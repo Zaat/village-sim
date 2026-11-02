@@ -45,7 +45,7 @@ function addKnowledge(w, pts, v) {
 function techNeed(w, id) {
   const pop = w.vills.length, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
   const base = { nets: w.fishOK ? 0.6 : 0.1, tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: w.fishOK ? 0.9 : 0.1, rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4, forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0), trade: 0.55 + (food > 6 ? 0.3 : 0), coinage: 0.5, seatrade: 0.35 + (w.of('dock').length ? 0.3 : 0) };
-  return (base[id] || 0.5) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0);
+  return (base[id] || 0.5) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id);
 }
 function techPref(v, id) {         // each council member's taste
   const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4, trade: t.soc * 0.4 + t.cur * 0.2, coinage: t.ind * 0.3 + t.cur * 0.1, seatrade: t.cur * 0.3 + t.brave * 0.3 })[id] || 0;
@@ -78,7 +78,7 @@ function techDay(w) {
 function researchAgenda(w, base, ms) {
   const avail = techAvailable(w), g = w.gov;
   const options = avail.map(id => ({ id: 'r_' + id, text: `${TECHS[id].name} (${TECHS[id].cost} knowledge): ${TECHS[id].desc}` }));
-  const score = id => techNeed(w, id) + ms.reduce((s, m) => s + techPref(m.v, id), 0) / ms.length;
+  const rf = rulingFocus(w), score = id => techNeed(w, id) + ms.reduce((s, m) => s + techPref(m.v, id), 0) / ms.length + (rf && TECH_FOCUS[id] === rf ? 0.12 : 0);      // the ruling circle nudges the agenda
   const def = 'r_' + avail.sort((a, b) => score(b) - score(a))[0];
   deliberate(w, { ...base, kind: 'research', topic: `The village has gathered enough curiosity to pursue one new line of study. Era: ${ERAS[techEra(w)]}. Known: ${Object.keys(w.tech.known).map(id => TECHS[id].name).join(', ') || 'nothing yet'}. Which should the council direct everyone toward?`, options, default: def,
     apply: (id, sp, reason, src) => {

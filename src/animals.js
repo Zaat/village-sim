@@ -61,7 +61,7 @@ class Animal {
     if (t && t.alive !== false) {
       const d = Math.hypot(t.x - this.x, t.y - this.y);
       if (d < 1.3) {
-        if (t instanceof Villager) { t.health -= 0.35; t.cause = 'wolf'; if (w.tick % 40 === 0) { w.say(`A wolf is attacking ${t.name}!`); nudge(w, 'defense', 0.04) } }
+        if (t instanceof Villager) { t.health -= 0.35; t.cause = 'wolf'; if (w.tick % 40 === 0) { w.say(`A wolf is attacking ${t.name}!`); nudge(w, 'defense', 0.012) } }
         else if (this.w.tick % 6 === 0) { t.alive = false; this.hunger = 0 }
       } else this.stepTo(t.x, t.y, 0.1);
     } else this.wander(0.05, 9);

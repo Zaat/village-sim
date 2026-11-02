@@ -96,7 +96,7 @@ function planTown(w) {
   if (structBps < 2 + Math.floor(pop / 8)) {
     const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
     if (cap < pop + 1) placeBuilding(w, 'house');
-    else if (farms < Math.min(30, Math.ceil((pop + 1) / 3.2)) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
+    else if (farms < Math.min(30, Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
     else if (full && stores < 10) placeBuilding(w, 'store');
     else if (cap < pop + 4 && w.stock.food > pop * 4 && w.stock.wood >= 10) placeBuilding(w, 'house');
   }
@@ -111,8 +111,8 @@ function planTown(w) {
 function resourceTargets(w) {
   const pop = w.vills.length, pend = w.pending(), s = w.season, cap = w.cap();
   const tgt = {
-    wood: 16 + 3 * pop + pend.wood + (s === 2 ? pop * 3 + w.houses().length * 6 : 0) + (s === 3 ? pop * 2 : 0), stone: 6 + 2 * pop + pend.stone,
-    food: 10 + 4 * pop + (s === 2 ? pop * 8 : 0) + (s === 1 ? pop * 3 : 0)
+    wood: 16 + 3 * pop + pend.wood + ((s === 2 ? pop * 3 + w.houses().length * 6 : 0) + (s === 3 ? pop * 2 : 0)) * (1 + 0.4 * lesson(w, 'cold')), stone: 6 + 2 * pop + pend.stone,
+    food: (10 + 4 * pop + (s === 2 ? pop * 8 : 0) + (s === 1 ? pop * 3 : 0)) * (1 + 0.5 * lesson(w, 'famine'))
   };
   for (const k in tgt) tgt[k] = Math.min(tgt[k], cap * 0.95);
   const eff = { wood: w.stock.wood + w.inbound.wood, stone: w.stock.stone + w.inbound.stone, food: w.stock.food + w.inbound.food };
@@ -175,7 +175,7 @@ function fire(w) {
   w.emit('event', `Fire! A ${b.type === 'house' ? 'cabin' : 'storehouse'} burned to the ground${who.length ? ', leaving ' + who.slice(0, 3).join(', ') + (who.length > 3 ? ' and others' : '') + ' homeless' : ''}.`, { kind: 'fire' });
 }
 function storm(w) {
-  let n = 0; for (const b of w.of('farm')) if (b.state === 1 && w.r() < 0.6) { b.state = 0; b.g = 0; n++ }
+  let n = 0; for (const b of w.of('farm')) if (b.state === 1 && w.r() < 0.6 * (1 - 0.5 * lesson(w, 'storm'))) { b.state = 0; b.g = 0; n++ }
   if (n) w.emit('event', `A violent storm tears across the island and flattens the young crops in ${n} field${n > 1 ? 's' : ''}.`, { kind: 'storm' });
 }
 function townNewDay(w) {
@@ -185,7 +185,7 @@ function townNewDay(w) {
     if (s === 1 && w.r() < 0.25 * sv) { w.drought = true; w.emit('event', 'The summer is dry. The crops grow slowly.', { kind: 'drought' }) }
   }
   if (d < 4) return;
-  if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1)) fire(w); if (w.r() < 0.02 * sv) storm(w) }
+  if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1) * (1 - 0.5 * lesson(w, 'fire'))) fire(w); if (w.r() < 0.02 * sv * (1 - 0.4 * lesson(w, 'storm'))) storm(w) }
   const cap = w.beds(), gp = w.gov.policy.growth;
   if (pop < 70 && cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1)) {            // travelers seek a home
     const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * 3) | 0);
@@ -194,9 +194,9 @@ function townNewDay(w) {
       w.emit('event', `${names.join(', ')} arrive${n === 1 ? 's' : ''} seeking shelter, and ${n === 1 ? 'is' : 'are'} welcomed.`, { kind: 'newcomers', names });
     }
   }
-  if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv) {               // a fever sweeps through; the weak and hungry suffer most
+  if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most
     let sick = 0;
-    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1); v.cause = 'fever'; sick++ }
+    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
   const wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1);

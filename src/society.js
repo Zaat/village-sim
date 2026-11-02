@@ -125,10 +125,13 @@ function updateGroups(w) {
   }
   for (const g of w.groups) if (!used.has(g.id)) w.say(`${g.name} has drifted apart.`);
   w.groups = fresh; for (const v of w.vills) v.group = null;
+  const adv = adultsOf(w), avg = f => adv.length ? adv.reduce((s, v) => s + f(v), 0) / adv.length : 0, VM = { trait: {}, op: {} };
+  for (const t of TRAITS) VM.trait[t] = avg(v => v.trait[t]); for (const k of ISSUES) VM.op[k] = avg(v => v.op[k]);
   for (const g of fresh) {
     const ms = g.members.map(id => memberOf(w, id)).filter(Boolean); for (const v of ms) v.group = g.id;
     g.leader = ms.reduce((a, b) => (a.charisma() > b.charisma() ? a : b)).id;
     g.op = {}; for (const k of ISSUES) g.op[k] = ms.reduce((s, v) => s + v.op[k], 0) / ms.length;
+    g.platform = groupPlatform(w, g, ms, VM);
   }
   for (const g of fresh) for (const h of fresh) {
     if (g === h || g.id > h.id) continue; let s = 0, c = 0;
@@ -152,10 +155,54 @@ function groupName(w, g, members, taken) {
 
 /* ---------------------------------------------------------------- council */
 const councilSize = n => n < 22 ? 3 : n < 50 ? 5 : 7;
-function candidates(w) { return adultsOf(w).filter(v => v.age < 80).map(v => ({ v, score: v.charisma() + (v.desire && v.desire.kind === 'lead' ? 0.25 : 0) + (v.reputation - 50) / 200 })).sort((a, b) => b.score - a.score).slice(0, 9) }
+function candidates(w) {
+  const sc = v => ({ v, score: v.charisma() + (v.desire && v.desire.kind === 'lead' ? 0.25 : 0) + (v.reputation - 50) / 200 });
+  const all = adultsOf(w).filter(v => v.age < 80).map(sc).sort((a, b) => b.score - a.score), out = all.slice(0, 9), have = new Set(out.map(x => x.v.id));
+  for (const g of w.groups) { if (g.members.length < 4) continue; const ld = all.find(x => x.v.id === g.leader); if (ld && !have.has(ld.v.id) && out.length < 13) { out.push(ld); have.add(ld.v.id) } }   // each sizeable circle fields its leader
+  return out;
+}
+/* ----- factions: a circle's platform is what its members care about most; voters weigh it at elections ----- */
+const FOCUS_TXT = { knowledge: 'learning and discovery', safety: 'safety and a strong defence', community: 'fellowship and good feasts', enterprise: 'honest work and prosperity' };
+function groupPlatform(w, g, ms, vm) {            // vm: the village-wide averages, so a platform is what sets the circle apart
+  const mean = t => ms.reduce((s, v) => s + v.trait[t], 0) / ms.length - vm.trait[t];
+  const issues = ISSUES.map(k => ({ k, dir: Math.sign(g.op[k]), a: Math.abs(g.op[k]), s: 0.25 * Math.abs(g.op[k]) + 0.75 * Math.abs(g.op[k] - vm.op[k]) })).filter(x => x.a > 0.15).sort((a, b) => b.s - a.s).slice(0, 2).map(x => ({ k: x.k, dir: x.dir }));
+  const sc = { knowledge: mean('cur'), safety: 0.6 * mean('brave') + 0.4 * (g.op.defense - vm.op.defense), community: 0.6 * mean('soc') + 0.4 * mean('kind'), enterprise: 0.6 * mean('ind') + 0.4 * (vm.op.tax - g.op.tax) };
+  return { issues, focus: Object.keys(sc).sort((a, b) => sc[b] - sc[a])[0] };
+}
+const platformText = g => g.platform ? (g.platform.issues.length ? g.platform.issues.map(i => motionText(i.k, i.dir)).join(' and ') : FOCUS_TXT[g.platform.focus]) : 'no particular cause';
+function platformAlign(voter, G) {
+  const is = G && G.platform && G.platform.issues; if (!is || !is.length) return 0;
+  return is.reduce((s, i) => s + clamp(voter.op[i.k] * i.dir, -1, 1), 0) / is.length;
+}
+const rulingGroup = w => w.gov.ruling ? w.groups.find(x => x.id === w.gov.ruling.gid) || null : null;
+const rulingFocus = w => { const R = rulingGroup(w); return R && R.platform ? R.platform.focus : null };
+const TECH_FOCUS = { tools: 'enterprise', mining: 'enterprise', forestry: 'enterprise', trade: 'enterprise', coinage: 'enterprise', seatrade: 'enterprise', ironwork: 'enterprise', watchtowers: 'safety', medicine: 'safety', granary: 'community', carpentry: 'community', boats: 'community', rotation: 'knowledge', plow: 'knowledge', navigation: 'knowledge', masonry: 'knowledge', nets: 'community', lodges: 'safety' };
+/* the circle that holds the most council seats (at least two) leads; others are in opposition */
+function updateRuling(w, election) {
+  const g = w.gov, seats = new Map();
+  for (const c of g.council) { const v = memberOf(w, c.id); if (v && v.group) seats.set(v.group, (seats.get(v.group) || 0) + 1) }
+  let best = null, n = 0; for (const [gid, k] of seats) if (k > n) { n = k; best = gid }
+  const chief = g.council.find(c => c.title === 'Chief'), cv = chief ? memberOf(w, chief.id) : null, cg = cv && cv.group ? w.groups.find(x => x.id === cv.group) : null;
+  if (cg && !seats.get(cg.id)) seats.set(cg.id, 1);
+  const grp = cg || (best && n >= 2 ? w.groups.find(x => x.id === best) : null), old = g.ruling; if (grp) n = seats.get(grp.id) || 1;      // the Chief's circle leads; else the circle with the most seats (two or more)
+  if (!grp) { if (old) { g.ruling = null; w.emit('faction', 'No single circle holds the council now. It governs as a coalition of independents.') } return }
+  if (old && old.gid === grp.id) { old.seats = n; old.name = grp.name; if (election) old.terms = (old.terms || 1) + 1; return }
+  g.ruling = { gid: grp.id, name: grp.name, seats: n, since: w.day, terms: 1 };
+  w.emit('faction', `${grp.name} now leads the council with ${n} of ${g.council.length} seats, pledging ${platformText(grp)}.`, {});
+}
+/* a circle is content when policy moves its way, bitter when it moves against it */
+function factionDay(w) {
+  const g = w.gov; updateRuling(w, false);
+  for (const G of w.groups) {
+    if (!G.platform || !G.platform.issues.length) { G.satisfied = 0; continue }
+    const hap = G.platform.issues.reduce((s, i) => s + g.policy[i.k] * i.dir, 0) / G.platform.issues.length; G.satisfied = hap;
+    const dm = hap < -0.4 ? -0.35 : hap > 0.4 ? 0.2 : 0; if (dm) for (const id of G.members) { const v = memberOf(w, id); if (v) v.mood = clamp(v.mood + dm, 0, 100) }
+  }
+}
 function voteScore(w, voter, c) {
   let od = 0; for (const k of ISSUES) od += Math.abs(voter.op[k] - c.v.op[k]); od /= ISSUES.length;
-  return 0.5 * relOf(w, voter, c.v) / 100 + 0.3 * (1 - od) + (voter.group && voter.group === c.v.group ? 0.25 : 0) + 0.25 * c.score + (voter === c.v ? 0.15 : 0) + w.r() * 0.08;
+  const G = c.v.group ? w.groups.find(x => x.id === c.v.group) : null, R = w.gov.ruling, fatigue = R && c.v.group === R.gid ? Math.min(0.12, 0.04 * (R.terms || 1)) : 0;
+  return 0.5 * relOf(w, voter, c.v) / 100 + 0.3 * (1 - od) + (voter.group && voter.group === c.v.group ? 0.25 : 0) + 0.25 * c.score + (voter === c.v ? 0.15 : 0) + 0.3 * platformAlign(voter, G) - fatigue + w.r() * 0.16;
 }
 function holdElection(w, why) {
   const g = w.gov, ad = adultsOf(w), cands = candidates(w); if (cands.length < 3) return;
@@ -170,6 +217,7 @@ function holdElection(w, why) {
   w.emit('election', `${why === 'first' ? 'The villagers gather to choose their first council.' : 'The council term ends and the villagers vote.'} ${chief.name} is chosen Chief. Votes: ${summary}.`, { chief, members: mem, why });
   for (const v of mem) { v.mood = Math.min(100, v.mood + 10); v.story(`Elected to the village council as ${titles.get(v.id) || 'Councillor'}.`) }
   if (!chief.fulfilledLead) chief.desireBoost = true;
+  updateRuling(w, true);
 }
 
 function fillCouncil(w) {
@@ -183,6 +231,7 @@ function fillCouncil(w) {
     g.council.push({ id: c.v.id, title: t }); c.v.mood = Math.min(100, c.v.mood + 8); c.v.story(`Chosen for the council as ${t}.`);
     w.emit('election', `${c.v.name} is chosen by the villagers to join the council as ${t}.`, { by: true });
   }
+  updateRuling(w, false);
 }
 /* A deliberation: the rules prepare options and a default; the optional Claude mind may pick one. */
 function deliberate(w, req) {
@@ -220,12 +269,18 @@ function holdMeeting(w) {
         REMEDIES[id].apply(g, w); g.trial = { remedy: id, start: w.day, base: rate };
         const champ = ms.slice().sort((a, b) => remedyPref(b.v, id) - remedyPref(a.v, id))[0];
         recordDecision(w, `to curb crime, the council resolved to ${REMEDIES[id].text}. ${champ.v.name} led the argument.`, sp, src);
-        nudge(w, 'law', 0.03); g.nextMeeting = w.day + 4;
+        nudge(w, 'law', 0.03); learn(w, 'crime', 0.15); g.nextMeeting = w.day + 4;
       } });
     return;
   }
   let issue = null, gap = 0.25, proposer = null;
   for (const k of ISSUES) { const avg = ad.reduce((s, v) => s + v.op[k], 0) / Math.max(1, ad.length), d = avg - g.policy[k]; if (Math.abs(d) > gap) { gap = Math.abs(d); issue = { k, dir: Math.sign(d), avg } } }
+  const RG = rulingGroup(w);
+  if (!issue && RG && RG.platform && w.r() < 0.7) for (const it of RG.platform.issues) {       // the ruling circle presses its own platform
+    if (g.policy[it.k] * it.dir >= 0.5 || Math.abs(g.policy[it.k] + it.dir * 0.5) > 1) continue;
+    const who = ms.filter(m => m.v.group === RG.id).sort((a, b) => b.v.op[it.k] * it.dir - a.v.op[it.k] * it.dir)[0];
+    if (who) { proposer = who.v; issue = { k: it.k, dir: it.dir, avg: ad.reduce((s, v) => s + v.op[it.k], 0) / Math.max(1, ad.length) }; break }
+  }
   if (!issue) {                                           // otherwise a councillor brings a petition of their own
     let bg = 0.5; for (const m of ms) for (const k of ISSUES) { const d = m.v.op[k] - g.policy[k]; if (Math.abs(d) > bg && Math.abs(g.policy[k] + Math.sign(d) * 0.5) <= 1) { bg = Math.abs(d); proposer = m.v; issue = { k, dir: Math.sign(d), avg: ad.reduce((s, v) => s + v.op[k], 0) / Math.max(1, ad.length) } } }
   }
@@ -343,6 +398,8 @@ function societyNewDay(w) {
   if (g.mediation) for (const [k, r] of w.rel) if (r < -30) w.rel.set(k, r + 3);
   if (w.stock.food < w.vills.length) nudge(w, 'growth', -0.05);
   if (w.has('coinage')) { const cs = ad.map(v => v.coins || 0).sort((a, b) => a - b), med = cs.length ? cs[cs.length >> 1] : 0; for (const v of ad) v.op.tax = clamp(v.op.tax + clamp((med - (v.coins || 0)) / 300, -0.02, 0.02), -1, 1) }       // the poor lean toward taxes, the comfortable away from them
+  for (const v of ad) for (const k of ISSUES) v.op[k] *= 0.995;          // convictions fade without fresh cause, so opinions keep their variety
+  factionDay(w);
   setupHoliday(w);
   if (w.settings.crime) crimeDay(w);
   g.council = g.council.filter(c => memberOf(w, c.id));

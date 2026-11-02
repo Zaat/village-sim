@@ -10,25 +10,25 @@ const PROJECTS = {
     name: 'Great Hall', tech: 'carpentry', size: [4, 3], cost: { wood: 70, stone: 20 }, time: 900, minPop: 22,
     pitch: 'a great hall where the council can meet and the village can feast', gives: 'The council meets more often, approval rises, and feasts lift everyone’s mood.',
     fit: v => 0.6 * v.trait.soc + 0.2 * (v.op.labor + 1) / 2 + 0.2 * (v.op.law + 1) / 2,
-    need: w => clamp((72 - w.gov.approval) / 40, 0, 1)
+    focus: 'community', need: w => clamp((72 - w.gov.approval) / 40, 0, 1)
   },
   library: {
     name: 'Library', tech: 'masonry', size: [3, 3], cost: { wood: 40, stone: 60 }, time: 1000, minPop: 28,
     pitch: 'a stone library to keep what the village has learned', gives: 'Everything the villagers learn counts half again as much, so discoveries come sooner.',
     fit: v => 0.7 * v.trait.cur + 0.15 * (v.op.growth + 1) / 2 + 0.15 * (1 - v.trait.brave),
-    need: w => clamp(0.6 - Object.keys(w.tech.known).length / 30, 0, 1)
+    focus: 'knowledge', need: w => clamp(0.6 - Object.keys(w.tech.known).length / 30, 0, 1)
   },
   bastion: {
     name: 'Bastion', tech: 'watchtowers', size: [3, 3], cost: { wood: 30, stone: 90 }, time: 1100, minPop: 30,
     pitch: 'a stone bastion to guard the village', gives: 'Wolves come half as often, thefts and brawls fall by a third.',
     fit: v => 0.45 * v.trait.brave + 0.4 * (v.op.defense + 1) / 2 + 0.15 * (v.op.law + 1) / 2,
-    need: w => clamp(crimeRate(w, 16) / Math.max(4, w.vills.length * 0.15) + (w.animals.some(a => a.kind === 'wolf' && a.alive) ? 0.3 : 0), 0, 1)
+    focus: 'safety', need: w => clamp(0.3 * lesson(w, 'wolves') + crimeRate(w, 16) / Math.max(4, w.vills.length * 0.15) + (w.animals.some(a => a.kind === 'wolf' && a.alive) ? 0.3 : 0), 0, 1)
   },
   monument: {
     name: 'Monument', tech: 'masonry', size: [3, 3], cost: { wood: 20, stone: 80 }, time: 1000, minPop: 35,
     pitch: 'a monument to the village’s founders and those it has lost', gives: 'A steady lift in mood, and newcomers are drawn to the village.',
     fit: v => 0.4 * v.trait.soc + 0.3 * (1 - v.trait.ind) + 0.3 * v.trait.kind,
-    need: w => clamp((62 - avgMood(w)) / 30, 0, 1)
+    focus: 'community', need: w => clamp((62 - avgMood(w)) / 30, 0, 1)
   }
 };
 for (const id in PROJECTS) {
@@ -58,7 +58,7 @@ function projectAgenda(w, base, ms) {
   const ad = adultsOf(w), score = {};
   for (const id of ids) {
     const p = PROJECTS[id], pub = ad.reduce((s, v) => s + p.fit(v), 0) / ad.length, cou = ms.reduce((s, m) => s + p.fit(m.v), 0) / ms.length;
-    score[id] = 0.35 * pub + 0.25 * cou + 0.4 * p.need(w) + w.r() * 0.08;
+    score[id] = 0.35 * pub + 0.25 * cou + 0.4 * p.need(w) + (rulingFocus(w) === p.focus ? 0.1 : 0) + w.r() * 0.08;
   }
   const best = ids.slice().sort((a, b) => score[b] - score[a])[0], go = score[best] > 0.46 - Math.min(0.14, 0.035 * (P.waits || 0));       // each refusal makes the next vote a little easier
   const options = ids.map(id => ({ id, text: `Build the ${PROJECTS[id].name}, ${PROJECTS[id].pitch}. Cost ${PROJECTS[id].cost.wood} firewood and ${PROJECTS[id].cost.stone} stone, many days of work. ${PROJECTS[id].gives}` }));

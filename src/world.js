@@ -7,7 +7,7 @@ class World {
   constructor(seed, settings = {}) {
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this); initTech(this); initEcon(this); initProjects(this);
+    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -33,7 +33,7 @@ class World {
   isNight() { return this.tod > 0.72 }
   r() { return this.rng() }
   say(text) { this.log.unshift({ day: this.day, season: this.season, text }); if (this.log.length > 120) this.log.pop() }
-  emit(type, text, data) { if (text) this.say(text); for (const f of this.listeners) { try { f(type, text, data) } catch (e) { console.error(e) } } }
+  emit(type, text, data) { if (text) this.say(text); try { noteEvent(this, type, text, data) } catch (e) { console.error(e) } for (const f of this.listeners) { try { f(type, text, data) } catch (e) { console.error(e) } } }
 
   /* ----- generation ----- */
   gen() {
@@ -257,6 +257,7 @@ class World {
     techDay(this);
     tradeDay(this);
     projectDay(this);
+    historyDay(this);
   }
 
   /* ----- diagnostics: every subsystem is timed and isolated, so one bug cannot stop the village ----- */

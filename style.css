@@ -74,3 +74,9 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #saveInfo{min-height:3.4em}
 #side>.card{flex:none}#drawer>.card,#drawer>details{flex:none}
 #projCard{height:215px;overflow-y:auto}
+/* narrow windows: the control bar drops below the date HUD instead of covering it */
+#stage{container-type:inline-size}
+#hud{max-width:calc(100% - 24px);flex-wrap:wrap}
+@container (max-width:900px){#ctl{top:56px;right:auto;left:12px;max-width:calc(100% - 24px);flex-wrap:wrap}#drawer{top:104px;max-height:calc(100% - 300px)}}
+@container (max-width:420px){#drawer{width:calc(100% - 24px)}}
+#chronCard{height:470px;overflow-y:auto}
