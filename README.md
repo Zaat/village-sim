@@ -1,4 +1,4 @@
-# Village Sim v0.12
+# Village Sim v0.13
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,12 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Tabs, speed and a balance sweep (new in 0.13)
+- The side panel is now **tabbed**: Village (stats, history, inspector), Society (council, circles), Progress (knowledge, trade, projects), World (neighbours, chronicle) and Events. Clicking something on the map jumps to the Village tab, and only the visible tab is redrawn. The last tab is remembered.
+- **Faster:** the fog-of-war update was a third of every tick; it now only looks where villagers have moved, which cuts total simulation cost by about a quarter.
+- **Smaller saves:** big map layers are run-length packed (about 312 KB down to about 23 KB), so a mid-game save is roughly 450 KB instead of 730 KB. Older saves still load.
+- **Developer tool, `tests/sweep.js`:** runs many worlds in parallel for a number of days and reports population, tech, politics, wealth, neighbours and errors per seed, how much worlds differ from each other, and warnings about degenerate worlds. It is the yardstick for making each village unique.
 
 ## Building stats (new in 0.12)
 - Every building now has **hit points**, a **condition** (Sound, Good, Worn, Poor, Failing), an age, the era it was built in, a material, a repair count and a last-event note. Click a building to see them; a small bar shows its condition on the map, and worn buildings show cracks and dust.

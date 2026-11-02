@@ -58,18 +58,29 @@
     <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause</div>
   </div>
   <aside id="side">
+    <div class="tabbar" id="tabbar"><button data-tab="village" class="on">Village</button><button data-tab="society">Society</button><button data-tab="progress">Progress</button><button data-tab="world">World</button><button data-tab="events">Events</button></div>
+    <section class="tab on" id="tab_village">
     <div class="card" id="statCard"></div>
     <div class="card"><h3>History</h3><canvas id="chart" width="300" height="84"></canvas>
       <div class="leg"><span><i style="background:#8fd18b"></i>population</span><span><i style="background:#e0a458"></i>food stock</span></div></div>
     <div class="card" id="sel"><h3>Inspector</h3><div class="hint">Click something on the map.</div></div>
+    </section>
+    <section class="tab" id="tab_society">
+    <div class="card"><h3>Village council</h3><div id="councilCard"></div></div>
+    <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
+    </section>
+    <section class="tab" id="tab_progress">
     <div class="card"><h3>Knowledge &amp; discoveries</h3><div id="techCard"></div></div>
     <div class="card"><h3>Trade &amp; treasury</h3><div id="econCard"></div></div>
     <div class="card"><h3>Great projects</h3><div id="projCard"></div></div>
-    <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
+    </section>
+    <section class="tab" id="tab_world">
     <div class="card"><h3>Neighbours</h3><div id="neighCard"></div></div>
-    <div class="card"><h3>Village council</h3><div id="councilCard"></div></div>
-    <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
+    <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
+    </section>
+    <section class="tab" id="tab_events">
     <div class="card"><h3>Events</h3><div id="log"></div></div>
+    </section>
   </aside>
 </div>
 <script src="src/config.js"></script>

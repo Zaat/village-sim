@@ -51,14 +51,14 @@ function genNeighbours(w) {
 }
 /* ----- fog of war ----- */
 function revealCircle(w, x, y, r) {
-  if (!w.seen) return; const { W, H } = CFG; let n = 0;
-  for (let yy = Math.max(0, Math.floor(y - r)); yy <= Math.min(H - 1, Math.ceil(y + r)); yy++) for (let xx = Math.max(0, Math.floor(x - r)); xx <= Math.min(W - 1, Math.ceil(x + r)); xx++) {
-    const i = yy * W + xx; if (!w.seen[i] && Math.hypot(xx - x, yy - y) <= r) { w.seen[i] = 1; n++ }
-  }
+  if (!w.seen) return; const { W, H } = CFG, r2 = r * r, seen = w.seen; let n = 0;
+  const y0 = Math.max(0, Math.floor(y - r)), y1 = Math.min(H - 1, Math.ceil(y + r)), x0 = Math.max(0, Math.floor(x - r)), x1 = Math.min(W - 1, Math.ceil(x + r));
+  for (let yy = y0; yy <= y1; yy++) { const dy = yy - y, rem = r2 - dy * dy; if (rem < 0) continue; const hw = Math.sqrt(rem), a = Math.max(x0, Math.ceil(x - hw)), b = Math.min(x1, Math.floor(x + hw)), row = yy * W; for (let xx = a; xx <= b; xx++) if (!seen[row + xx]) { seen[row + xx] = 1; n++ } }
   if (n) w.seenVer++;
 }
+/* only villagers who have moved since their last look reveal anything new */
 function revealTick(w) {
-  for (const v of w.vills) revealCircle(w, v.x, v.y, 7);
+  for (const v of w.vills) { if (v._fx !== undefined && Math.abs(v.x - v._fx) < 2.5 && Math.abs(v.y - v._fy) < 2.5) continue; v._fx = v.x; v._fy = v.y; revealCircle(w, v.x, v.y, 7) }
   for (const b of w.boats) if (b.state === 'out') revealCircle(w, b.x, b.y, 13);
 }
 /* ----- sailing ----- */
