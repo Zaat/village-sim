@@ -4,7 +4,7 @@
    ========================================================================== */
 class Animal {
   constructor(w, kind, x, y) {
-    this.w = w; this.id = w.nextId++; this.kind = kind; this.x = x + 0.5; this.y = y + 0.5; this.alive = true;
+    this.w = w; this.id = w.nextId++; this.kind = kind; this.x = x + 0.5; this.y = y + 0.5; this.alive = true; this.born = w.day;
     this.hp = kind === 'wolf' ? 40 : kind === 'deer' ? 20 : 5; this.tx = this.x; this.ty = this.y; this.wait = 0;
     this.life = kind === 'wolf' ? CFG.TPD * 4 : Infinity; this.hunger = 60; this.dir = 1; this.sex = w.r() < 0.5 ? 'm' : 'f'; this.target = null; this.moving = false;
   }

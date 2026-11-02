@@ -235,7 +235,7 @@ class Villager {
     this.jobKind = 'fire';
     this.steps = [go((x, y) => x === P.x && y === P.y, null, P.go, { maxCost: 90 }),
     work(P.ticks, P.stay, () => {
-      let n = 0; const lim = P.kind === 'tavern' ? 3 : 2, rad = P.kind === 'plaza' ? 6 : 4.5;
+      recordVisit(w, P.bld, this); let n = 0; const lim = P.kind === 'tavern' ? 3 : 2, rad = P.kind === 'plaza' ? 6 : 4.5;
       for (const o of w.vills) { if (o === this || o.isChild() || o.sleeping || Math.hypot(o.x - this.x, o.y - this.y) > rad) continue; if (n >= lim) break; if (fest || w.r() < 0.55) { w.interact(this, o); n++ } }
       if (fest) this.social = Math.min(100, this.social + 40);
       else if (P.kind === 'tavern') { this.social = Math.min(100, this.social + 18); this.mood = Math.min(100, this.mood + 1.5) }
@@ -245,7 +245,7 @@ class Villager {
   planMarket() {       // browse the stalls while merchants are in town
     const w = this.w, s = marketSpot(w); if (!s) return false; this.jobKind = 'fire';
     this.steps = [go((x, y) => x === s.x && y === s.y, null, 'To the market', { maxCost: 80 }),
-    work(110, 'Browsing the market stalls', () => { const o = w.vills.find(o => o !== this && !o.isChild() && !o.sleeping && Math.hypot(o.x - this.x, o.y - this.y) < 5); if (o && w.r() < 0.6) w.interact(this, o); else this.social = Math.min(100, this.social + 8) })];
+    work(110, 'Browsing the market stalls', () => { recordVisit(w, w.of('market')[0], this); const o = w.vills.find(o => o !== this && !o.isChild() && !o.sleeping && Math.hypot(o.x - this.x, o.y - this.y) < 5); if (o && w.r() < 0.6) w.interact(this, o); else this.social = Math.min(100, this.social + 8) })];
     return true;
   }
   planSocial() {
@@ -409,7 +409,7 @@ class Villager {
       work(trip, 'Sailing out', null, { onTick: at }),
       work(this.wt(100, 'fish'), 'Fishing at sea', () => { if (w.fish[best.idx] > 0) { w.fish[best.idx]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }),
       work(trip, 'Sailing home', null, { onTick: p => at(1 - p) }),
-      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; if (this.carry) { this.output = (this.output || 0) + this.carry.amt; w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
+      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; recordVisit(w, dock, this); if (this.carry) { dock.catch = (dock.catch || 0) + this.carry.amt; this.output = (this.output || 0) + this.carry.amt; w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
     return true;
   }
   planBuild() {

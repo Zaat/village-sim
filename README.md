@@ -1,4 +1,4 @@
-# Village Sim v0.15
+# Village Sim v0.16
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,11 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Inspector overhaul (new in 0.16)
+- **Buildings:** fixed the age bugs (day-0 buildings always read 0 days; upgrades overwrote the original era). Panels now have Usage, People and Details sections. Venues (square, tavern, hall, amphitheatre, market, campfire, docks) track visits this season, last season, the past year, all time, a popularity trend (growing, steady, fading) with a small four-season chart, and regulars. Houses list residents; camps list workers; docks list boats and total catch; great works say who built them.
+- **Villagers:** age in years, family (partner, parents, children), housemates, places they are often found at, work output, birth date. Names are links: click one to jump to that villager or building.
+- **Animals:** health, hunger, age, activity, pack size for wolves.
 
 ## When a village divides (new in 0.15)
 Unity is no longer just a number. A circle that feels unheard, is unhappy, or sits far from the way things are run can now act, and the council has to answer (or Claude can counsel it, if you have that switched on).

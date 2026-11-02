@@ -14,10 +14,10 @@ const baseHp = b => BLD_HP[b.type] || 100;
 const hpFactor = b => (b.type === 'house' || b.type === 'store') ? STYLE_HP[b.style || 0] : 1;
 function ensureStats(w, b) {
   if (b.maxHp !== undefined) return b;
-  b.maxHp = Math.round(baseHp(b) * hpFactor(b)); b.hp = b.maxHp; b.built = w.day; b.era = techEra(w); b.repairs = 0; b.last = null; return b;
+  b.maxHp = Math.round(baseHp(b) * hpFactor(b)); b.hp = b.maxHp; b.built = w.day; b.era = techEra(w); b.builtEra = b.era; b.repairs = 0; b.last = null; return b;
 }
 /* a rebuilt (upgraded) building starts again at full strength */
-function restyle(w, b) { const keep = b.built; b.maxHp = Math.round(baseHp(b) * hpFactor(b)); b.hp = b.maxHp; b.built = keep === undefined ? w.day : keep; b.era = techEra(w); b.last = `rebuilt day ${w.day}` }
+function restyle(w, b) { const keep = b.built; b.maxHp = Math.round(baseHp(b) * hpFactor(b)); b.hp = b.maxHp; b.built = keep === undefined ? w.day : keep; if (b.builtEra === undefined) b.builtEra = b.era; b.era = techEra(w); b.upgraded = w.day; b.last = `rebuilt day ${w.day}` }
 const condition = b => { const r = b.hp / b.maxHp; return r >= 0.9 ? 'Sound' : r >= 0.7 ? 'Good' : r >= 0.45 ? 'Worn' : r >= 0.2 ? 'Poor' : 'Failing' };
 const conditionColor = b => { const r = b.hp / b.maxHp; return r >= 0.7 ? '#7ad07a' : r >= 0.45 ? '#d9c26a' : r >= 0.2 ? '#e0985a' : '#e0604a' };
 
@@ -39,4 +39,26 @@ function buildingDay(w) {
     }
   }
 }
-function ageText(w, b) { const d = Math.max(0, w.day - (b.built || w.day)), y = d / (CFG.DPS * 4); return d < 32 ? `${d} day${d === 1 ? '' : 's'} old` : `${y.toFixed(1)} years old` }
+function ageText(w, b) { const d = Math.max(0, w.day - (b.built ?? w.day)), y = d / (CFG.DPS * 4); return d < 32 ? `${d} day${d === 1 ? '' : 's'} old` : `${y.toFixed(1)} years old` }
+
+/* ----- how much a building is used: visits per season, a rolling year, regulars and the trend ----- */
+function rollVisits(w, b) {
+  const ser = Math.floor(w.day / CFG.DPS);
+  if (!b.vh) { b.vh = [0, 0, 0, 0]; b.vser = ser; b.vtot = 0; b.reg = {} }
+  const gap = ser - b.vser; if (gap > 0) { for (let i = 0; i < Math.min(gap, 4); i++) b.vh.unshift(0); b.vh.length = 4; b.vser = ser }
+  return b;
+}
+function recordVisit(w, b, v) {
+  if (!b || !v) return; v.fav = v.fav || {}; v.fav[b.type] = (v.fav[b.type] || 0) + 1; rollVisits(w, b); b.vh[0]++; b.vtot++; const r = b.reg; r[v.id] = (r[v.id] || 0) + 1;
+  const ks = Object.keys(r); if (ks.length > 40) { let mk = ks[0]; for (const k of ks) if (r[k] < r[mk]) mk = k; delete r[mk] }
+}
+/* popularity: the last two seasons (this one scaled to a full season) against the two before */
+function popularity(w, b) {
+  rollVisits(w, b); const vh = b.vh, year = vh[0] + vh[1] + vh[2] + vh[3], age = w.day - (b.built ?? w.day), el = (w.day % CFG.DPS) + 1;
+  const cur = el >= 3 ? vh[0] * CFG.DPS / el : vh[1], recent = (cur + vh[1]) / 2, older = (vh[2] + vh[3]) / 2;
+  let trend = 'steady', arrow = '→';
+  if (age < CFG.DPS * 2) { trend = 'too new to tell'; arrow = '·' }
+  else if (recent + older < 4) { trend = year < 3 ? 'rarely used' : 'quiet'; arrow = '·' }
+  else if (recent > older * 1.2 + 1) { trend = 'growing'; arrow = '▲' } else if (recent < older * 0.8 - 1) { trend = 'fading'; arrow = '▼' }
+  return { year, season: vh[0], last: vh[1], trend, arrow, perDay: year / Math.max(1, Math.min(CFG.DPS * 4, age)), hist: vh.slice().reverse() };
+}

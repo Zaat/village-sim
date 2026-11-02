@@ -44,7 +44,8 @@ function gatherPlan(w, v, meet, fest) {
     kind = kind === 'hall' || kind === 'amph' || kind === 'tavern' || kind === 'plaza' ? 'fire' : kind;
     for (let k = 0; k < 10 && !spot; k++) { const x = Math.round(w.cx + (w.r() * 2 - 1) * 3), y = Math.round(w.cy + (w.r() * 2 - 1) * 3); if (w.walkable(y * CFG.W + x)) spot = { x, y } }
   }
-  return spot ? { ...spot, kind, go, stay, ticks } : null;
+  const bld = spot && b && kind !== 'fire' ? b : (spot ? w.of('campfire')[0] || null : null);
+  return spot ? { ...spot, kind, go, stay, ticks, bld } : null;
 }
 /* an afternoon browse when merchants are in town */
 function marketSpot(w) {

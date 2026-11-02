@@ -285,6 +285,62 @@ function renderGroups() {
       <div class="hint">${w.gov.ruling && w.gov.ruling.gid === g.id ? '<b>Ruling circle.</b> ' : g.satisfied < -0.4 ? '<b>In opposition, and unhappy.</b> ' : ''}Platform: ${escapeHtml(platformText(g))}${g.platform ? ' · focus on ' + FOCUS_TXT[g.platform.focus] : ''}</div>${ally.length ? `<div class="hint">Friendly with ${escapeHtml(ally.join(', '))}</div>` : ''}${riv.length ? `<div class="hint">Rivals: ${escapeHtml(riv.join(', '))}</div>` : ''}</div>`;
   }).join('');
 }
+
+/* ---- selectable-unit panels: small building blocks so every panel reads the same way ---- */
+const sec = (title, body) => body ? `<div class="sec"><div class="sech">${title}</div>${body}</div>` : '';
+const kvs = rows => `<div class="stats">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><b>${v}</b></div>`).join('')}</div>`;
+const vlink = (v, extra) => `<a class="lnk" data-vid="${v.id}">${escapeHtml(v.name)}</a>${extra ? ' <span class="hint">' + extra + '</span>' : ''}`;
+const dateText = d => `Day ${d} (year ${Math.floor(d / (CFG.DPS * 4)) + 1})`;
+const ageYears = days => { const y = days / (CFG.DPS * 4); return y < 1 ? `${Math.round(days)} days` : `${y.toFixed(1)} years` };
+const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
+const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0] : BUILDING_NAMES[s.type] || s.type;
+const VENUES = { plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
+function buildingPanel(w, s, extra) {
+  const pct = Math.max(0, Math.round(100 * s.hp / s.maxHp)), cx = s.x + s.w / 2, cy = s.y + s.h / 2;
+  const near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - cx, v.y - cy) < Math.max(s.w, s.h) + 2.5);
+  const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.', campfire: 'The first gathering place. Evenings and talk start here.' }[s.type] || '';
+  const mat = (BLD_MATERIAL[s.type] || (() => '-'))(s.type === 'plaza' || s.type === 'tavern' ? w : s.style), wr = (BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0];
+  const facts = kvs([['Age', ageText(w, s)], ['Built', dateText(s.built ?? w.day)], ['Built in', ERAS[s.builtEra !== undefined ? s.builtEra : (s.era || 0)]], s.upgraded !== undefined ? ['Rebuilt', dateText(s.upgraded) + ` (${ERAS[s.era || 0]})`] : null, ['Material', escapeHtml(mat)], ['Size', `${s.w} x ${s.h} tiles`], ['Repairs', s.repairs || 0], ['Wear', wr * 100 > 0 ? (wr * 3200).toFixed(1) + '% a year' : '-']]);
+  let people = '', use = '';
+  if (s.type === 'house') {
+    const res = s.occ.map(id => w.vills.find(v => v.id === id)).filter(Boolean), beds = bedsOf(s);
+    people = sec('Residents', `<div class="hint">${res.length ? res.length + ' living here' : 'Empty'} · ${beds} beds${res.length > beds ? ' (children and newborns share)' : ''}</div>` + res.map(v => `<div>${vlink(v, `${ageYears(v.age)}${v.role && !v.isChild() ? ' · ' + v.role : ''}`)}</div>`).join(''));
+  } else if (s.type === 'farm') {
+    people = sec('Field', `<div class="hint">${['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]}</div>`);
+  } else if (s.type === 'store') {
+    people = sec('Stores', `<div class="hint">The village holds ${Math.round(w.stock.food)} food, ${Math.round(w.stock.wood)} firewood and ${Math.round(w.stock.stone)} stone of ${w.cap()} it can keep. Stores raise the limit by ${100 + (w.has('granary') ? 40 : 0)}.</div>`);
+  } else if (s.type === 'dock') {
+    const bs = w.boats.filter(b => b.dock === s.id);
+    people = sec('Boats', `<div class="hint">${bs.length} boat${bs.length === 1 ? '' : 's'} (${bs.filter(b => b.state === 'out').length} at sea). ${s.catch ? 'Landed ' + Math.round(s.catch) + ' food in all.' : 'No catch landed yet.'}</div>`);
+  } else if (s.type === 'logcamp' || s.type === 'minecamp' || s.type === 'lodge') {
+    const role = { logcamp: 'woodcutter', minecamp: 'miner', lodge: 'hunter' }[s.type], rad = s.type === 'lodge' ? 22 : 14, ws = w.vills.filter(v => v.role === role && Math.hypot(v.x - cx, v.y - cy) < rad + 6);
+    people = sec('Workers', `<div class="hint">${ws.length} ${role}${ws.length === 1 ? '' : 's'} work within reach (${rad} tiles).</div>` + ws.slice(0, 5).map(v => `<div>${vlink(v, v.label)}</div>`).join(''));
+  } else if (PROJECTS[s.type]) {
+    const d = w.proj && w.proj.done[s.type];
+    people = sec('A great work', `<div class="hint">${escapeHtml(proj)}</div>` + (d ? `<div class="hint">Finished ${dateText(d.day)}${d.champ ? '. Championed by ' + escapeHtml(d.champ) : ''}${d.names && d.names.length ? '; ' + escapeHtml(d.names.join(' and ')) + ' pledged their labour' : ''}.</div>` : ''));
+  } else if (s.type === 'market') people = sec('Market', `<div class="hint">Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.</div>`);
+  if (VENUES[s.type] || s.vtot) {
+    const P = popularity(w, s), regs = Object.entries(s.reg || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([id, n]) => ({ v: w.vills.find(x => x.id === +id), n })).filter(x => x.v);
+    const col = P.arrow === '▲' ? '#7ad07a' : P.arrow === '▼' ? '#e0985a' : '#9aa5ae';
+    use = sec('Usage', kvs([['This season', P.season], ['Last season', P.last], ['Past year', P.year], ['All time', s.vtot || 0]]) + `<div class="polh" style="margin-top:6px"><span><span style="color:${col}">${P.arrow}</span> Popularity: <b>${P.trend}</b></span>${spark(P.hist)}</div>`
+      + `<div class="hint">${P.year ? 'About ' + P.perDay.toFixed(1) + ' ' + (VENUES[s.type] || 'visits') + ' a day. ' : ''}${near.length} villager${near.length === 1 ? '' : 's'} here right now${near.length ? ': ' + near.slice(0, 4).map(v => vlink(v)).join(', ') + (near.length > 4 ? '…' : '') : ''}.</div>`
+      + (regs.length ? `<div class="hint">Regulars: ${regs.map(x => vlink(x.v, '×' + x.n)).join(', ')}</div>` : ''));
+  }
+  const hist = [s.last ? `Last event: ${escapeHtml(s.last)}` : '', s.hp / s.maxHp < 0.75 ? (s.repairer ? 'A builder is on the way to mend it.' : 'Needs repair: builders will mend it when wood is available.') : ''].filter(Boolean);
+  return `<h3>Building</h3><div class="big">${bName(s)}</div><div class="hint">${escapeHtml(purpose || (s.type === 'logcamp' || s.type === 'minecamp' || s.type === 'lodge' ? extra : '') || '')}</div>
+    <div class="polh" style="margin-top:8px"><span>Condition: <b>${condition(s)}</b></span><span class="hint">${Math.round(s.hp)} / ${s.maxHp} hit points</span></div><div class="bar"><i style="background:${conditionColor(s)};width:${pct}%"></i></div>
+    ${use}${people}${sec('Details', facts)}${hist.length ? `<div class="hint" style="margin-top:6px">${hist.join('<br>')}</div>` : ''}`;
+}
+function familyBlock(w, s, home) {
+  const by = ids => ids.map(id => w.vills.find(v => v.id === id)).filter(Boolean);
+  const ptn = s.partner != null ? by([s.partner])[0] : null, kids = by(s.kids), par = by((s.parentIds || []).filter(x => x != null)), mates = home ? by(home.occ).filter(v => v !== s) : [];
+  const fav = Object.entries(s.fav || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => `${(BUILDING_NAMES[t] || t).toLowerCase()} ×${n}`).join(', ');
+  const rows = [['Partner', ptn ? vlink(ptn) : 'none'], par.length ? ['Parents', par.map(v => vlink(v)).join(', ')] : null, ['Children', kids.length ? kids.slice(0, 6).map(v => vlink(v)).join(', ') + (kids.length > 6 ? '…' : '') : 'none'],
+    ['Home', home ? `<a class="lnk" data-bid="${home.id}">cabin at ${home.x},${home.y}</a>${mates.length ? ' with ' + mates.map(v => vlink(v)).join(', ') : ''}` : 'none'], fav ? ['Often found at', escapeHtml(fav)] : null,
+    s.output ? ['Work output', `${Math.round(s.output)} units gathered`] : null, ['Born', dateText(Math.max(0, Math.round(w.day - s.age)))]];
+  return sec('Family &amp; life', `<div class="kvl">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><span>${v}</span></div>`).join('')}</div>`);
+}
 function updateInspector() {
   const w = world, s = selected, el = $('sel');
   if (s instanceof Villager && s.alive) {
@@ -292,36 +348,31 @@ function updateInspector() {
     const home = s.home != null ? w.buildings.get(s.home) : null, sk = Object.entries(s.skill).filter(([, v]) => v > 0.2).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const gr = w.groups.find(x => x.id === s.group), tt = titleOf(w, s), ptn = s.partner != null ? nameOf(s.partner) : null;
     el.innerHTML = `<h3>Villager</h3><div class="big">${escapeHtml(s.name)} <span class="hint">of House ${escapeHtml(s.family)}</span></div>
-      <div class="hint">${s.sex === 'f' ? 'Woman' : 'Man'} · ${s.stage()} · age ${s.age.toFixed(0)} days${tt ? ' · council ' + tt : ''}${s.role && !s.isChild() ? ' · ' + s.role : ''}${s.preg > 0 ? ' · expecting' : ''}</div>
+      <div class="hint">${s.sex === 'f' ? 'Woman' : 'Man'} · ${s.stage()} · age ${ageYears(s.age)}${tt ? ' · council ' + tt : ''}${s.role && !s.isChild() ? ' · ' + s.role : ''}${s.preg > 0 ? ' · expecting' : ''}</div>
       <div class="tags">${s.traitWords().map(t => `<span class="tag">${t}</span>`).join('') || '<span class="tag">Even-tempered</span>'}${gr ? `<span class="tag" style="border-color:${gr.color}">${escapeHtml(gr.name)}</span>` : ''}</div>
       ${s.char ? `<div class="hint" style="margin:4px 0">Character: <b style="color:var(--ink)">${ruthWord(s.char)}</b>, ${faithWord(s.char)}, ${ambWord(s.char)}. ${escapeHtml(upbringingText(s))}</div>` : ''}
       <div style="margin-bottom:6px">${escapeHtml(s.label)}${s.carry ? ' · carrying ' + s.carry.amt + ' ' + s.carry.kind : ''}</div>
       ${bar('Mood (' + moodWord(s.mood) + ')', s.mood, '#c678dd')}${bar('Hunger (full)', s.hunger, '#e0a458')}${bar('Energy', s.energy, '#6a8fd0')}${bar('Health', s.health, '#8fd18b')}
       ${s.desire ? `<div class="hint" style="margin:4px 0"><b>Dreams</b> ${escapeHtml(s.desireText())}</div>` : ''}
       ${w.has('coinage') ? `<div class="hint">Coins: ${s.coins || 0} (earned ${s.earned || 0} in all)</div>` : ''}
-      <div class="hint">Partner: ${ptn ? escapeHtml(ptn) : 'none'} · children: ${s.kids.length} · home: ${home ? 'cabin at ' + home.x + ',' + home.y : 'none'}</div>
+      ${familyBlock(w, s, home)}
       <div class="hint">Skills: ${sk.length ? sk.map(([k, v]) => k + ' (' + skillWord(v) + ')').join(', ') : 'still learning'}</div>
       <div class="hint">Bonds: ${friends.length ? friends.map(f => escapeHtml(f.o.name) + ' ' + (f.r > 0 ? '+' : '') + Math.round(f.r)).join(', ') : 'none yet'}</div>
       ${s.isChild() ? '' : `<div class="opinions"><div class="hint">Opinions</div>${opBar('Growth', s.op.growth)}${opBar('Leisure', s.op.labor)}${opBar('Strict law', s.op.law)}${opBar('Watch', s.op.defense)}${opBar('Taxes', s.op.tax || 0)}</div>`}
       <div class="story"><div class="hint">Life story</div>${s.bio.slice(-8).reverse().map(b => `<div><b>D${b.day}</b>${escapeHtml(b.text)}</div>`).join('') || '<div class="hint">Just beginning.</div>'}</div>`;
   } else if (s instanceof Animal && s.alive) {
-    el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'} Health ${Math.max(0, Math.round(s.hp))}.</div>`;
+    const mx = s.kind === 'wolf' ? 40 : s.kind === 'deer' ? 20 : 5, near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - s.x, v.y - s.y) < 8), pack = s.kind === 'wolf' ? w.animals.filter(a => a.alive && a.kind === 'wolf' && Math.hypot(a.x - s.x, a.y - s.y) < 12).length : 0;
+    el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'}</div>
+      ${bar('Health', 100 * Math.max(0, s.hp) / mx, '#8fd18b')}${bar('Hunger (full)', s.hunger, '#e0a458')}
+      ${sec('Details', kvs([['Sex', s.sex === 'm' ? 'Male' : 'Female'], s.born !== undefined ? ['Age', ageYears(w.day - s.born)] : null, ['Doing', s.moving ? (s.target ? 'Hunting or fleeing' : 'Roaming') : 'Resting'], ['Position', `${Math.round(s.x)}, ${Math.round(s.y)}`], s.kind === 'wolf' ? ['Pack nearby', pack] : null, ['Villagers near', near.length]]))}`;
   } else if (s && s.type && s.w) {
-    const names = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', market: 'Market square', house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
     let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
     if (s.type === 'market') extra = 'Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.';
     if (s.type === 'dock') { const bs = w.boats.filter(b => b.dock === s.id); extra = `${bs.length} fishing boat${bs.length === 1 ? '' : 's'} work from here (${bs.filter(b => b.state === 'out').length} at sea). Catches go straight to the stores.` }
     if (s.type === 'logcamp') extra = 'A depot beside the forest. Woodcutters within about 14 tiles work about 15% faster and get a quarter more wood from every tree.';
     if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
     if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
-    ensureStats(w, s);
-    const here = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - (s.x + s.w / 2), v.y - (s.y + s.h / 2)) < Math.max(s.w, s.h) + 2.5).length, pct = Math.max(0, Math.round(100 * s.hp / s.maxHp));
-    const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.' }[s.type] || '';
-    const usage = s.type === 'store' ? `Raises the storage limit by ${100 + (w.has('granary') ? 40 : 0)}.` : s.type === 'farm' ? '' : (s.type === 'plaza' || s.type === 'tavern') ? `${here} villager${here === 1 ? '' : 's'} here right now.` : '';
-    el.innerHTML = `<h3>Building</h3><div class="big">${names[s.type] || s.type}</div><div class="hint">${extra || escapeHtml(proj || purpose)}</div>
-      <div class="polh" style="margin-top:8px"><span>Condition: <b>${condition(s)}</b></span><span class="hint">${Math.round(s.hp)} / ${s.maxHp} hit points</span></div><div class="bar"><i style="background:${conditionColor(s)};width:${pct}%"></i></div>
-      <div class="stats"><div><span class="hint">Material</span><b>${escapeHtml((BLD_MATERIAL[s.type] || (() => '-'))(s.type === 'plaza' || s.type === 'tavern' ? w : s.style))}</b></div><div><span class="hint">Age</span><b>${ageText(w, s)}</b></div><div><span class="hint">Built in</span><b>${ERAS[s.era !== undefined ? s.era : 0]}</b></div><div><span class="hint">Repairs</span><b>${s.repairs || 0}</b></div><div><span class="hint">Size</span><b>${s.w} x ${s.h} tiles</b></div><div><span class="hint">Wear</span><b>${((BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0]) * 100 > 0 ? (((BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0]) * 3200).toFixed(1) + '% a year' : '-'}</b></div></div>
-      ${usage ? `<div class="hint" style="margin-top:6px">${usage}</div>` : ''}${s.last ? `<div class="hint" style="margin-top:4px">Last event: ${escapeHtml(s.last)}</div>` : ''}${s.hp / s.maxHp < 0.75 ? `<div class="hint" style="margin-top:4px">${s.repairer ? 'A builder is on the way to mend it.' : 'Needs repair: builders will mend it when the stores allow.'}</div>` : ''}`;
+    ensureStats(w, s); el.innerHTML = buildingPanel(w, s, extra);
   } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
 }
 /* ---- side panel tabs ---- */
@@ -331,6 +382,11 @@ function showTab(t) {
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab_' + t));
   if (world) updateUI();
 }
+$('sel').addEventListener('click', e => {
+  const a = e.target.closest('a.lnk'); if (!a || !world) return; e.preventDefault(); let o = null;
+  if (a.dataset.vid) o = world.vills.find(v => v.id === +a.dataset.vid); else if (a.dataset.bid) o = world.buildings.get(+a.dataset.bid);
+  if (o) { selected = o; const T = CFG.T; R.cam.x = (o.x + (o.w || 0) / 2) * T; R.cam.y = (o.y + (o.h || 0) / 2) * T; follow = o instanceof Villager; showTab('village'); updateUI() }
+});
 $('tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab) }); showTab(curTab);
 const chart = $('chart'), cc = chart.getContext('2d');
 function drawChart() {

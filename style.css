@@ -64,7 +64,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .tr.up{color:#e07a6a}.tr.down{color:#8fd18b}
 
 /* fixed-size live panels so nothing shifts while the simulation redraws them */
-#statCard{height:262px;overflow:hidden}#sel{height:372px;overflow-y:auto}#techCard{height:250px;overflow-y:auto}#econCard{height:236px;overflow-y:auto}#councilCard{height:360px;overflow-y:auto}#groupCard{height:150px;overflow-y:auto}
+#statCard{height:262px;overflow:hidden}#sel{height:560px;overflow-y:auto}#techCard{height:250px;overflow-y:auto}#econCard{height:236px;overflow-y:auto}#councilCard{height:360px;overflow-y:auto}#groupCard{height:150px;overflow-y:auto}
 #log{height:230px;max-height:none}#chart{height:84px}
 /* settings drawer: lives over the map, outside the scrolling side panel, so it never moves */
 #drawer{position:absolute;right:12px;top:62px;width:350px;max-height:calc(100% - 262px);overflow-y:auto;background:rgba(16,21,26,.97);border:1px solid var(--line);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:6;box-shadow:0 10px 34px rgba(0,0,0,.55)}
@@ -90,3 +90,5 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .tab{display:none;flex-direction:column;gap:10px}.tab.on{display:flex}.tab>.card{flex:none}
 #log{height:calc(100vh - 150px);min-height:300px}
 #regimeCard{min-height:420px}
+
+.sec{margin-top:10px;padding-top:6px;border-top:1px solid var(--line)}.sech{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:3px}.lnk{color:#9ec5ff;cursor:pointer;text-decoration:none;font-weight:600}.lnk:hover{text-decoration:underline}.spark{display:inline-flex;align-items:flex-end;gap:3px;height:18px}.spark i{display:block;width:6px;background:var(--acc);border-radius:1px}.kvl>div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}.kvl>div>span:last-child{text-align:right}
