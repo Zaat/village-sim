@@ -26,6 +26,7 @@ const GROUP_NAMES = {
   role: { farmer: 'The Fieldwrights', woodcutter: 'The Hewers', miner: 'The Stonebreakers', hunter: "The Hunters' Lodge", fisher: 'The Netters', builder: "The Builders' Guild" },
   trait: { cur: 'The Starwatchers', kind: 'The Hearthkeepers', brave: 'The Stalwarts', soc: 'The Fireside Circle', ind: 'The Early Risers' },
 };
+const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
 const SURNAMES = ['Marsh', 'Ashby', 'Thorne', 'Wren', 'Holloway', 'Fenn', 'Rowe', 'Calder', 'Brook', 'Harrow', 'Vale', 'Stroud', 'Linden', 'Pike'];
 
 const adultsOf = w => w.vills.filter(v => v.isAdult());
@@ -62,7 +63,7 @@ function socialInteract(w, a, b) {
     const ia = a.charisma(), ib = b.charisma(), oa = 0.25 + 0.5 * a.trait.cur, ob = 0.25 + 0.5 * b.trait.cur, f = 1 + prev / 200;
     const oa0 = a.op[topic], ob0 = b.op[topic];
     a.op[topic] = clamp(oa0 + (ob0 - oa0) * ib * ob * 0.35 * f, -1, 1); b.op[topic] = clamp(ob0 + (oa0 - ob0) * ia * oa * 0.35 * f, -1, 1);
-    a.debates++; b.debates++;
+    a.debates++; b.debates++; addKnowledge(w, 1 + 1.5 * a.trait.cur, a); addKnowledge(w, 1 + 1.5 * b.trait.cur, b);
     const heated = diff > 1.1 && kind < 0.5 && w.r() < 0.5 + (prev < 0 ? 0.2 : 0);
     r += heated ? -(6 + w.r() * 8) : (2 + w.r() * 3) * (0.5 + sim);
     if (w.r() < 0.07) w.say(`${a.name} and ${b.name} debated ${ISSUE_TXT[topic].q}${heated ? ' and parted angrily' : ' and each gave ground'}.`);
@@ -81,8 +82,8 @@ function socialInteract(w, a, b) {
 }
 function pairUp(w, a, b) {
   a.partner = b.id; b.partner = a.id; const f = a.sex === 'f' ? a : b, m = a.sex === 'f' ? b : a;
-  if (f.home == null && m.home != null) { const h = w.buildings.get(m.home); if (h && h.occ.length < CFG.HOUSE_CAP) { h.occ.push(f.id); f.home = m.home } }
-  else if (m.home == null && f.home != null) { const h = w.buildings.get(f.home); if (h && h.occ.length < CFG.HOUSE_CAP) { h.occ.push(m.id); m.home = f.home } }
+  if (f.home == null && m.home != null) { const h = w.buildings.get(m.home); if (h && h.occ.length < bedsOf(h)) { h.occ.push(f.id); f.home = m.home } }
+  else if (m.home == null && f.home != null) { const h = w.buildings.get(f.home); if (h && h.occ.length < bedsOf(h)) { h.occ.push(m.id); m.home = f.home } }
   a.mood = Math.min(100, a.mood + 15); b.mood = Math.min(100, b.mood + 15);
   a.story(`Fell in love with ${b.name}.`); b.story(`Fell in love with ${a.name}.`);
   w.say(`${a.name} and ${b.name} have become a couple.`);
@@ -144,7 +145,7 @@ function groupName(w, g, members, taken) {
   if (topFam[1] / members.length >= 0.6) name = `House ${topFam[0]}`;
   if (!name) { const rl = {}; for (const v of members) if (v.role) rl[v.role] = (rl[v.role] || 0) + 1; const tr = Object.entries(rl).sort((a, b) => b[1] - a[1])[0]; if (tr && tr[1] / members.length >= 0.5) name = GROUP_NAMES.role[tr[0]] }
   if (!name) { let bt = 'soc', bv = 0; for (const t of TRAITS) { const m = members.reduce((s, v) => s + v.trait[t], 0) / members.length; if (m > bv) { bv = m; bt = t } } name = GROUP_NAMES.trait[bt] }
-  let out = name, k = 1; while (taken.has(out)) { k++; out = name + ' ' + ['', '', 'II', 'III', 'IV', 'V'][Math.min(k, 5)] }
+  let out = name, k = 1; while (taken.has(out) && k < 500) { k++; out = name + ' ' + (ROMAN[k] || k) }      // always terminates: every pass tries a new suffix
   return out;
 }
 
@@ -203,6 +204,7 @@ function holdMeeting(w) {
   const members = ms.map(m => ({ name: m.v.name, title: m.title, traits: m.v.traitWords().join(', ') || 'even-tempered', op: m.v.op, group: (w.groups.find(x => x.id === m.v.group) || {}).name || null }));
   const history = g.decisions.slice(0, 5).map(d => `Day ${d.day}: ${d.text}`);
   const base = { members, history, state: stateBrief(w) };
+  if (!crisis && !w.tech.focus && techAvailable(w).length) { researchAgenda(w, base, ms); return }
   if (crisis) {
     const options = Object.keys(REMEDIES).map(id => ({ id, text: `${REMEDIES[id].text} (past results score ${g.efficacy[id].toFixed(2)} of 1)` }));
     const score = id => ms.reduce((s, m) => s + remedyPref(m.v, id) + 0.8 * g.efficacy[id] + w.r() * 0.2, 0);

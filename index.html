@@ -10,7 +10,7 @@
 <div id="app">
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span></div>
+    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span></div>
     <div id="ctl">
       <button data-sp="0" title="Space">⏸</button><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button>
       <span class="sep"></span>
@@ -25,6 +25,7 @@
     <div class="card"><h3>History</h3><canvas id="chart" width="300" height="84"></canvas>
       <div class="leg"><span><i style="background:#8fd18b"></i>population</span><span><i style="background:#e0a458"></i>food stock</span></div></div>
     <div class="card" id="sel"><h3>Inspector</h3><div class="hint">Click something on the map.</div></div>
+    <div class="card"><h3>Knowledge &amp; discoveries</h3><div id="techCard"></div></div>
     <div class="card"><h3>Village council</h3><div id="councilCard"></div></div>
     <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
     <div class="card" id="mindCard">
@@ -41,12 +42,19 @@
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
     </div>
+    <details class="card" id="diagCard"><summary>Diagnostics <span class="beta" id="diagBadge">ok</span></summary>
+      <div id="diagBody" class="hint">Collecting…</div>
+      <div class="btnrow"><button id="diagCopy">Copy report</button><button id="diagSave">Download report</button></div>
+      <div class="btnrow"><button id="diagCheck">Self-check &amp; repair</button><button id="diagProf">Clear timings</button></div>
+      <textarea id="diagText" readonly style="display:none"></textarea>
+    </details>
     <div class="card"><h3>Save &amp; load</h3>
       <div class="hint" id="saveInfo">Nothing saved yet.</div>
       <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave" disabled>Load saved</button></div>
       <div class="btnrow"><button id="exportBtn">Export file</button><button id="importBtn">Import file</button></div>
       <input type="file" id="importFile" accept=".json,application/json" style="display:none">
-      <label class="tog" style="margin-top:8px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
+      <label class="tog" style="margin-top:8px"><input type="checkbox" id="autoresume" checked><span class="sw"></span><span>Resume automatically <span class="hint">when the page opens</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
       <div class="hint" style="margin-top:6px">Browser saves stay on this device and can be cleared by the browser. Export a file to keep a village safe or move it to another device.</div>
     </div>
     <div class="card"><h3>World</h3>
@@ -58,9 +66,12 @@
 <script src="src/villager.js"></script>
 <script src="src/town.js"></script>
 <script src="src/society.js"></script>
+<script src="src/tech.js"></script>
+<script src="src/water.js"></script>
 <script src="src/save.js"></script>
 <script src="src/world.js"></script>
 <script src="src/render.js"></script>
+<script src="src/debug.js"></script>
 <script src="src/ui.js"></script>
 </body>
 </html>

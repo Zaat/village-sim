@@ -88,6 +88,8 @@ for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('c
 /* ---------- world lifecycle ---------- */
 function adoptWorld(w) {
   world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
+  world.listeners.push(type => { if (type === 'season' && autosaveOn && $('autosave').checked) saveToStorage(false) });
+  world.dbg.onFault = () => dbgPersist(world); world.profReset();
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k];
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); updateUI();
 }
@@ -107,7 +109,7 @@ function readMeta(key = META_KEY) { try { const m = JSON.parse(localStorage.getI
 function saveToStorage(manual) {
   if (!world || world.tick === 0) return false;
   try {
-    const json = JSON.stringify(serializeWorld(world)), meta = saveMeta(world);
+    const json = JSON.stringify(serializeWorld(world)), meta = { ...saveMeta(world), speed };
     localStorage.setItem(SAVE_KEY, json); localStorage.setItem(META_KEY, JSON.stringify(meta));
     saveInfo(`${manual ? 'Saved' : 'Autosaved'} at ${new Date().toLocaleTimeString()}: ${metaText(meta)} (${Math.round(json.length / 1024)} KB).`); $('loadSave').disabled = false; return true;
   } catch (e) { saveInfo('This browser would not store the save (' + ((e && e.name) || 'error') + '). Use "Export file" to keep your village.'); return false }
@@ -117,6 +119,13 @@ function loadFromStorage() {
     const raw = localStorage.getItem(SAVE_KEY); if (!raw) { saveInfo('No browser save found.'); return false }
     adoptWorld(deserializeWorld(JSON.parse(raw))); saveInfo('Loaded the browser save: ' + metaText(saveMeta(world)) + '.'); return true;
   } catch (e) { saveInfo('Could not load that save: ' + ((e && e.message) || e)); return false }
+}
+async function saveTextFile(name, text, okMsg) {
+  try {
+    if (DL) { const r = await DL.save({ filename: name, data: text }); saveInfo(r.status === 'saved' ? (okMsg || 'Saved ') + name + '.' : 'Sent.') }
+    else { const url = URL.createObjectURL(new Blob([text], { type: 'application/json' })), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); saveInfo((okMsg || 'Saved ') + name + '.') }
+    return true;
+  } catch (e) { saveInfo(e && e.code === 'declined' ? 'Cancelled.' : 'Could not save the file (' + ((e && (e.code || e.message)) || 'error') + ').'); return false }
 }
 async function exportFile() {
   if (!world) return; const json = JSON.stringify(serializeWorld(world)), name = `village-y${world.year}-${SEASONS[world.season].toLowerCase()}-d${world.seasonDay}-seed${world.seed}.json`;
@@ -154,7 +163,7 @@ function nameOf(id) { const v = world.vills.find(x => x.id === id); return v ? v
 function updateUI() {
   const w = world, hrs = (6 + w.tod * 24) % 24, hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60), s = w.season;
   $('hudDate').textContent = `Year ${w.year} · ${SEASONS[s]} · Day ${w.seasonDay}`;
-  $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
+  $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''} · ${ERAS[techEra(w)]}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
   const cap = w.cap(), an = {}; for (const a of w.animals) if (a.alive) an[a.kind] = (an[a.kind] || 0) + 1;
   const stg = {}; for (const v of w.vills) stg[v.stage()] = (stg[v.stage()] || 0) + 1;
   const roles = {}; for (const v of w.vills) if (v.age >= CFG.CHILD_DAYS && !v.isElder()) roles[v.role || 'forager'] = (roles[v.role || 'forager'] || 0) + 1;
@@ -162,12 +171,22 @@ function updateUI() {
   $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.vills.length}</div><div class="hint">mood ${moodWord(mood)}</div></div>
     <div class="hint" style="margin-bottom:4px">${stg.infant || 0} infants · ${stg.child || 0} children · ${stg.youth || 0} youths · ${stg.adult || 0} adults · ${stg.elder || 0} elders</div>
     ${resRow('Food', w.stock.food, cap, '#e0a458')}${resRow('Wood', w.stock.wood, cap, '#a8743c')}${resRow('Stone', w.stock.stone, cap, '#9aa3ab')}
-    <div class="grid" style="margin-top:6px"><div><span>Cabins</span> ${w.houses().length} (${w.houses().length * CFG.HOUSE_CAP} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
-    <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div></div>
+    <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
+    <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  renderCouncil(); renderGroups();
+  renderTech(); renderCouncil(); renderGroups();
   $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
+}
+function renderTech() {
+  const w = world, t = w.tech, el = $('techCard'), era = techEra(w), known = Object.keys(t.known), avail = techAvailable(w);
+  const focus = t.focus ? TECHS[t.focus] : null, pct = focus ? Math.min(100, t.points / focus.cost * 100) : 0;
+  const locked = Object.keys(TECHS).filter(id => !t.known[id] && !avail.includes(id));
+  el.innerHTML = `<div class="era"><b>${ERAS[era]}</b><span class="hint">${known.length} of ${Object.keys(TECHS).length} discoveries</span></div>
+    ${focus ? `<div class="hint">Studying <b style="color:var(--ink)">${focus.name}</b> · ${Math.round(t.points)} / ${focus.cost}</div><div class="tprog"><i style="width:${pct}%"></i></div><div class="hint">${focus.desc}</div>` : avail.length ? `<div class="hint">The council will choose what to study next (${avail.length} option${avail.length === 1 ? '' : 's'} available).</div>` : '<div class="hint">Everything within reach has been learned.</div>'}
+    <div class="techchips">${known.map(id => `<span class="chip" title="${escapeHtml(TECHS[id].desc)}"><i style="background:#9cc4ff"></i>${TECHS[id].name}</span>`).join('')}</div>
+    ${t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('')}
+    ${locked.length ? `<div class="hint" style="margin-top:6px">Still ahead: ${locked.map(id => TECHS[id].name).join(', ')}</div>` : ''}`;
 }
 function renderCouncil() {
   const w = world, g = w.gov, el = $('councilCard');
@@ -207,8 +226,12 @@ function updateInspector() {
   } else if (s instanceof Animal && s.alive) {
     el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'} Health ${Math.max(0, Math.round(s.hp))}.</div>`;
   } else if (s && s.type && s.w) {
-    const names = { house: 'Cabin', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire' };
-    let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${CFG.HOUSE_CAP}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.'; if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
+    const names = { house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+    let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
+    if (s.type === 'dock') { const bs = w.boats.filter(b => b.dock === s.id); extra = `${bs.length} fishing boat${bs.length === 1 ? '' : 's'} work from here (${bs.filter(b => b.state === 'out').length} at sea). Catches go straight to the stores.` }
+    if (s.type === 'logcamp') extra = 'A depot beside the forest. Woodcutters within about 14 tiles work about 15% faster and get a quarter more wood from every tree.';
+    if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
+    if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
     el.innerHTML = `<h3>Building</h3><div class="big">${names[s.type] || s.type}</div><div class="hint">${extra}</div>`;
   } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
 }
@@ -254,18 +277,88 @@ addEventListener('resize', () => { resizeRender(); clampCam() });
 $('restart').onclick = () => { const v = $('seed').value.trim(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v) };
 $('seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('restart').click() });
 
-/* ---------- main loop ---------- */
-let last = performance.now(), acc = 0, uiAcc = 0, miniAcc = 0;
-function frame(now) {
-  const dt = Math.min(100, now - last); last = now;
-  if (speed > 0) { acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now(); while (n-- > 0) { world.step(); if (performance.now() - t0 > 14) { acc = 0; break } } }
-  const pan = 520 * dt / 1000 / R.cam.z, c = R.cam;
-  if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }
-  if (follow && selected && selected.x !== undefined && selected.alive !== false) { const tx = selected.type ? (selected.x + selected.w / 2) * CFG.T : selected.x * CFG.T, ty = selected.type ? (selected.y + selected.h / 2) * CFG.T : selected.y * CFG.T; c.x += (tx - c.x) * 0.12; c.y += (ty - c.y) * 0.12 }
-  clampCam(); render(world, selected, now);
-  uiAcc += dt; if (uiAcc > 300) { uiAcc = 0; updateUI() } miniAcc += dt; if (miniAcc > 120) { miniAcc = 0; drawMinimap(world, selected) }
-  requestAnimationFrame(frame);
+/* ---------- diagnostics panel ---------- */
+const AUTORESUME_KEY = 'villagesim.autoresume';
+let diagTimer = 0, lastDiag = { frames: 0, t: performance.now(), tick: 0 };
+function fmt(x, d = 2) { return Number.isFinite(x) ? x.toFixed(d) : '–' }
+function updateDiag() {
+  const w = world, d = w.dbg, secs = dbgSections(w), errs = dbgAllErrors(w), total = errs.reduce((s, r) => s + r.count, 0), want = CFG.TPS * speed, eff = DBG.tps / CFG.TPS;
+  const limited = speed > 0 && DBG.tps < want * 0.7 && want > 0;
+  $('diagBadge').textContent = total ? total + ' error' + (total === 1 ? '' : 's') : limited ? 'slow' : 'ok'; $('diagBadge').classList.toggle('bad', total > 0);
+  const hw = $('hudWarn'); if (total || limited) { hw.style.display = ''; hw.textContent = total ? '⚠ ' + total + ' error' + (total === 1 ? '' : 's') : '⏱ running at ' + fmt(eff, 1) + '× (CPU-limited)' } else hw.style.display = 'none';
+  const rows = secs.slice(0, 6).map(r => `<tr><td>${r.name}</td><td>${fmt(r.avgMs, 3)} ms avg · ${fmt(r.maxMs, 1)} max · ${Math.round(r.share * 100)}%</td></tr>`).join('');
+  $('diagBody').innerHTML = `<table><tr><td>Speed</td><td>${fmt(eff, 1)}× actual of ${speed}× requested${limited ? ' · <span class="err">can\'t keep up</span>' : ''}</td></tr>
+    <tr><td>Per tick</td><td>${d.ticks ? fmt(d.tickMs / d.ticks, 3) : '–'} ms avg · ${fmt(d.tickMax, 1)} ms worst</td></tr><tr><td>Frame</td><td>${fmt(DBG.fps, 0)} fps · draw ${fmt(DBG.renderMs, 1)} ms</td></tr>
+    <tr><td>Villagers / animals</td><td>${w.vills.length} / ${w.animals.length}</td></tr><tr><td>Bonds tracked</td><td>${w.rel.size}</td></tr><tr><td>Freed from being stuck</td><td>${d.unstuck}</td></tr>
+    <tr><td>Watchdog restarts</td><td>${DBG.restarts}</td></tr></table>
+    <div class="hint">Where the time goes (last 10 s)</div><table>${rows || '<tr><td>No data yet</td></tr>'}</table>
+    ${errs.length ? '<div class="hint">Errors this session</div>' + errs.slice(-5).map(r => `<div class="err">${escapeHtml(r.where)}: ${escapeHtml(r.msg)} ×${r.count}${r.ent ? ' (' + escapeHtml(r.ent) + ')' : ''}</div>`).join('') : '<div class="okk">No errors this session.</div>'}
+    ${DBG.previous.length ? `<div class="hint" style="margin-top:4px">Previous session left ${DBG.previous.length} error record(s), latest: ${escapeHtml(DBG.previous[DBG.previous.length - 1].where)}: ${escapeHtml(DBG.previous[DBG.previous.length - 1].msg)}</div>` : ''}`;
 }
-window.__sim = { get world() { return world }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND };
+async function reportAction(kind) {
+  const text = JSON.stringify(dbgReport(world, speed), null, 2);
+  if (kind === 'save') return saveTextFile(`village-diagnostics-y${world.year}-d${world.day}.json`, text, 'Saved report ');
+  let ok = false; try { await navigator.clipboard.writeText(text); ok = true } catch (e) { }
+  const ta = $('diagText'); if (ok) { saveInfo('Report copied to the clipboard.'); ta.style.display = 'none' } else { ta.value = text; ta.style.display = ''; ta.focus(); ta.select(); saveInfo('The browser blocked copying. The report is in the box below: select all and copy it.') }
+}
+$('diagCopy').onclick = () => reportAction('copy'); $('diagSave').onclick = () => reportAction('save');
+$('diagProf').onclick = () => { world.profReset(); world.dbg.errors.clear(); DBG.session.clear(); DBG.previous = []; try { localStorage.removeItem(ERR_KEY) } catch (e) { } updateDiag() };
+$('diagCheck').onclick = () => { const before = world.dbg.total; world.sanity(); for (const v of world.vills) { try { v.abort(0) } catch (e) { } } saveInfo(world.dbg.total > before ? 'Self-check repaired corrupted values and reset every villager’s current job.' : 'Self-check found nothing to repair; every villager’s current job was reset.'); updateDiag() };
+$('hudWarn').onclick = () => { $('diagCard').open = true; $('diagCard').scrollIntoView({ block: 'center' }) };
+$('autoresume').checked = (() => { try { return localStorage.getItem(AUTORESUME_KEY) !== '0' } catch (e) { return true } })();
+$('autoresume').addEventListener('change', e => { try { localStorage.setItem(AUTORESUME_KEY, e.target.checked ? '1' : '0') } catch (_) { } });
+
+/* ---------- main loop: nothing in here is allowed to stop it ---------- */
+let last = performance.now(), acc = 0, uiAcc = 0, miniAcc = 0, lastFrameAt = performance.now(), frames = 0;
+function frame(now) {
+  const ts = performance.now(); lastFrameAt = ts; frames++;
+  try {
+    const dt = Math.min(100, now - last); last = now;
+    if (speed > 0) {
+      acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now();
+      try { while (n-- > 0) { world.step(); if (performance.now() - t0 > 14) { acc = 0; break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
+    }
+    const pan = 520 * dt / 1000 / R.cam.z, c = R.cam;
+    if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }
+    if (follow && selected && selected.x !== undefined && selected.alive !== false) { const tx = selected.type ? (selected.x + selected.w / 2) * CFG.T : selected.x * CFG.T, ty = selected.type ? (selected.y + selected.h / 2) * CFG.T : selected.y * CFG.T; c.x += (tx - c.x) * 0.12; c.y += (ty - c.y) * 0.12 }
+    const r0 = performance.now(); try { clampCam(); render(world, selected, now) } catch (e) { dbgNote('render', e); dbgPersist(world) } DBG.renderMs = DBG.renderMs * 0.9 + (performance.now() - r0) * 0.1;
+    uiAcc += dt; if (uiAcc > 300) { uiAcc = 0; try { updateUI() } catch (e) { dbgNote('ui', e); dbgPersist(world) } }
+    miniAcc += dt; if (miniAcc > 120) { miniAcc = 0; try { drawMinimap(world, selected) } catch (e) { dbgNote('minimap', e) } }
+  } catch (e) { dbgNote('frame', e); dbgPersist(world) }
+  finally { DBG.frameMs = DBG.frameMs * 0.9 + (performance.now() - ts) * 0.1; requestAnimationFrame(frame) }
+}
+
+/* once a second: live numbers, and the watchdog */
+let wd = { tick: 0, changedAt: performance.now(), stage: 0 };
+setInterval(() => {
+  const nowT = performance.now(), dt = (nowT - lastDiag.t) / 1000; if (dt <= 0) return;
+  DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick };
+  if (++diagTimer % 10 === 0) world.profReset();
+  try { updateDiag() } catch (e) { }
+  if (document.hidden) { wd.changedAt = nowT; wd.tick = world.tick; lastFrameAt = nowT; return }      // browsers pause hidden pages; that is not a freeze
+  if (nowT - lastFrameAt > 4000) {                                  // the drawing loop itself has stopped
+    DBG.restarts++; DBG.watchdog.push({ at: new Date().toISOString(), reason: 'frame loop stalled ' + Math.round(nowT - lastFrameAt) + ' ms' }); lastFrameAt = nowT; requestAnimationFrame(frame); return;
+  }
+  if (world.tick !== wd.tick) { wd.tick = world.tick; wd.changedAt = nowT; wd.stage = 0 }
+  else if (speed > 0 && nowT - wd.changedAt > 8000) {               // frames are drawn but the village has not moved
+    const reason = 'simulation made no progress for ' + Math.round((nowT - wd.changedAt) / 1000) + ' s (stage ' + (wd.stage + 1) + ')'; DBG.restarts++; DBG.watchdog.push({ at: new Date().toISOString(), reason }); dbgNote('watchdog', new Error(reason));
+    try { if (wd.stage === 0) { world.sanity(); for (const v of world.vills) { try { v.abort(0) } catch (e) { } } }      // 1st: repair numbers and reset every job
+      else if (wd.stage === 1) { saveToStorage(false); if (loadFromStorage()) saveInfo('The village stopped responding, so it was reloaded from the last autosave.') }   // 2nd: reload the last autosave
+    } catch (e) { dbgNote('recover', e) }
+    wd.stage = Math.min(2, wd.stage + 1); wd.changedAt = nowT; dbgPersist(world);
+  }
+}, 1000);
+addEventListener('error', e => { dbgNote('window', e.error || new Error(e.message)); if (world) dbgPersist(world) });
+addEventListener('unhandledrejection', e => { dbgNote('promise', e.reason); if (world) dbgPersist(world) });
+
+window.__sim = { get world() { return world }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };
+dbgLoadPrevious();
 newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
-{ const m = readMeta(); if (m) { autosaveOn = false; setSpeed(0); $('loadSave').disabled = false; $('resumeInfo').textContent = metaText(m) + (m.savedAt ? ' · saved ' + new Date(m.savedAt).toLocaleString() : ''); $('resume').style.display = 'flex'; saveInfo('A saved village is waiting: ' + metaText(m) + '.') } }
+{
+  const m = readMeta();
+  if (m) {
+    $('loadSave').disabled = false; let resumed = false;
+    if ($('autoresume').checked) { autosaveOn = false; resumed = loadFromStorage(); if (resumed) { autosaveOn = true; setSpeed(m.speed > 0 ? m.speed : 10); saveInfo('Resumed your saved village automatically: ' + metaText(m) + '.') } }
+    if (!resumed) { autosaveOn = false; setSpeed(0); $('resumeInfo').textContent = metaText(m) + (m.savedAt ? ' · saved ' + new Date(m.savedAt).toLocaleString() : ''); $('resume').style.display = 'flex'; saveInfo('A saved village is waiting: ' + metaText(m) + '.') }
+  }
+}

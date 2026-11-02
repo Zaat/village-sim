@@ -6,7 +6,7 @@ const { chromium } = require('playwright'); const fs=require('fs');
   await p.goto('file:///home/claude/village-sim/index.html'); await p.waitForTimeout(500);
   console.log('1 fresh start: banner visible =',await p.isVisible('#resume'),'| autosave info:',await p.innerText('#saveInfo'));
   await p.evaluate(()=>{__sim.setSpeed(0);__sim.newWorld(777);__sim.run(1200*45)});
-  const s1=await state(); await p.click('#saveNow'); console.log('2 saved:',JSON.stringify(s1),'\n   ',await p.innerText('#saveInfo'));
+  await p.evaluate(()=>localStorage.setItem('villagesim.autoresume','0')); const s1=await state(); await p.click('#saveNow'); console.log('2 saved:',JSON.stringify(s1),'\n   ',await p.innerText('#saveInfo'));
   await p.reload(); await p.waitForTimeout(600);
   console.log('3 after reload: banner =',await p.isVisible('#resume'),'|',(await p.innerText('#resumeInfo')).replace(/\n/g,' ').slice(0,110),'| paused speed button on =',await p.evaluate(()=>document.querySelector('[data-sp="0"]').classList.contains('on')));
   const before=await state(); await p.waitForTimeout(800); const still=await state(); console.log('   world frozen while banner shown:',before.day===still.day);

@@ -1,4 +1,4 @@
-# Village Sim v0.4
+# Village Sim v0.5
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -6,6 +6,23 @@ A watch-mostly village simulation: a 160×112 island you can pan and zoom, four 
 Open `index.html` in a browser. There is no build step and no dependencies (plain script tags, so it also works from `file://`).
 
 The optional **Claude counsel** (right panel) only works on the published page, where the page can call Claude. It is **off by default**. When on, the council and courts hand Claude a short list of concrete options (pass or reject a motion, pick a remedy for a crime wave, choose a sentence). Claude picks one based on each member's personality, opinions and what worked before, and writes the debate. The choice is validated; if it is off, slow or invalid, the village's own rules decide. Limited to 40 deliberations per session.
+
+## Technology, eras and building
+- **Knowledge** comes from debating, practising a trade and teaching. The council chooses what to study next (rules by default; Claude can deliberate). 15 discoveries across four ages: Founding, Craft, Stone & Sail, Iron.
+- **Effects:** bigger catches (nets), faster work (tools, ironwork), more storage and less spoilage (granaries), higher crop yields (rotation, plow), safer winters (medicine, watchtowers), and more.
+- **Architecture changes with the ages:** log cabins, then timber-frame houses (carpentry), then stone houses (masonry). Roads become cobbled. Old homes are upgraded over time, and better homes sleep more people. Storehouses change style too.
+- **Docks and boats** (boat-building): fishing boats sail straight out from a dock to deep water, fish, and return; catches are unloaded at the dock.
+- **Camps** (forestry, mining, hunting lodges): a camp beside dense forest, rock or game acts as a local depot. Workers within about 14 tiles (22 for hunters) work faster, get more per trip, and hunts are surer.
+
+## Diagnostics
+Open the **Diagnostics** panel (it shows ok / slow / N errors). It lists actual speed against requested speed, time per tick, where the time goes, and errors with counts. **Copy report** or **Download report** produces a full JSON report (world state counts, timings, errors with stack traces, last events, and errors left over from the previous session). Send that report if something goes wrong.
+
+Safety nets: every subsystem and every villager/animal update is isolated, so one bug is logged and skipped instead of stopping the village; a villager that keeps failing is removed. A daily self-check repairs corrupted numbers and frees villagers who have stopped making progress. A watchdog restarts a stalled frame loop and, if the village stops advancing, resets all jobs and then reloads the last autosave. The page also **resumes your saved village automatically** when it opens (switchable).
+
+## Performance and stability notes
+- A long run (500 simulated days, 160+ villagers) completes with no errors. The year-12 freeze was an infinite loop in the naming of social circles (a sixth circle with the same base name never found a unique suffix). It is fixed, and every loop in the code is now bounded or provably terminating.
+- Pathfinding failures were the main cost; fields and game that cannot be reached are now skipped before searching, and wildlife uses a spatial grid. Roughly 3x faster at 70+ villagers.
+- Wood is renewable: felled trees often sprout again, foresters replant, and better homes need less firewood.
 
 ## Saving
 - **Autosave** every minute to this browser, plus when you leave the page. Next visit, a prompt offers to **Resume** (the game stays paused until you choose). **Start fresh** keeps the old save as a backup.
@@ -24,6 +41,9 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 | `src/villager.js` | personality, skills, needs, jobs (lazy `go`/`work` steps), wolf response |
 | `src/town.js` | what to build, resource targets, role assignment (self-correcting), events (newcomers, wolves, fever, fire, storm, drought, harsh winter) |
 | `src/society.js` | opinions and debates, bonds and rivalries, emergent social circles, elected council and policies, crime and justice, holidays and games |
+| `src/tech.js` | knowledge, research, the discovery tree, eras, house styles, upgrades |
+| `src/water.js` | docks and fishing boats |
+| `src/debug.js` | diagnostics: error history, performance numbers, downloadable reports |
 | `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
 | `src/render.js` | camera, seasonal terrain cache, pixel art drawn in code, lighting, minimap |
 | `src/ui.js` | panels, input, Claude narrator toggle, main loop |

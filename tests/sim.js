@@ -1,7 +1,7 @@
 // Headless engine test: node tests/sim.js [seed] [days]
 const fs=require('fs'),vm=require('vm'),path=require('path');
 const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;';
+const code=['config','animals','villager','town','society','tech','water','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;';
 const ctx={console};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+(process.argv[2]||12345),days=+(process.argv[3]||96);
 const w=new ctx.World(seed);
@@ -25,3 +25,11 @@ console.log('couples',ad.filter(v=>v.partner!=null).length/2,'fertile women',ad.
 console.log('stages',JSON.stringify(w.vills.reduce((a,v)=>{a[v.stage()]=(a[v.stage()]||0)+1;return a},{})),'mood avg',Math.round(ad.reduce((s,v)=>s+v.mood,0)/Math.max(1,ad.length)));
 console.log('desires',JSON.stringify(ad.reduce((a,v)=>{const k=v.desire?v.desire.kind:'none';a[k]=(a[k]||0)+1;return a},{})));
 console.log((w.gov.decisions.slice(0,6)).map(d=>'D'+d.day+' '+d.text).join('\n'));
+// technology & water summary
+{
+  const styles=w.houses().reduce((a,h)=>{a[h.style||0]=(a[h.style||0]||0)+1;return a},{});
+  console.log('tech: era',typeof techEra!=='undefined'?techEra(w):'?','known',JSON.stringify(w.tech.known),'focus',w.tech.focus,'points',Math.round(w.tech.points));
+  console.log('discoveries:',w.tech.log.map(l=>`D${l.day} ${l.id}${l.by?' ('+l.by+')':''}`).join(', '));
+  console.log('house styles',JSON.stringify(styles),'docks',w.of('dock').length,'boats',w.boats.length,'beds',w.beds(),'roads cobbled',w.road.filter(x=>x===2).length);
+}
+{ const cnt=t=>w.of(t).length; console.log('camps: logging',cnt('logcamp'),'mining',cnt('minecamp'),'lodges',cnt('lodge'),'docks',cnt('dock'),'boats',w.boats.length,'| errors:',JSON.stringify([...w.dbg.errors.values()].map(e=>e.where+': '+e.msg+' x'+e.count))); }

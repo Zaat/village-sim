@@ -101,8 +101,13 @@ function drawFeature(g, w, x, y, now) {
 }
 function roadTile(g, w, x, y) {
   const X = x * CFG.T, Y = y * CFG.T, h = hash2(x, y), s = w.season;
-  rc(g, s === 3 ? '#cbc9c0' : '#b99d6c', X, Y, CFG.T, CFG.T); rc(g, s === 3 ? '#b7b5ad' : '#a58a5b', X + (h & 11), Y + ((h >> 4) & 11), 3, 2); rc(g, s === 3 ? '#e8e6df' : '#cdb383', X + ((h >> 8) & 11), Y + ((h >> 12) & 11), 2, 1);
-  const i = y * CFG.W + x; if (!w.road[i - 1]) rc(g, 'rgba(0,0,0,.1)', X, Y, 1, CFG.T); if (!w.road[i + 1]) rc(g, 'rgba(0,0,0,.1)', X + CFG.T - 1, Y, 1, CFG.T);
+  const i = y * CFG.W + x;
+  if (w.road[i] === 2) {                      // cobbled: set stones with mortar
+    rc(g, s === 3 ? '#cfd3d6' : '#8f949a', X, Y, CFG.T, CFG.T);
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const ox = (r % 2) * 3 + c * 5, hh = hash2(x * 3 + c, y * 4 + r); rc(g, s === 3 ? '#e6e9eb' : ['#a9aeb3', '#9ea3a8', '#b4b9be'][hh % 3], X + ox, Y + r * 4, 4, 3) }
+    if (!w.road[i - 1]) rc(g, 'rgba(0,0,0,.14)', X, Y, 1, CFG.T); if (!w.road[i + 1]) rc(g, 'rgba(0,0,0,.14)', X + CFG.T - 1, Y, 1, CFG.T); return;
+  }
+  rc(g, s === 3 ? '#cbc9c0' : '#b99d6c', X, Y, CFG.T, CFG.T); rc(g, s === 3 ? '#b7b5ad' : '#a58a5b', X + (h & 11), Y + ((h >> 4) & 11), 3, 2); rc(g, s === 3 ? '#e8e6df' : '#cdb383', X + ((h >> 8) & 11), Y + ((h >> 12) & 11), 2, 1); if (!w.road[i - 1]) rc(g, 'rgba(0,0,0,.1)', X, Y, 1, CFG.T); if (!w.road[i + 1]) rc(g, 'rgba(0,0,0,.1)', X + CFG.T - 1, Y, 1, CFG.T);
 }
 function farmArt(g, w, b) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, Wd = b.w * CFG.T, Ht = b.h * CFG.T, s = w.season;
@@ -115,28 +120,82 @@ function farmArt(g, w, b) {
   if (s === 3) { rc(g, 'rgba(255,255,255,.6)', X, Y, Wd, Ht) }
 }
 function houseArt(g, w, b, night, now) {
-  const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season, lit = b.occ.length > 0;
+  const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season, lit = b.occ.length > 0, st = b.style || 0;
   rc(g, 'rgba(0,0,0,.22)', X + 2, Y + 29, 30, 3);
-  rc(g, '#b88a58', X + 3, Y + 15, 26, 15); for (let i = 0; i < 5; i++) rc(g, '#9c7346', X + 3, Y + 18 + i * 3, 26, 1); rc(g, '#7a5632', X + 3, Y + 15, 1, 15); rc(g, '#7a5632', X + 28, Y + 15, 1, 15);
-  const rcol = b.id % 3 === 0 ? ['#9a3b2c', '#7f2e22'] : b.id % 3 === 1 ? ['#7b4a2a', '#623a20'] : ['#4f6b7a', '#3d5461'];
-  for (let r = 0; r < 13; r++) { const l = Math.round(10 - r * 10 / 12); rc(g, r % 3 === 2 ? rcol[1] : rcol[0], X + l, Y + 3 + r, 32 - 2 * l, 1) }
-  rc(g, rcol[1], X, Y + 15, 32, 1);
-  if (s === 3) { for (let r = 0; r < 4; r++) { const l = Math.round(10 - r * 10 / 12); rc(g, '#fff', X + l, Y + 3 + r, 32 - 2 * l, 1) } rc(g, '#eef3f6', X + 1, Y + 15, 30, 1); rc(g, '#fff', X + 4, Y + 10, 6, 1); rc(g, '#fff', X + 21, Y + 10, 6, 1) }
-  rc(g, '#7a7f85', X + 22, Y + 1, 4, 7); rc(g, '#5b6066', X + 22, Y + 1, 4, 1);
-  rc(g, '#5a3a22', X + 13, Y + 21, 6, 9); rc(g, '#d8b56a', X + 17, Y + 25, 1, 1);
-  const wc = lit && night ? '#ffd76a' : '#9fc4d8'; for (const wx of [5, 22]) { rc(g, '#5a3a22', X + wx - 1, Y + 18, 7, 7); rc(g, wc, X + wx, Y + 19, 5, 5); rc(g, '#5a3a22', X + wx + 2, Y + 19, 1, 5); rc(g, '#5a3a22', X + wx, Y + 21, 5, 1) }
+  if (st === 0) { rc(g, '#b88a58', X + 3, Y + 15, 26, 15); for (let i = 0; i < 5; i++) rc(g, '#9c7346', X + 3, Y + 18 + i * 3, 26, 1); rc(g, '#7a5632', X + 3, Y + 15, 1, 15); rc(g, '#7a5632', X + 28, Y + 15, 1, 15) }
+  else if (st === 1) {                           // timber frame: plaster panels between dark beams
+    const wd = '#5a3a22'; rc(g, '#e0d2b4', X + 3, Y + 15, 26, 15); rc(g, wd, X + 3, Y + 15, 26, 1); rc(g, wd, X + 3, Y + 22, 26, 1); rc(g, wd, X + 3, Y + 29, 26, 1);
+    for (const px of [3, 10, 21, 27]) rc(g, wd, X + px, Y + 15, 2, 15); for (let i = 0; i < 6; i++) { rc(g, wd, X + 4 + i, Y + 16 + i, 1, 1); rc(g, wd, X + 26 - i, Y + 16 + i, 1, 1) }
+  } else {                                       // dressed stone
+    rc(g, '#9ea4aa', X + 3, Y + 15, 26, 15); for (let r = 0; r < 4; r++) { const y = Y + 15 + r * 4; rc(g, '#7b8186', X + 3, y + 3, 26, 1); for (let c = 0; c < 5; c++) rc(g, '#7b8186', X + 3 + (r % 2 ? 3 : 0) + c * 6, y, 1, 3) }
+    rc(g, '#b9bfc4', X + 3, Y + 15, 26, 1); rc(g, '#6f757a', X + 3, Y + 29, 26, 1);
+  }
+  const pal = st === 0 ? (b.id % 3 === 0 ? ['#9a3b2c', '#7f2e22'] : b.id % 3 === 1 ? ['#7b4a2a', '#623a20'] : ['#4f6b7a', '#3d5461']) : st === 1 ? ['#b4553a', '#8f3f29'] : ['#566472', '#43505c'];
+  const top = st === 1 ? 1 : 3, rows = st === 1 ? 15 : 13;
+  for (let r = 0; r < rows; r++) { const l = Math.round(10 - r * 10 / (rows - 1)); rc(g, r % 3 === 2 ? pal[1] : pal[0], X + l, Y + top + r, 32 - 2 * l, 1) }
+  rc(g, pal[1], X, Y + top + rows - 1, 32, 1); if (st === 2) { rc(g, '#2f3943', X + 11, Y + top, 10, 1); rc(g, '#6a7884', X + 4, Y + top + rows - 3, 24, 1) }
+  if (s === 3) { for (let r = 0; r < 4; r++) { const l = Math.round(10 - r * 10 / (rows - 1)); rc(g, '#fff', X + l, Y + top + r, 32 - 2 * l, 1) } rc(g, '#eef3f6', X + 1, Y + top + rows - 1, 30, 1) }
+  if (st === 2) { rc(g, '#8a9096', X + 21, Y, 5, 9); rc(g, '#6a7076', X + 21, Y, 5, 1) } else { rc(g, st === 1 ? '#8a4a3a' : '#7a7f85', X + 22, Y + 1, 4, 7); rc(g, '#5b6066', X + 22, Y + 1, 4, 1) }
+  rc(g, '#5a3a22', X + 13, Y + 21, 6, 9); rc(g, '#d8b56a', X + 17, Y + 25, 1, 1); if (st === 2) { rc(g, '#5a3a22', X + 14, Y + 20, 4, 1); rc(g, '#7b8186', X + 12, Y + 20, 1, 10); rc(g, '#7b8186', X + 19, Y + 20, 1, 10) } if (st === 1) rc(g, '#7a5632', X + 12, Y + 19, 8, 2);
+  const wc = lit && night ? '#ffd76a' : '#9fc4d8';
+  for (const wx of [5, 22]) { const fr = st === 2 ? '#7b8186' : '#5a3a22'; rc(g, fr, X + wx - 1, Y + 18, 7, 7); rc(g, wc, X + wx, Y + 19, 5, 5); rc(g, fr, X + wx + 2, Y + 19, 1, 5); rc(g, fr, X + wx, Y + 21, 5, 1); if (st === 1) { rc(g, '#4a6a8a', X + wx - 2, Y + 18, 1, 7); rc(g, '#4a6a8a', X + wx + 6, Y + 18, 1, 7) } }
   if (lit && (night || s === 3 || w.tod > 0.55)) for (let k = 0; k < 3; k++) { const t = ((now / 700) + k / 3) % 1; g.fillStyle = `rgba(210,210,215,${0.5 * (1 - t)})`; g.fillRect(X + 22 + Math.sin(t * 5 + k) * 2, Y - t * 10, 3 + t * 3, 3 + t * 3) }
 }
 function storeArt(g, w, b, now) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season;
   rc(g, 'rgba(0,0,0,.22)', X + 1, Y + 29, 31, 3);
-  rc(g, '#a88a5a', X + 2, Y + 13, 28, 17); for (let i = 0; i < 6; i++) rc(g, '#8d7248', X + 2, Y + 16 + i * 3, 28, 1);
-  for (let r = 0; r < 11; r++) { const l = Math.round(8 - r * 8 / 10); rc(g, r % 3 === 2 ? '#52463a' : '#6b5a4a', X + l, Y + 3 + r, 32 - 2 * l, 1) } rc(g, '#3e352c', X, Y + 14, 32, 1);
+  const st = b.style || 0, wallC = ['#a88a5a', '#c9b182', '#9ea4aa'][st], lineC = ['#8d7248', '#8a6a42', '#7b8186'][st], roofC = [['#6b5a4a', '#52463a'], ['#8b4a3a', '#6f3a2d'], ['#566472', '#43505c']][st];
+  rc(g, wallC, X + 2, Y + 13, 28, 17); for (let i = 0; i < 6; i++) rc(g, lineC, X + 2, Y + 16 + i * 3, 28, 1); if (st === 1) { for (const px of [2, 15, 28]) rc(g, '#5a3a22', X + px, Y + 13, 2, 17); rc(g, '#d9c48a', X + 21, Y + 16, 5, 4); rc(g, '#5a3a22', X + 21, Y + 16, 5, 1) }
+  for (let r = 0; r < 11; r++) { const l = Math.round(8 - r * 8 / 10); rc(g, r % 3 === 2 ? roofC[1] : roofC[0], X + l, Y + 3 + r, 32 - 2 * l, 1) } rc(g, roofC[1], X, Y + 14, 32, 1);
   if (s === 3) for (let r = 0; r < 4; r++) { const l = Math.round(8 - r * 0.8); rc(g, '#fff', X + l, Y + 3 + r, 32 - 2 * l, 1) }
   rc(g, '#4b3a2a', X + 9, Y + 19, 14, 11); rc(g, '#3a2c20', X + 15, Y + 19, 2, 11); rc(g, '#6b5640', X + 9, Y + 19, 14, 1);
   const full = Math.min(1, w.stock.food / w.cap());
   if (full > 0.15) { rc(g, '#d9c48a', X + 3, Y + 25, 5, 5); rc(g, '#c4ad70', X + 3, Y + 25, 5, 1) } if (full > 0.45) { rc(g, '#d9c48a', X + 24, Y + 25, 5, 5); rc(g, '#c4ad70', X + 24, Y + 25, 5, 1) } if (full > 0.75) rc(g, '#d9c48a', X + 24, Y + 21, 5, 4);
   rc(g, '#7a5a30', X + 1, Y + 26, 3, 4); rc(g, '#4a3a20', X + 1, Y + 27, 3, 1);
+}
+function logcampArt(g, w, b, now) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T;
+  rc(g, 'rgba(0,0,0,.2)', X + 1, Y + 29, 31, 3); rc(g, '#7a5f3c', X + 1, Y + 14, 30, 16); rc(g, '#6b5232', X + 4, Y + 20, 8, 3); rc(g, '#8a6e48', X + 18, Y + 26, 10, 2);
+  for (const [lx, ly, lw] of [[2, 25, 14], [3, 21, 12], [5, 17, 9]]) { rc(g, '#7a4a22', X + lx, Y + ly, lw, 4); rc(g, '#9a6632', X + lx, Y + ly, lw, 1); rc(g, '#d9b27a', X + lx, Y + ly + 1, 2, 2); rc(g, '#d9b27a', X + lx + lw - 2, Y + ly + 1, 2, 2) }
+  rc(g, '#5a3d22', X + 19, Y + 11, 2, 16); rc(g, '#5a3d22', X + 29, Y + 15, 2, 12);
+  for (let i = 0; i < 14; i++) { rc(g, i % 3 === 0 ? '#8a7a5a' : '#a89268', X + 18 + i, Y + 9 + Math.floor(i * 0.45), 1, 3) }
+  rc(g, '#c9b182', X + 21, Y + 21, 7, 5); rc(g, '#a89268', X + 21, Y + 21, 7, 1);
+  rc(g, '#6b4a2a', X + 14, Y + 24, 4, 5); rc(g, '#8a8f95', X + 13, Y + 20, 1, 6); rc(g, '#a9aeb3', X + 12, Y + 19, 3, 2);
+  if (w.season === 3) { rc(g, '#fff', X + 18, Y + 9, 14, 1); rc(g, '#fff', X + 5, Y + 16, 9, 1) }
+}
+function minecampArt(g, w, b, now) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T;
+  rc(g, 'rgba(0,0,0,.2)', X + 1, Y + 29, 31, 3); rc(g, '#6f6a62', X + 1, Y + 15, 30, 15);
+  rc(g, '#7d8288', X + 3, Y + 1, 21, 9); rc(g, '#9aa0a6', X + 3, Y + 1, 21, 2); rc(g, '#6b7076', X + 5, Y + 6, 17, 3);
+  rc(g, '#5a3d22', X + 6, Y + 8, 2, 14); rc(g, '#5a3d22', X + 17, Y + 8, 2, 14); rc(g, '#6b4a2a', X + 5, Y + 7, 15, 2); rc(g, '#17130f', X + 8, Y + 10, 9, 12);
+  rc(g, '#3a3028', X + 8, Y + 10, 9, 1); rc(g, '#4a4038', X + 10, Y + 22, 20, 1); rc(g, '#4a4038', X + 10, Y + 25, 20, 1); for (let i = 0; i < 6; i++) rc(g, '#6b4a2a', X + 11 + i * 3, Y + 22, 1, 4);
+  rc(g, '#7a5232', X + 19, Y + 18, 9, 6); rc(g, '#9a6a3a', X + 19, Y + 18, 9, 1); rc(g, '#aab2b8', X + 20, Y + 16, 7, 3); rc(g, '#c4cacf', X + 21, Y + 16, 3, 1); rc(g, '#222', X + 20, Y + 24, 2, 2); rc(g, '#222', X + 26, Y + 24, 2, 2);
+  rc(g, '#8a9096', X + 2, Y + 24, 5, 5); rc(g, '#aab0b6', X + 2, Y + 24, 5, 1); rc(g, '#8a9096', X + 5, Y + 26, 5, 3); rc(g, '#ffe27a', X + 6, Y + 6, 2, 1);
+  if (w.season === 3) rc(g, '#fff', X + 3, Y + 1, 21, 1);
+}
+function lodgeArt(g, w, b, now) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T;
+  rc(g, 'rgba(0,0,0,.2)', X + 1, Y + 29, 31, 3); rc(g, '#8b6b45', X + 4, Y + 15, 18, 15); for (let i = 0; i < 4; i++) rc(g, '#6f5436', X + 4, Y + 18 + i * 3, 18, 1);
+  for (let r = 0; r < 13; r++) { const l = Math.round(6 - r * 6 / 12); rc(g, r % 2 ? '#c4a24a' : '#b8963e', X + 1 + l, Y + 3 + r, 24 - 2 * l, 1) } rc(g, '#8a6a2a', X + 1, Y + 15, 24, 1);
+  rc(g, '#3e2c1c', X + 10, Y + 21, 6, 9); rc(g, '#d9cdb0', X + 9, Y + 18, 1, 3); rc(g, '#d9cdb0', X + 8, Y + 17, 1, 2); rc(g, '#d9cdb0', X + 16, Y + 18, 1, 3); rc(g, '#d9cdb0', X + 17, Y + 17, 1, 2); rc(g, '#d9cdb0', X + 10, Y + 19, 6, 1);
+  rc(g, '#5a3d22', X + 25, Y + 14, 2, 15); rc(g, '#5a3d22', X + 30, Y + 14, 2, 15); rc(g, '#5a3d22', X + 25, Y + 14, 7, 1); rc(g, '#b98a5a', X + 26, Y + 15, 4, 7); rc(g, '#a07a4a', X + 26, Y + 15, 4, 1); rc(g, '#c9a070', X + 28, Y + 17, 3, 5);
+  if (w.season !== 1 || w.tod > 0.55) for (let k = 0; k < 2; k++) { const t = ((now / 800) + k / 2) % 1; g.fillStyle = `rgba(200,200,205,${0.5 * (1 - t)})`; g.fillRect(X + 11 + Math.sin(t * 4 + k) * 2, Y + 1 - t * 9, 3 + t * 2, 3 + t * 2) }
+  if (w.season === 3) rc(g, '#fff', X + 5, Y + 3, 16, 1);
+}
+function dockArt(g, w, b, now) {
+  const T = CFG.T, X = b.x * T, Y = b.y * T, [ux, uy] = b.dir || [1, 0], len = 3 * T;
+  const plank = (x, y, wd, ht) => { rc(g, '#8a6a42', x, y, wd, ht); if (wd > ht) for (let i = 3; i < wd; i += 4) rc(g, '#6b4f30', x + i, y, 1, ht); else for (let i = 3; i < ht; i += 4) rc(g, '#6b4f30', x, y + i, wd, 1) };
+  if (ux !== 0) { const x0 = ux > 0 ? X : X - 2 * T; plank(x0, Y + 5, len, 6); for (const px of [x0 + 2, x0 + len - 4]) { rc(g, '#4a3220', px, Y + 3, 2, 3); rc(g, '#4a3220', px, Y + 11, 2, 3) } }
+  else { const y0 = uy > 0 ? Y : Y - 2 * T; plank(X + 5, y0, 6, len); for (const py of [y0 + 2, y0 + len - 4]) { rc(g, '#4a3220', X + 3, py, 3, 2); rc(g, '#4a3220', X + 11, py, 3, 2) } }
+  if (w.season === 3) { if (ux !== 0) rc(g, 'rgba(255,255,255,.8)', ux > 0 ? X : X - 2 * T, Y + 5, len, 1); else rc(g, 'rgba(255,255,255,.8)', X + 5, uy > 0 ? Y : Y - 2 * T, 1, len) }
+}
+function drawBoat(g, bt, w, now) {
+  const T = CFG.T, x = Math.round(bt.x * T), y = Math.round(bt.y * T), nav = w.has('navigation'), bob = Math.round(Math.sin(now / 420 + bt.id) * 1);
+  rc(g, 'rgba(255,255,255,.35)', x - 11, y + 3 + bob, 22, 1); if (bt.state === 'out') { rc(g, 'rgba(255,255,255,.3)', x - 13 * bt.dir, y + 1 + bob, 6, 1); rc(g, 'rgba(255,255,255,.2)', x - 16 * bt.dir, y + 3 + bob, 5, 1) }
+  g.save(); g.translate(x, y + bob); g.scale(bt.dir, 1);
+  rc(g, '#6b4426', -9, -2, 18, 4); rc(g, '#7a5230', -8, -3, 16, 1); rc(g, '#8f6338', -9, -3, 1, 1); rc(g, '#8f6338', 9, -4, 1, 2); rc(g, '#3e2a18', -7, 0, 14, 1); rc(g, '#a07a4a', -8, -4, 16, 1);
+  if (nav) { rc(g, '#5a3d22', 0, -15, 1, 12); for (let i = 0; i < 9; i++) rc(g, i % 2 ? '#f0ece0' : '#fbf8ef', 1, -14 + i, 8 - Math.floor(i * 0.7), 1) } else if (bt.state === 'out') { rc(g, '#5a3d22', -3, -4, 1, 1); rc(g, '#8a6a42', -7, -2, 6, 1) }
+  g.restore();
 }
 function campfireArt(g, w, b, now, dark) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, f = ((now / 110) | 0) % 3;
@@ -152,10 +211,11 @@ function bpArt(g, w, bp, now) {
   if (bp.type === 'road') return;
   const need = bp.cost.wood + bp.cost.stone, have = bp.have.wood + bp.have.stone, f = (need ? have / need : 1) * 0.5 + bp.prog / bp.time * 0.5;
   rc(g, '#000', X + 1, Y + Ht - 4, Wd - 2, 3); rc(g, '#ffd45a', X + 1, Y + Ht - 4, (Wd - 2) * f, 3);
-  if (bp.prog > 0) { const hgt = Math.round(Ht * 0.6 * bp.prog / bp.time); rc(g, 'rgba(150,110,70,.75)', X + 3, Y + Ht - 6 - hgt, Wd - 6, hgt) }
+  if (bp.type === 'upgrade') { rc(g, '#a07a4a', X, Y, 2, Ht); rc(g, '#a07a4a', X + Wd - 2, Y, 2, Ht); for (let k = 4; k < Ht; k += 8) rc(g, '#8a6a42', X, Y + k, Wd, 1) }
+  if (bp.prog > 0 && bp.type !== 'upgrade') { const hgt = Math.round(Ht * 0.6 * bp.prog / bp.time); rc(g, 'rgba(150,110,70,.75)', X + 3, Y + Ht - 6 - hgt, Wd - 6, hgt) }
 }
 function drawBuilding(g, w, b, now, dark) {
-  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark);
+  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now);
 }
 
 /* ---------- animals & villagers ---------- */
@@ -183,7 +243,7 @@ const SHIRTS_M = ['#6a8fd0', '#5a7fb0', '#7a9a6a', '#a07850', '#8a6aa8'], SHIRTS
 const HATS = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', builder: '#e8a03a', hunter: '#3f7d4a', fisher: '#4aa3d8' };
 function drawVillager(g, v, w, now, sel) {
   const x = Math.round(v.x * CFG.T), y = Math.round(v.y * CFG.T), st = v.stage(), k = { infant: 0.5, child: 0.7, youth: 0.88, adult: 1, elder: 0.96 }[st], s = w.season;
-  rc(g, 'rgba(0,0,0,.22)', x - 4 * k, y - 1, 8 * k, 2);
+  if (!v.boat) rc(g, 'rgba(0,0,0,.22)', x - 4 * k, y - 1, 8 * k, 2);
   if (sel === v) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y, 7, 3.5, 0, 0, 7); g.stroke() }
   const shirt = (v.sex === 'f' ? SHIRTS_F : SHIRTS_M)[v.look % 5], skin = SKIN[(v.look >> 3) % 5], hair = st === 'elder' ? '#b9bdc2' : HAIR[(v.look >> 5) % 6], gcol = R.gcol && R.gcol.get(v.group);
   g.save(); g.translate(x, y); g.scale(v.dir * k, k);
@@ -192,7 +252,7 @@ function drawVillager(g, v, w, now, sel) {
     const t = (now / 500) % 3; g.fillStyle = '#fff'; g.font = '6px sans-serif'; g.fillText('z', x + 4 + t, y - 9 - t * 2); return;
   }
   const mv = v.cur && v.cur.type === 'go' && v.path.length > 0, ph = mv ? ((now / 140) | 0) % 2 : 0, work = v.cur && v.cur.type === 'work' && !v.fighting && v.label !== 'Idling' && !/Chat|Talk|Feast|Eat|Hid/.test(v.label), sw = work ? ((now / 160) | 0) % 2 : 0;
-  rc(g, '#3b3f4a', -2, -4, 2, 4 - (ph ? 1 : 0)); rc(g, '#3b3f4a', 1, -4, 2, 4 - (ph ? 0 : 1));
+  if (v.boat) g.translate(0, 2); else { rc(g, '#3b3f4a', -2, -4, 2, 4 - (ph ? 1 : 0)); rc(g, '#3b3f4a', 1, -4, 2, 4 - (ph ? 0 : 1)) }
   rc(g, shirt, -3, -9, 6, 6); rc(g, 'rgba(0,0,0,.15)', -3, -4, 6, 1); if (s === 3) rc(g, '#e8edf0', -3, -9, 6, 1);
   rc(g, skin, -4, -8 + (ph ? 1 : 0), 1, 3); rc(g, skin, 3, -8 - (work ? sw * 2 : (ph ? 0 : 1)), 1, 3);
   rc(g, skin, -2, -13, 5, 5); rc(g, hair, -2, -14, 5, 2); rc(g, hair, -3, -13, 1, 3); rc(g, '#222', 1, -11, 1, 1);
@@ -226,8 +286,9 @@ function render(w, sel, now) {
   for (const sc of w.scars) if (w.tick < sc.until && inViewR(sc, x0, x1, y0, y1)) scarArt(g, sc, w);
   const rows = []; for (let y = y0; y <= y1 + 3; y++) rows[y] = [];
   const inView = (bx, by, bw, bh) => bx + bw >= x0 && bx <= x1 && by + bh >= y0 && by <= y1 + 3;
-  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
+  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
   for (const bp of w.bps) if (inView(bp.x, bp.y, bp.w, bp.h)) bpArt(g, w, bp, now);
+  for (const bt of w.boats) { const ty = Math.floor(bt.y); if (rows[ty]) rows[ty].push({ y: bt.y * T - 2, fn: () => drawBoat(g, bt, w, now) }) }
   for (const a of w.animals) { if (!a.alive) continue; const ty = Math.floor(a.y); if (rows[ty] && a.x / 1 >= x0 - 1 && a.x <= x1 + 1) rows[ty].push({ y: a.y * T, fn: () => drawAnimal(g, a, w, now, sel) }) }
   for (const v of w.vills) { const ty = Math.floor(v.y); if (rows[ty] && v.x >= x0 - 1 && v.x <= x1 + 1) rows[ty].push({ y: v.y * T, fn: () => drawVillager(g, v, w, now, sel) }) }
   for (let y = y0; y <= y1; y++) {
@@ -267,7 +328,7 @@ function bunting(g, w, now) {
 function drawMinimap(w, sel) {
   const m = R.mini; if (!m || !R.miniBase) return; const g = m.getContext('2d');
   g.drawImage(R.miniBase, 0, 0);
-  for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
+  for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
   g.fillStyle = '#b99d6c'; for (let i = 0; i < w.road.length; i++) if (w.road[i]) g.fillRect(i % CFG.W, (i / CFG.W) | 0, 1, 1);
   for (const a of w.animals) if (a.alive && a.kind === 'wolf') { g.fillStyle = '#ff3b3b'; g.fillRect(a.x - 1, a.y - 1, 2, 2) }
   for (const v of w.vills) { g.fillStyle = v === sel ? '#fff' : '#ffe24a'; g.fillRect(v.x - 0.5, v.y - 0.5, 1.5, 1.5) }

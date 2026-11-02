@@ -3,9 +3,10 @@
    town.js — the town "mind": what to build, who does which job, and the
    random events that give the story texture. Villagers decide WHEN and HOW.
    ========================================================================== */
-function makeBp(w, type, x, y) {
-  const [bw, bh] = type === 'road' ? [1, 1] : CFG.SIZE[type];
-  const bp = { id: w.bpnext++, type, x, y, w: bw, h: bh, idx: y * CFG.W + x, cost: CFG.COST[type], have: { wood: 0, stone: 0 }, inc: { wood: 0, stone: 0 }, prog: 0, time: CFG.BUILD_TIME[type], workers: 0, alive: true, ready() { return this.have.wood >= this.cost.wood && this.have.stone >= this.cost.stone } };
+function makeBp(w, type, x, y, extra) {
+  const tb = type === 'upgrade' ? w.buildings.get(extra.target) : null, [bw, bh] = type === 'road' ? [1, 1] : tb ? [tb.w, tb.h] : CFG.SIZE[type];
+  const cost = type === 'upgrade' ? (extra.toStyle === 2 ? { wood: 4, stone: 8 } : { wood: 6, stone: 0 }) : CFG.COST[type];
+  const bp = { id: w.bpnext++, type, x, y, w: bw, h: bh, idx: y * CFG.W + x, cost, ...(extra || {}), have: { wood: 0, stone: 0 }, inc: { wood: 0, stone: 0 }, prog: 0, time: CFG.BUILD_TIME[type], workers: 0, alive: true, ready() { return this.have.wood >= this.cost.wood && this.have.stone >= this.cost.stone } };
   w.bps.push(bp); for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) w.bpAt.set((y + dy) * CFG.W + x + dx, bp);
   return bp;
 }
@@ -30,9 +31,57 @@ function placeBuilding(w, type) {
   }
   return null;
 }
+/* camps: built beside dense resources once the village has the know-how */
+const CAMP_INFO = {
+  logcamp: { tech: 'forestry', res: 'wood', limit: pop => Math.min(3, 1 + Math.floor(pop / 45)), min: 16, r: 8, count: (w, x, y, r) => countFeat(w, x, y, r, f => f === FEAT.OAK || f === FEAT.PINE) },
+  minecamp: { tech: 'mining', res: 'stone', limit: pop => Math.min(2, 1 + Math.floor(pop / 60)), min: 8, r: 7, count: (w, x, y, r) => countFeat(w, x, y, r, f => f === FEAT.STONE) },
+  lodge: { tech: 'lodges', res: 'food', limit: pop => Math.min(2, 1 + Math.floor(pop / 70)), min: 3, r: 12, count: (w, x, y, r) => w.animals.reduce((n, a) => n + (a.alive && a.kind !== 'wolf' && Math.hypot(a.x - x, a.y - y) <= r ? 1 : 0), 0) },
+};
+function countFeat(w, x, y, r, pred) {
+  let n = 0; for (let yy = Math.max(0, y - r); yy <= Math.min(CFG.H - 1, y + r); yy++) for (let xx = Math.max(0, x - r); xx <= Math.min(CFG.W - 1, x + r); xx++) if (pred(w.feat[yy * CFG.W + xx])) n++;
+  return n;
+}
+function placeCamp(w, type) {
+  const info = CAMP_INFO[type], { W, H } = CFG, same = w.of(type), cands = [];
+  for (let y = 4; y < H - 5; y += 2) for (let x = 4; x < W - 5; x += 2) {
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 10 || d > 52 || same.some(c => Math.hypot(c.x - x, c.y - y) < 14)) continue;
+    let ok = true;
+    for (let dy = 0; dy < 2 && ok; dy++) for (let dx = 0; dx < 2; dx++) { const i = (y + dy) * W + x + dx, t = w.terr[i]; if (!(t === TERR.GRASS || t === TERR.ROCK || t === TERR.SAND) || w.feat[i] || w.bmap[i] || w.road[i] || w.bpAt.has(i) || w.claim[i] >= 0) { ok = false; break } }
+    if (!ok) continue;
+    const sc = info.count(w, x + 1, y + 1, info.r); if (sc < info.min) continue;
+    cands.push({ x, y, score: sc - d * 0.35 + w.r() });
+  }
+  cands.sort((a, b) => b.score - a.score);
+  for (const c of cands.slice(0, 6)) if (w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: 2, h: 2 }), 180)) return makeBp(w, type, c.x, c.y);
+  return null;
+}
+function planCamps(w) {
+  const pop = w.vills.length, count = type => w.bps.filter(b => b.type === type).length;
+  for (const type of Object.keys(CAMP_INFO)) {
+    const info = CAMP_INFO[type]; if (!w.has(info.tech) || w.day < (w['next_' + type] || 0)) continue;
+    if (w.of(type).length + count(type) >= info.limit(pop) || w.stock.wood < CFG.COST[type].wood + 12 || w.stock.food < pop * 2) continue;
+    w['next_' + type] = w.day + 2; if (placeCamp(w, type)) return;
+  }
+}
+function placeDock(w) {
+  const { W, H } = CFG, docks = w.of('dock'), cands = [];
+  for (let y = 3; y < H - 3; y++) for (let x = 3; x < W - 3; x++) {
+    const i = y * W + x, t = w.terr[i]; if ((t !== TERR.SAND && t !== TERR.GRASS) || w.feat[i] || w.bmap[i] || w.road[i] || w.bpAt.has(i)) continue;
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d > 48 || docks.some(k => Math.hypot(k.x - x, k.y - y) < 7)) continue;
+    for (const [ux, uy] of NB) {
+      let n = 0, deep = 0; for (let k = 1; k <= 8; k++) { const xx = x + ux * k, yy = y + uy * k; if (xx < 0 || yy < 0 || xx >= W || yy >= H || w.terr[yy * W + xx] > TERR.SHALLOW) break; n = k; if (w.terr[yy * W + xx] === TERR.DEEP) deep++ }
+      if (n >= 5 && deep >= 2) { cands.push({ x, y, dir: [ux, uy], score: d - deep * 0.5 + w.r() * 3 }); break }
+    }
+  }
+  cands.sort((a, b) => a.score - b.score);
+  for (const c of cands.slice(0, 6)) {
+    if (w.search(w.cx - 1, w.cy, (x, y) => x === c.x && y === c.y, 160)) return makeBp(w, 'dock', c.x, c.y, { dir: c.dir });       // must be reachable on foot from the camp
+  }
+  return null;
+}
 function planRoads(w) {
   if (w.bps.filter(b => b.type === 'road').length >= 8) return;
-  const targets = [...w.houses(), ...w.of('farm'), ...w.of('store')];
+  const targets = [...w.houses(), ...w.of('farm'), ...w.of('store'), ...w.of('logcamp'), ...w.of('minecamp'), ...w.of('lodge')];
   for (const b of targets) {
     if (w.connected.has(b.id)) continue; w.connected.add(b.id);
     const path = w.search(b.x, b.y, (x, y, i) => w.storeAdj[i] === 1 && !(w.bmap[i] && w.blk[i])); if (!path) continue;
@@ -42,7 +91,7 @@ function planRoads(w) {
 }
 function planTown(w) {
   const pop = w.vills.length, count = t => w.bps.filter(b => b.type === t).length;
-  const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = houses * CFG.HOUSE_CAP;
+  const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = w.beds() + count('house') * (CFG.HOUSE_CAP + styleNow(w));
   const structBps = w.bps.filter(b => b.type !== 'road').length;
   if (structBps < 2 + Math.floor(pop / 8)) {
     const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
@@ -51,6 +100,9 @@ function planTown(w) {
     else if (full && stores < 10) placeBuilding(w, 'store');
     else if (cap < pop + 4 && w.stock.food > pop * 4 && w.stock.wood >= 10) placeBuilding(w, 'house');
   }
+  if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(3, 1 + Math.floor(pop / 40)) && w.stock.wood > 30) placeDock(w);
+  planCamps(w);
+  planUpgrades(w);
   planRoads(w);
 }
 
@@ -88,7 +140,7 @@ function assignRoles(w) {
     miner: Math.max(n >= 4 ? 1 : 0, Math.round(n * 0.13)),
   };
   const { tgt, eff } = resourceTargets(w), ratio = k => eff[k] / Math.max(1, tgt[k]);       // self-correct: fewer hands on a surplus, more on a shortage
-  if (ratio('wood') > 1.4) q.woodcutter = Math.max(1, Math.round(q.woodcutter * 0.5)); else if (ratio('wood') < 0.5) q.woodcutter = Math.ceil(q.woodcutter * 1.5);
+  if (ratio('wood') > 1.4) q.woodcutter = Math.max(1, Math.round(q.woodcutter * 0.5)); else if (ratio('wood') < 0.5) q.woodcutter = Math.min(Math.ceil(q.woodcutter * 1.5), Math.round(n * 0.3));
   if (ratio('stone') > 1.6) q.miner = Math.max(n >= 4 ? 1 : 0, Math.round(q.miner * 0.5)); else if (ratio('stone') < 0.5) q.miner = Math.ceil(q.miner * 1.5);
   if (ratio('food') > 1.6) { q.hunter = Math.max(1, Math.round(q.hunter * 0.5)); q.fisher = Math.round(q.fisher * 0.5) } else if (ratio('food') < 0.6) { q.hunter = Math.ceil(q.hunter * 1.5); q.fisher = Math.ceil(q.fisher * 1.5) }
   for (const v of adults) if (v.role && HEAVY.has(v.role) && v.isElder()) v.role = null;     // elders step back from heavy labor
@@ -133,7 +185,7 @@ function townNewDay(w) {
   }
   if (d < 4) return;
   if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1)) fire(w); if (w.r() < 0.02 * sv) storm(w) }
-  const cap = w.houses().length * CFG.HOUSE_CAP, gp = w.gov.policy.growth;
+  const cap = w.beds(), gp = w.gov.policy.growth;
   if (pop < 70 && cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1)) {            // travelers seek a home
     const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * 3) | 0);
     if (sp) {
@@ -143,7 +195,7 @@ function townNewDay(w) {
   }
   if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv) {               // a fever sweeps through; the weak and hungry suffer most
     let sick = 0;
-    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100); v.cause = 'fever'; sick++ }
+    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
   const wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv;

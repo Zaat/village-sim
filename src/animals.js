@@ -29,8 +29,9 @@ class Animal {
     const fr = this.kind === 'deer' ? 4.6 : 3.2;
     if ((w.tick + this.id) % 4 === 0) {
       let tx = null, ty = null, bd = fr;
-      for (const v of w.vills) { const d = Math.hypot(v.x - this.x, v.y - this.y); if (d < bd) { bd = d; tx = this.x + (this.x - v.x) * 3; ty = this.y + (this.y - v.y) * 3 } }
-      for (const a of w.animals) if (a.kind === 'wolf' && a.alive) { const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < 8 && d < bd + 4) { bd = d; tx = this.x + (this.x - a.x) * 3; ty = this.y + (this.y - a.y) * 3 } }
+      const gw = Math.ceil(CFG.W / 6), gx = (this.x / 6) | 0, gy = (this.y / 6) | 0;
+      for (let cy = gy - 1; cy <= gy + 1; cy++) for (let cx = gx - 1; cx <= gx + 1; cx++) { const cell = w.grid[cy * gw + cx]; if (!cell || cx < 0 || cx >= gw) continue; for (const v of cell) { const d = Math.hypot(v.x - this.x, v.y - this.y); if (d < bd) { bd = d; tx = this.x + (this.x - v.x) * 3; ty = this.y + (this.y - v.y) * 3 } } }
+      for (const a of w.wolfList) if (a.alive) { const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < 8 && d < bd + 4) { bd = d; tx = this.x + (this.x - a.x) * 3; ty = this.y + (this.y - a.y) * 3 } }
       if (tx !== null) { this.fleeing = 12; this.tx = clamp(tx, 2, CFG.W - 2); this.ty = clamp(ty, 2, CFG.H - 2); this.wait = 0 }
     }
     if (this.fleeing > 0) { this.fleeing--; this.stepTo(this.tx, this.ty, this.kind === 'deer' ? 0.13 : 0.12) }
@@ -40,7 +41,7 @@ class Animal {
     const w = this.w; this.life--; this.hunger += 0.02;
     if (this.life <= 0) { this.alive = false; return }
     // nearby villagers who are fighting hurt it
-    for (const v of w.vills) if (v.fighting && Math.hypot(v.x - this.x, v.y - this.y) < 2.6) this.hp -= 0.1 + 0.15 * v.skill.hunt + (v.role === 'hunter' ? 0.1 : 0);
+    for (const v of w.vills) if (v.fighting && Math.hypot(v.x - this.x, v.y - this.y) < 2.6) this.hp -= (0.1 + 0.15 * v.skill.hunt + (v.role === 'hunter' ? 0.1 : 0)) * (w.has('ironwork') ? 1.25 : 1);
     if (this.hp <= 0) {
       this.alive = false; const h = w.vills.filter(v => v.fighting && Math.hypot(v.x - this.x, v.y - this.y) < 4);
       w.emit('wolfslain', h.length ? `${h.map(v => v.name).slice(0, 2).join(' and ')} drove off a wolf for good.` : 'A wolf was killed.', { h }); for (const v of h) v.skill.hunt = Math.min(1, v.skill.hunt + 0.05); return;

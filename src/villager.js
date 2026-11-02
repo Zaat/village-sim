@@ -24,7 +24,7 @@ class Villager {
     this.hunger = 75 + w.r() * 25; this.energy = 70 + w.r() * 30; this.social = 50 + w.r() * 40; this.health = 100;
     this.carry = null; this.steps = []; this.cur = null; this.path = []; this.label = 'Idle';
     this.home = null; this.sleeping = false; this.preg = 0; this.father = null; this.lastBirth = -1e9; this.wait = 0;
-    this.claim = -1; this.claimB = null; this.inb = null; this.haul = null; this.bpWork = null; this.jobKind = null; this.failUntil = {};
+    this.claim = -1; this.claimB = null; this.boat = null; this.inb = null; this.haul = null; this.bpWork = null; this.jobKind = null; this.failUntil = {};
     this.dir = 1; this.fighting = false; this.cause = 'hunger'; this.emote = null;
     // society: identity, opinions, desires, story
     this.family = parents && (parents[1] || parents[0]) ? (parents[1] || parents[0]).family : SURNAMES[(w.r() * SURNAMES.length) | 0];
@@ -77,9 +77,9 @@ class Villager {
   isChild() { return this.age < CFG.CHILD_DAYS }
   wt(base, key) {
     const w = this.w, st = this.isElder() ? 1.3 : this.stage() === 'youth' ? 1.35 : 1;
-    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor)));
+    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1)));
   }
-  gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)) }
+  gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)); addKnowledge(this.w, 0.13, this) }
   traitWords() { const o = []; for (const t of TRAITS) { if (this.trait[t] > 0.66) o.push(TRAIT_WORDS[t][1]); else if (this.trait[t] < 0.34) o.push(TRAIT_WORDS[t][0]) } return o }
 
   update() {
@@ -90,7 +90,7 @@ class Villager {
     this.age += 1 / CFG.TPD;
     const stg = this.stage(); if (stg !== this._st) { this._st = stg; this.onStage(stg) }
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
-    else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02);
+    else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0));
     if (w.cold) { this.health -= 0.012; this.cause = 'cold' }
     if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : 'starved'); return }
     if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
@@ -110,6 +110,7 @@ class Villager {
     const st = this.cur;
     if (st.type === 'go') { this.move(); if (this.cur && this.path.length === 0) this.cur = null }
     else {
+      if (st.onTick) st.onTick(1 - st.t / st.ticks);
       const fin = st.until ? (st.until() || --st.t <= 0) : --st.t <= 0;
       if (fin) { this.sleeping = false; this.fighting = false; const d = st.done; this.cur = null; if (d) d() }
     }
@@ -121,6 +122,7 @@ class Villager {
     if (st.type === 'go') {
       this.path = st.path || w.search(this.tx, this.ty, st.goal, st.maxCost); st.path = null;
       if (!this.path && !st.maxCost) this.path = w.search(this.tx, this.ty, st.goal, undefined, true);     // boxed in: hack through brush
+      if (!this.path && st.onFail) st.onFail();
       if (!this.path) { this.path = []; if (this.hunger < 30) { this.stuck = (this.stuck || 0) + 1; if (this.stuck >= 2) this.rescue() } this.abort(); return false }
     } else { st.t = st.ticks; this.sleeping = !!st.sleep; this.fighting = !!st.fight }
     return true;
@@ -153,14 +155,15 @@ class Villager {
     if (this.inb) { w.inbound[this.inb.kind] -= this.inb.amt; this.inb = null }
     if (this.haul) { if (!this.haul.done && this.haul.bp.alive) this.haul.bp.inc[this.haul.type] -= this.haul.amt; this.haul = null }
     if (this.bpWork) { this.bpWork.workers--; this.bpWork = null }
+    if (this.boat) { const b = this.boat, d = w.buildings.get(b.dock); if (b.state === 'out' && d) { this.x = d.x + 0.5; this.y = d.y + 0.5 } b.home(); this.boat = null }
     this.jobKind = null;
   }
 
   /* ----- danger: wolves ----- */
   checkDanger() {
     const w = this.w; let wolf = null, wd = 99;
-    for (const a of w.animals) if (a.kind === 'wolf' && a.alive) { const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < wd) { wd = d; wolf = a } }
-    const watch = Math.max(0, w.gov.policy.defense); if (!wolf || wd > 9 + 3 * watch) return false;
+    for (const a of w.wolfList) if (a.alive) { const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < wd) { wd = d; wolf = a } }
+    const watch = Math.max(0, w.gov.policy.defense) + (w.has('watchtowers') ? 0.4 : 0); if (!wolf || wd > 9 + 3 * watch) return false;
     const fighter = !this.isChild() && (this.role === 'hunter' || this.trait.brave > 0.62 - 0.12 * watch || (this.trait.brave > 0.4 && w.vills.filter(v => v.fighting).length >= 1));
     if (fighter) { if (this.jobKind !== 'fight') { this.abort(0); this.planFight(wolf) } return true }
     if (this.jobKind !== 'flee') { this.abort(0); this.planFlee() }
@@ -247,7 +250,7 @@ class Villager {
     const w = this.w, pop = w.vills.length, s = w.season, autumn = s === 2, winter = s === 3, { tgt, eff } = resourceTargets(w);
     const def = {}; for (const k in tgt) def[k] = (tgt[k] - eff[k]) / tgt[k];
     const tries = [], T = (name, fn) => tries.push([name, fn]);
-    const foodAny = () => this.planFarm() || (this.role === 'fisher' ? this.planFish() || this.planHunt() : this.planHunt() || this.planFish()) || this.planGather('food');
+    const foodAny = () => this.planFarm() || (this.role === 'fisher' ? this.planBoatFish() || this.planFish() || this.planHunt() : this.planHunt() || this.planBoatFish() || this.planFish()) || this.planGather('food');
     if (w.stock.food < pop * 1.5) T('crisis', foodAny);
     switch (this.role) {
       case 'builder': T('build', () => this.planBuild()); break;
@@ -255,7 +258,7 @@ class Villager {
       case 'woodcutter': T('wood', () => def.wood > -0.1 && this.planGather('wood')); break;
       case 'miner': T('stone', () => def.stone > -0.1 && this.planGather('stone')); break;
       case 'hunter': T('hunt', () => def.food > -0.2 && this.planHunt()); break;
-      case 'fisher': T('fish', () => def.food > -0.2 && this.planFish()); break;
+      case 'fisher': T('fish', () => def.food > -0.2 && (this.planBoatFish() || this.planFish())); break;
     }
     const builders = w.vills.filter(v => v.jobKind === 'build' || v.jobKind === 'haul').length;
     if (builders < Math.max(1, Math.ceil(w.vills.length / 6))) T('build2', () => this.planBuild());
@@ -267,9 +270,9 @@ class Villager {
     }
     return false;
   }
-  deliverSteps() {
-    const w = this.w;
-    return [go((x, y, i) => w.nearStock(x, y, i), null, 'Carrying to stores', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { w.stock[this.carry.kind] = Math.min(w.cap(), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
+  deliverSteps(kind = 'food') {      // the nearest drop-off counts: the village stores, or a camp for that resource
+    const w = this.w, ca = w.campAdj[kind];
+    return [go((x, y, i) => w.storeAdj[i] === 1 || (ca && ca[i] === 1), null, 'Carrying to the depot', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { w.stock[this.carry.kind] = Math.min(w.cap(), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
   }
   planGather(kind) {
     const w = this.w;
@@ -281,27 +284,30 @@ class Villager {
         const ok = kind === 'wood' ? (f === FEAT.OAK || f === FEAT.PINE) : kind === 'stone' ? f === FEAT.STONE : f === FEAT.BUSH && w.res[n] > 0;
         if (ok && w.claim[n] < 0) { tgt = n; return true }
       } return false;
-    }, 75);
+    }, kind === 'wood' ? 110 : 75);
     if (!path || tgt < 0) return false;
     w.claim[tgt] = this.id; this.claim = tgt; this.jobKind = 'gather';
-    const amt = Math.min(CFG.CARRY, w.res[tgt]); this.inb = { kind, amt }; w.inbound[kind] += amt;
-    const key = kind === 'wood' ? 'wood' : kind === 'stone' ? 'stone' : null, time = this.wt(kind === 'wood' ? 60 : kind === 'stone' ? 80 : 35, key);
+    const camp = w.campNear(kind, tgt % CFG.W, (tgt / CFG.W) | 0), load = CFG.CARRY + (camp && kind === 'stone' ? 2 : 0), bonus = camp ? 1.25 : 1;       // a camp nearby: bigger loads, better yield, shorter trips
+    const amt = Math.round(Math.min(load, w.res[tgt]) * bonus); this.inb = { kind, amt }; w.inbound[kind] += amt;
+    const key = kind === 'wood' ? 'wood' : kind === 'stone' ? 'stone' : null, time = Math.max(4, Math.round(this.wt(kind === 'wood' ? 60 : kind === 'stone' ? 80 : 35, key) * (camp ? 0.85 : 1)));
     this.steps = [go(null, path, 'Heading out'), work(time, kind === 'wood' ? 'Chopping wood' : kind === 'stone' ? 'Quarrying stone' : 'Picking berries', () => {
-      const take = Math.min(CFG.CARRY, w.res[tgt]); w.res[tgt] -= take;
-      if (w.res[tgt] === 0) { if (w.feat[tgt] === FEAT.BUSH) w.regrow.push({ idx: tgt, at: w.tick + 2400 }); else w.clearTile(tgt) }
-      this.carry = { kind, amt: take }; if (key) this.gain(key);
-    }), ...this.deliverSteps()];
+      const take = Math.min(load, w.res[tgt]); w.res[tgt] -= take;
+      if (w.res[tgt] === 0) { if (w.feat[tgt] === FEAT.BUSH) w.regrow.push({ idx: tgt, at: w.tick + 2400 }); else { const kindF = w.feat[tgt]; w.clearTile(tgt); if (kindF !== FEAT.STONE && w.r() < (w.has('forestry') ? 0.9 : 0.5)) w.regrow.push({ idx: tgt, at: w.tick + CFG.TPD * (w.has('forestry') ? 2 : 4), tree: kindF }) } }
+      this.carry = { kind, amt: Math.round(take * bonus) }; if (key) this.gain(key);
+    }), ...this.deliverSteps(kind)];
     return true;
   }
   planFarm() {
-    const w = this.w, s = w.season; let fb = null;
+    const w = this.w, s = w.season; let fb = null, any = false;
+    for (const b of w.buildings.values()) if (b.type === 'farm' && !b.claim && (b.state === 2 || (b.state === 0 && s < 2))) { any = true; break }
+    if (!any) return false;
     const path = w.search(this.tx, this.ty, (x, y, i) => {
       const id = w.bmap[i]; if (!id) return false; const b = w.buildings.get(id);
       if (b && b.type === 'farm' && !b.claim && (b.state === 2 || (b.state === 0 && s < 2))) { fb = b; return true } return false;
     }, 90);
     if (!path || !fb) return false;
     const b = fb, harvest = b.state === 2; b.claim = this.id; this.claimB = b; this.jobKind = 'farm';
-    const amt = Math.round(CFG.FARM_YIELD * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1));
+    const amt = Math.round(CFG.FARM_YIELD * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1));
     this.steps = [go(null, path, 'To the field'), work(this.wt(harvest ? 55 : 40, 'farm'), harvest ? 'Harvesting' : 'Sowing seeds', () => {
       if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
     })];
@@ -310,12 +316,12 @@ class Villager {
   }
   planHunt() {
     const w = this.w; let best = null, bd = 48;
-    for (const a of w.animals) { if (!a.alive || a.kind === 'wolf') continue; const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < bd) { bd = d; best = a } }
+    for (const a of w.animals) { if (!a.alive || a.kind === 'wolf' || (a.noHunt || 0) > w.tick) continue; const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < bd) { bd = d; best = a } }
     if (!best) return false;
     const a = best; this.jobKind = 'hunt';
-    this.steps = [go((x, y) => Math.hypot(x + 0.5 - a.x, y + 0.5 - a.y) <= 5.2, null, 'Stalking ' + (a.kind === 'deer' ? 'a deer' : 'a rabbit'), { maxCost: 70, check: () => a.alive }),
+    this.steps = [go((x, y) => Math.hypot(x + 0.5 - a.x, y + 0.5 - a.y) <= 5.2, null, 'Stalking ' + (a.kind === 'deer' ? 'a deer' : 'a rabbit'), { maxCost: 70, check: () => a.alive, onFail: () => { a.noHunt = w.tick + 1500 } }),
     work(this.wt(25, 'hunt'), 'Taking aim', () => {
-      if (a.alive && Math.hypot(a.x - this.x, a.y - this.y) <= 7.5 && w.r() < 0.5 + 0.45 * this.skill.hunt) { a.alive = false; this.carry = { kind: 'food', amt: a.kind === 'deer' ? 10 : 3 }; this.gain('hunt'); this.gain('hunt') }
+      if (a.alive && Math.hypot(a.x - this.x, a.y - this.y) <= 7.5 && w.r() < 0.5 + 0.45 * this.skill.hunt + (w.has('ironwork') ? 0.08 : 0) + (w.campNear('food', a.x, a.y, 22) ? 0.1 : 0)) { a.alive = false; this.carry = { kind: 'food', amt: a.kind === 'deer' ? 10 : 3 }; this.gain('hunt'); this.gain('hunt') }
     }), ...this.deliverSteps()];
     return true;
   }
@@ -326,8 +332,27 @@ class Villager {
       for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false;
     }, 80);
     if (!path || spot < 0) return false;
-    w.claim[spot] = this.id; this.claim = spot; this.jobKind = 'fish'; const amt = 2 + (this.skill.fish > 0.6 ? 1 : 0); this.inb = { kind: 'food', amt }; w.inbound.food += amt;
+    w.claim[spot] = this.id; this.claim = spot; this.jobKind = 'fish'; const amt = 2 + (this.skill.fish > 0.6 ? 1 : 0) + (w.has('nets') ? 1 : 0); this.inb = { kind: 'food', amt }; w.inbound.food += amt;
     this.steps = [go(null, path, 'To the shore'), work(this.wt(100, 'fish'), 'Fishing', () => { if (w.fish[wt] > 0) { w.fish[wt]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }), ...this.deliverSteps()];
+    return true;
+  }
+  planBoatFish() {
+    const w = this.w; if (!w.has('boats')) return false;
+    const boat = w.boats.find(b => b.crew == null && b.state === 'moored'); if (!boat) return false;
+    const dock = w.buildings.get(boat.dock); if (!dock) return false; const n = boat.range(); if (n < 3) return false;
+    const [ux, uy] = dock.dir; let best = null;
+    for (let k = 1; k < n; k++) { const x = Math.floor(boat.mx) + ux * k, y = Math.floor(boat.my) + uy * k, idx = y * CFG.W + x; if (w.fish[idx] > 0 && (!best || w.fish[idx] >= best.f)) best = { k, idx, f: w.fish[idx] } }
+    if (!best) return false;
+    boat.crew = this.id; this.boat = boat; this.jobKind = 'boatfish';
+    const amt = 5 + (w.has('navigation') ? 2 : 0) + (this.skill.fish > 0.6 ? 1 : 0), trip = Math.ceil(best.k / 0.06), dest = this.w.has('navigation') ? 1 : 0;
+    this.inb = { kind: 'food', amt }; w.inbound.food += amt;
+    const at = p => { boat.x = boat.mx + ux * best.k * p; boat.y = boat.my + uy * best.k * p; this.x = boat.x; this.y = boat.y; this.dir = ux !== 0 ? (ux > 0 ? 1 : -1) : this.dir; boat.dir = this.dir };
+    this.steps = [go((x, y) => x === dock.x && y === dock.y, null, 'To the dock', { maxCost: 120, check: () => boat.crew === this.id }),
+      work(8, 'Boarding the boat', () => { boat.state = 'out'; this.x = boat.x; this.y = boat.y }),
+      work(trip, 'Sailing out', null, { onTick: at }),
+      work(this.wt(100, 'fish'), 'Fishing at sea', () => { if (w.fish[best.idx] > 0) { w.fish[best.idx]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }),
+      work(trip, 'Sailing home', null, { onTick: p => at(1 - p) }),
+      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; if (this.carry) { w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
     return true;
   }
   planBuild() {
@@ -335,7 +360,7 @@ class Villager {
     for (const bp of w.bps) {
       if (bp.ready() && bp.workers < 2) {
         bp.workers++; this.bpWork = bp; this.jobKind = 'build'; const chunk = Math.min(30, bp.time - bp.prog);
-        this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120 }), work(this.wt(chunk, 'build'), 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
+        this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120 }), work(this.wt(chunk, 'build'), bp.type === 'upgrade' ? 'Upgrading a home' : 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
         return true;
       }
     }

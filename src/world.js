@@ -2,23 +2,26 @@
 /* ==========================================================================
    world.js — terrain generation, buildings, pathfinding, seasons, main step.
    ========================================================================== */
+const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 class World {
   constructor(seed, settings = {}) {
+    this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this);
+    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this); initTech(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
-    this.storeAdj = new Uint8Array(N); this.bldAdj = new Uint8Array(N);
+    this.storeAdj = new Uint8Array(N); this.bldAdj = new Uint8Array(N); this.campAdj = { wood: new Uint8Array(N), stone: new Uint8Array(N), food: new Uint8Array(N) };
     this.shade = new Uint8Array(N); this.fish = new Uint8Array(N).fill(CFG.FISH_MAX); this.claim = new Int32Array(N).fill(-1);
-    this._d = new Float32Array(N); this._p = new Int32Array(N); this._seen = new Int32Array(N); this._ds = new Int32Array(N); this._st = 0;
+    this.grid = []; this.wolfList = []; for (let i = 0; i < Math.ceil(CFG.W / 6) * Math.ceil(CFG.H / 6); i++) this.grid.push([]); this._hk = new Float32Array(N * 4 + 16); this._hv = new Int32Array(N * 4 + 16); this._d = new Float32Array(N); this._p = new Int32Array(N); this._seen = new Int32Array(N); this._ds = new Int32Array(N); this._st = 0;
     this.buildings = new Map(); this.bnext = 1; this.bps = []; this.bpAt = new Map(); this.bpnext = 1;
     this.regrow = []; this.log = []; this.hist = []; this.listeners = []; this.connected = new Set();
     this.vills = []; this.animals = []; this.nextId = 1; this.tick = 0; this.rel = new Map();
     this.stock = { ...CFG.START_STOCK }; if (this.settings.survival) for (const k in this.stock) this.stock[k] = Math.floor(this.stock[k] * 0.6); this.inbound = { wood: 0, stone: 0, food: 0 };
     this.nameUse = 0; this.births = 0; this.deaths = 0; this.causes = {};
     this.harsh = false; this.drought = false; this.cold = false; this.festival = false; this.fishOK = false;
-    this.gen(); this.spawn();
+    this.gen(); for (let i = 0; i < N; i++) if (this.terr[i] === TERR.DEEP) this.fish[i] = CFG.FISH_DEEP;
+    this.spawn();
     this.say('A small band of settlers makes camp beside the water.');
   }
   /* ----- time ----- */
@@ -113,7 +116,7 @@ class World {
     const [w, h] = CFG.SIZE[type], b = { id: this.bnext++, type, x, y, w, h, occ: [], state: 0, g: 0, claim: 0 };
     this.buildings.set(b.id, b);
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) { const i = (y + dy) * CFG.W + x + dx; this.bmap[i] = b.id; if (CFG.SOLID[type]) this.blk[i] = 1; this.road[i] = 0 }
-    if (CFG.SOLID[type]) this.markAdj(b, type === 'store' ? this.storeAdj : null);
+    if (CFG.SOLID[type]) this.markAdj(b, this.adjFor(type));
     return b;
   }
   markAdj(b, extra) {
@@ -126,7 +129,12 @@ class World {
   }
   houses() { const a = []; for (const b of this.buildings.values()) if (b.type === 'house') a.push(b); return a }
   of(type) { const a = []; for (const b of this.buildings.values()) if (b.type === type) a.push(b); return a }
-  cap() { return 60 + 100 * this.of('store').length }
+  adjFor(type) { return type === 'store' ? this.storeAdj : type === 'logcamp' ? this.campAdj.wood : type === 'minecamp' ? this.campAdj.stone : type === 'lodge' ? this.campAdj.food : null }
+  /* is there a camp for this resource close by? (logging camp for wood, mining camp for stone, lodge for food) */
+  campNear(kind, x, y, r = 14) { const type = kind === 'wood' ? 'logcamp' : kind === 'stone' ? 'minecamp' : 'lodge'; for (const b of this.buildings.values()) if (b.type === type && Math.hypot(b.x + 1 - x, b.y + 1 - y) <= r) return true; return false }
+  has(id) { return !!this.tech.known[id] }
+  beds() { let n = 0; for (const b of this.buildings.values()) if (b.type === 'house') n += bedsOf(b); return n }
+  cap() { return 60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length }
   passable(i) { const t = this.terr[i], f = this.feat[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.blk[i] === 0 && (f === FEAT.OAK || f === FEAT.PINE || f === FEAT.BUSH) }
   clearTile(i) { const f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) this.trees--; this.feat[i] = 0; this.res[i] = 0 }
   walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.feat[i] === 0 && this.blk[i] === 0 }
@@ -135,26 +143,33 @@ class World {
   assignHome(v) {
     if (v.home != null) return;
     let best = null, bd = 1e9;
-    for (const h of this.houses()) { if (h.occ.length >= CFG.HOUSE_CAP) continue; const d = Math.abs(h.x - this.cx) + Math.abs(h.y - this.cy); if (d < bd) { bd = d; best = h } }
+    for (const h of this.houses()) { if (h.occ.length >= bedsOf(h)) continue; const d = Math.abs(h.x - this.cx) + Math.abs(h.y - this.cy); if (d < bd) { bd = d; best = h } }
     if (best) { best.occ.push(v.id); v.home = best.id }
   }
   pending() { const p = { wood: 0, stone: 0 }; for (const b of this.bps) for (const t of ['wood', 'stone']) p[t] += Math.max(0, b.cost[t] - b.have[t] - b.inc[t]); return p }
   complete(bp) {
     bp.alive = false; this.bps.splice(this.bps.indexOf(bp), 1);
     for (let dy = 0; dy < bp.h; dy++) for (let dx = 0; dx < bp.w; dx++) this.bpAt.delete((bp.y + dy) * CFG.W + bp.x + dx);
-    if (bp.type === 'road') { this.road[bp.idx] = 1; return }
-    this.addBuilding(bp.type, bp.x, bp.y);
-    if (bp.type === 'house') this.say('A new cabin is finished.');
+    if (bp.type === 'road') { this.road[bp.idx] = this.has('masonry') ? 2 : 1; return }
+    if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
+    const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' || bp.type === 'store' ? styleNow(this) : 0;
+    if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.say('A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
+    if (bp.type === 'logcamp') this.say('A logging camp is raised beside the forest.');
+    if (bp.type === 'minecamp') this.say('A mining camp opens at the rockface.');
+    if (bp.type === 'lodge') this.say('A hunting lodge is built near the game trails.');
+    if (bp.type === 'house') this.say(`A new ${HOUSE_STYLES[b.style].toLowerCase()} is finished.`);
     if (bp.type === 'farm') this.say('A new field is ready for sowing.');
-    if (bp.type === 'store') this.say('A storehouse is raised, so the village can keep more.');
+    if (bp.type === 'store') this.say(b.style === 2 ? 'A stone granary is raised, so the village can keep more.' : 'A storehouse is raised, so the village can keep more.');
   }
 
   /* ----- pathfinding: Dijkstra, roads cheap, sand/rock slightly dear ----- */
   search(sx, sy, goal, maxCost = 1e9, through = false) {
-    const { W, H } = CFG, dist = this._d, prev = this._p, seen = this._seen, ds = this._ds, st = ++this._st;
-    const s = sy * W + sx; dist[s] = 0; seen[s] = st; prev[s] = -1; const h = new Heap(); h.push(0, s);
-    while (h.size) {
-      const u = h.pop(); if (ds[u] === st) continue; ds[u] = st; const ux = u % W, uy = (u / W) | 0;
+    const { W, H } = CFG, dist = this._d, prev = this._p, seen = this._seen, ds = this._ds, hk = this._hk, hv = this._hv, st = ++this._st;
+    const s = sy * W + sx; dist[s] = 0; seen[s] = st; prev[s] = -1; let hs = 1; hk[0] = 0; hv[0] = s;
+    while (hs > 0) {
+      const u = hv[0]; hs--;
+      if (hs > 0) { const lk = hk[hs], lv = hv[hs]; let i = 0; for (; ;) { let c = 2 * i + 1; if (c >= hs) break; if (c + 1 < hs && hk[c + 1] < hk[c]) c++; if (hk[c] >= lk) break; hk[i] = hk[c]; hv[i] = hv[c]; i = c } hk[i] = lk; hv[i] = lv }
+      if (ds[u] === st) continue; ds[u] = st; const ux = u % W, uy = (u / W) | 0;
       if (goal(ux, uy, u)) { const path = []; let c = u; while (c !== s) { path.push(c); c = prev[c] } path.reverse(); return path }
       if (dist[u] > maxCost) continue;
       for (let k = 0; k < 4; k++) {
@@ -162,12 +177,14 @@ class World {
         const v = ny * W + nx; if (ds[v] === st) continue; let extra = 0;
         if (!this.walkable(v)) { if (!through || !this.passable(v)) continue; extra = 6 }
         const t = this.terr[v], nd = dist[u] + extra + (this.road[v] ? 0.55 : t === TERR.GRASS ? 1 : t === TERR.SAND ? 1.15 : 1.4);
-        if (seen[v] !== st || nd < dist[v]) { dist[v] = nd; seen[v] = st; prev[v] = u; h.push(nd, v) }
+        if (seen[v] !== st || nd < dist[v]) {
+          dist[v] = nd; seen[v] = st; prev[v] = u;
+          let i = hs++; while (i > 0) { const p = (i - 1) >> 1; if (hk[p] <= nd) break; hk[i] = hk[p]; hv[i] = hv[p]; i = p } hk[i] = nd; hv[i] = v;
+        }
       }
     }
     return null;
   }
-
   /* ----- social ----- */
   relKey(a, b) { return a.id < b.id ? a.id + '_' + b.id : b.id + '_' + a.id }
   getRel(a, b) { return this.rel.get(this.relKey(a, b)) || 0 }
@@ -186,7 +203,7 @@ class World {
   tryConceive(f, m) {
     if (!f.isAdult() || !m.isAdult() || f.partner !== m.id) return;
     if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX) return;
-    if (this.vills.length + 1 > this.houses().length * CFG.HOUSE_CAP) return;
+    if (this.vills.length + 1 > this.beds()) return;
     const gp = this.gov.policy.growth; if (this.stock.food < this.vills.length * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
     if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
   }
@@ -209,7 +226,7 @@ class World {
   removeBuilding(b) {
     this.buildings.delete(b.id); const { W } = CFG;
     for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * W + b.x + dx; this.bmap[i] = 0; this.blk[i] = 0 }
-    this.storeAdj.fill(0); this.bldAdj.fill(0); for (const x of this.buildings.values()) if (CFG.SOLID[x.type]) this.markAdj(x, x.type === 'store' ? this.storeAdj : null);
+    this.storeAdj.fill(0); this.bldAdj.fill(0); for (const k in this.campAdj) this.campAdj[k].fill(0); for (const x of this.buildings.values()) if (CFG.SOLID[x.type]) this.markAdj(x, this.adjFor(x.type));
     for (const id of b.occ) { const v = this.vills.find(x => x.id === id); if (v) { v.home = null; v.mood = Math.max(0, v.mood - 20); v.story('Lost their home.') } }
     this.connected.delete(b.id); this.scars.push({ x: b.x, y: b.y, w: b.w, h: b.h, until: this.tick + CFG.TPD * 3 });
   }
@@ -225,9 +242,9 @@ class World {
       this.emit('season', null, { season: s });
     }
     const stc = this.gov.council.find(c => c.title === 'Steward'), std = stc ? this.vills.find(v => v.id === stc.id) : null;
-    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1)));
+    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1) * (this.has('granary') ? 0.7 : 1)));
     if (s === 3) {
-      const need = Math.ceil((this.vills.length * 0.5 + this.houses().length * 1 + 1) * (this.harsh ? 1.8 : 1) * (this.settings.survival ? 1.4 : 1));
+      const need = Math.ceil((this.vills.length * 0.3 + this.houses().length * 0.7 + 1) * (this.harsh ? 1.8 : 1) * (this.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(this)));
       if (this.stock.wood >= need) { this.stock.wood -= need; if (this.cold) this.say('Warm hearths again; the cold has eased.'); this.cold = false }
       else { this.stock.wood = 0; if (!this.cold) this.emit('cold', 'The firewood has run out. The village is freezing!'); this.cold = true }
     } else this.cold = false;
@@ -235,37 +252,85 @@ class World {
     animalsNewDay(this);
     townNewDay(this);
     societyNewDay(this);
+    techDay(this);
   }
 
+  /* ----- diagnostics: every subsystem is timed and isolated, so one bug cannot stop the village ----- */
+  fault(where, e, ent) {
+    const d = this.dbg, msg = (e && e.message) || String(e), stack = ((e && e.stack) || '').split('\n').slice(0, 6).join('\n'), key = where + ': ' + msg;
+    let r = d.errors.get(key);
+    if (!r) { r = { where, msg, stack, count: 0, first: { day: this.day, tick: this.tick }, last: null, ent: ent ? `${ent.constructor.name} #${ent.id} ${ent.name || ent.kind || ''}` : null }; d.errors.set(key, r); if (d.errors.size > 40) d.errors.delete(d.errors.keys().next().value) }
+    r.count++; r.last = { day: this.day, tick: this.tick }; d.total++;
+    if (d.onFault) { try { d.onFault(r) } catch (_) { } }
+    return r;
+  }
+  section(name, fn) {
+    const t0 = nowMs(); try { fn() } catch (e) { this.fault(name, e) }
+    const dt = nowMs() - t0, p = this.dbg.prof[name] || (this.dbg.prof[name] = { t: 0, n: 0, max: 0 }); p.t += dt; p.n++; if (dt > p.max) p.max = dt;
+  }
+  entityFault(kind, ent, e) {
+    this.fault(kind + '.update', e, ent); ent.faults = (ent.faults || 0) + 1;
+    try { if (ent.abort) ent.abort(0) } catch (_) { }
+    if (ent.faults >= 8) {                         // a villager or animal that keeps failing is removed rather than allowed to spam errors forever
+      ent.alive = false; if (kind === 'villager') { const k = this.vills.indexOf(ent); if (k >= 0) this.vills.splice(k, 1); this.say(`${ent.name} has vanished without a trace.`) }
+    }
+  }
+  /* repairs corrupted numbers and frees villagers that have stopped making progress */
+  sanity() {
+    const bad = x => !Number.isFinite(x); let fixed = 0, unstuck = 0;
+    for (const v of this.vills) {
+      if (bad(v.x) || bad(v.y) || v.x < 0 || v.y < 0 || v.x >= CFG.W || v.y >= CFG.H) { v.x = this.cx + 0.5; v.y = this.cy + 2.5; try { v.abort(0) } catch (_) { } fixed++ }
+      for (const k of ['hunger', 'energy', 'social', 'health', 'mood', 'age']) if (bad(v[k])) { v[k] = k === 'age' ? 20 : 70; fixed++ }
+      if (v.path && v.path.some(p => !(p >= 0))) { v.path = []; fixed++ }
+      if (!v.sleeping && v._px === v.x && v._py === v.y && v._pl === v.label && v._pt !== undefined && this.tick - v._pt >= CFG.TPD * 2) { try { v.abort(0) } catch (_) { } unstuck++; v._pt = this.tick }
+      else if (v._px !== v.x || v._py !== v.y || v._pl !== v.label || v._pt === undefined) { v._px = v.x; v._py = v.y; v._pl = v.label; v._pt = this.tick }
+    }
+    for (const a of this.animals) if (bad(a.x) || bad(a.y)) { a.alive = false; fixed++ }
+    for (const k in this.stock) if (!Number.isFinite(this.stock[k])) { this.stock[k] = 0; fixed++ }
+    if (fixed) this.fault('sanity', new Error(`repaired ${fixed} corrupted values`));
+    this.dbg.unstuck += unstuck;
+  }
+  profReset() { this.dbg.prof = {}; this.dbg.ticks = 0; this.dbg.tickMs = 0; this.dbg.tickMax = 0 }
+
+  /* villagers bucketed into 6-tile cells, so animals only look at the neighbours that matter */
+  rebuildGrid() {
+    const gw = Math.ceil(CFG.W / 6); for (const c of this.grid) c.length = 0;
+    for (const v of this.vills) { const i = ((v.y / 6) | 0) * gw + ((v.x / 6) | 0); if (this.grid[i]) this.grid[i].push(v) }
+    this.wolfList = this.animals.filter(a => a.kind === 'wolf' && a.alive);
+  }
   /* ----- main step ----- */
-  step() {
-    this.tick++;
-    if (this.tick % CFG.TPD === 0) this.onNewDay();
-    const g = GROW[this.season] * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1);
+  nature() {
+    const g = GROW[this.season] * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1) * (this.has('rotation') ? 1.15 : 1);
     for (const b of this.buildings.values()) if (b.type === 'farm' && b.state === 1) { b.g += g / CFG.FARM_GROW; if (b.g >= 1) { b.state = 2; b.g = 1 } }
-    if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) if (this.regrow[k].at <= this.tick && this.season < 3) { this.res[this.regrow[k].idx] = 4; this.regrow.splice(k, 1) }
-    if (this.tick % (this.settings.survival ? 400 : 200) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if (this.fish[i] < CFG.FISH_MAX && this.terr[i] === TERR.SHALLOW) this.fish[i]++;
-    if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * 1.08) {      // saplings spread from existing woods (capped, and never beside roads or buildings)
-      for (let a = 0; a < 8; a++) {
+    if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) { const g = this.regrow[k]; if (g.at > this.tick || this.season >= 3) continue; if (g.tree) { const i = g.idx; if (this.terr[i] === TERR.GRASS && !this.feat[i] && !this.bmap[i] && !this.road[i] && !this.bpAt.has(i)) { this.feat[i] = g.tree; this.res[i] = 4; this.trees++ } } else this.res[g.idx] = 4; this.regrow.splice(k, 1) }
+    if (this.tick % (this.settings.survival ? 400 : 200) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if ((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) this.fish[i]++;
+    if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * (this.has('forestry') ? 1.6 : 1.3)) {      // saplings spread from existing woods (capped, and never beside roads or buildings); foresters replant more
+      for (let a = 0; a < (this.has('forestry') ? 24 : 14); a++) {
         const x = 1 + ((this.r() * (CFG.W - 2)) | 0), y = 1 + ((this.r() * (CFG.H - 2)) | 0), i = y * CFG.W + x;
         if (this.terr[i] !== TERR.GRASS || this.feat[i] || this.bmap[i] || this.road[i] || this.bpAt.has(i) || this.claim[i] >= 0) continue;
         if (Math.hypot(x - this.cx, y - this.cy) < 8) continue;
         let busy = false; for (let dy = -2; dy <= 2 && !busy; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * CFG.W + x + dx; if (this.road[j] || this.bmap[j]) { busy = true; break } } if (busy) continue;
         let near = false; for (const [dx, dy] of NB) { const f = this.feat[(y + dy) * CFG.W + x + dx]; if (f === FEAT.OAK || f === FEAT.PINE) { near = true; break } }
-        if (near && this.r() < 0.35) { this.feat[i] = this.E[i] > 0.58 ? FEAT.PINE : FEAT.OAK; this.res[i] = 4; this.trees++ }
+        if (near && this.r() < 0.5) { this.feat[i] = this.E[i] > 0.58 ? FEAT.PINE : FEAT.OAK; this.res[i] = 4; this.trees++ }
       }
     }
-    for (const a of this.animals) if (a.alive) a.update();
-    if (this.tick % 20 === 0) this.animals = this.animals.filter(a => a.alive);
-    for (const v of this.vills.slice()) if (v.alive) v.update();
-    if (this.tick % 60 === 0) planTown(this);
-    if (this.tick % 400 === 0) updateGroups(this);
-    if (!this.holidayDone && this.tod > 0.68) resolveHoliday(this);
-    if (!this.meetingDone && this.tod > 0.62) { this.meetingDone = true; holdMeeting(this) }
-    if (this.tick % 240 === 0) assignRoles(this);
+  }
+  step() {
+    const t0 = nowMs(), d = this.dbg; this.tick++;
+    if (this.tick % CFG.TPD === 0) { this.section('calendar', () => this.onNewDay()); this.section('sanity', () => this.sanity()) }
+    this.section('nature', () => this.nature());
+    if (this.tick % 4 === 0) this.section('grid', () => this.rebuildGrid());
+    this.section('animals', () => { for (const a of this.animals) if (a.alive) { try { a.update() } catch (e) { this.entityFault('animal', a, e) } } if (this.tick % 20 === 0) this.animals = this.animals.filter(a => a.alive) });
+    this.section('villagers', () => { for (const v of this.vills.slice()) if (v.alive) { try { v.update() } catch (e) { this.entityFault('villager', v, e) } } });
+    if (this.tick % 60 === 0) this.section('planner', () => planTown(this));
+    if (this.tick % 400 === 0) this.section('groups', () => updateGroups(this));
+    if (!this.holidayDone && this.tod > 0.68) this.section('holiday', () => resolveHoliday(this));
+    if (!this.meetingDone && this.tod > 0.62) { this.meetingDone = true; this.section('council', () => holdMeeting(this)) }
+    if (this.tick % 240 === 0) this.section('roles', () => assignRoles(this));
     if (this.tick % 100 === 0) {
       this.hist.push({ pop: this.vills.length, food: this.stock.food, wood: this.stock.wood, stone: this.stock.stone, season: this.season });
       if (this.hist.length > 1500) this.hist.shift();
     }
+    const dt = nowMs() - t0; d.ticks++; d.tickMs += dt; if (dt > d.tickMax) d.tickMax = dt; d.lastTickAt = nowMs();
   }
 }

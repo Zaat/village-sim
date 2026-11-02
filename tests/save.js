@@ -1,6 +1,6 @@
 // Round-trip test: node tests/save.js
 const fs=require('fs'),vm=require('vm'),path=require('path');const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,serializeWorld,deserializeWorld,Villager,Animal});';
+const code=['config','animals','villager','town','society','tech','water','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,serializeWorld,deserializeWorld,Villager,Animal,TECHS,techAvailable});';
 const ctx={console,Buffer};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777,{survival:false,disasters:true,crime:true});
 for(let t=0;t<1200*70;t++)w.step();
