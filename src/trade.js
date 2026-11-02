@@ -12,7 +12,7 @@ const FINE_PRICE = 40;
 const TRADER_NAMES = ['the Saltroad traders', 'the Dunmere merchants', 'the Highfen peddlers', 'the Greywater caravan', 'the Ember Coast traders', 'the Willowmere guild', 'the Stonebridge company'];
 
 function initEcon(w) { w.econ = { treasury: 0, prices: { ...BASE_PRICE }, trend: { wood: 0, stone: 0, food: 0 }, caravan: null, nextCaravan: 0, trades: [], sold: 0, bought: 0, spent: 0, comfort: 0 } }
-const taxRate = w => clamp(0.25 + 0.15 * w.gov.policy.tax, 0.1, 0.4);
+const taxRate = w => clamp(0.25 + 0.15 * w.gov.policy.tax + (w.rx ? 0.12 * w.rx.C : 0), 0.1, 0.5);
 const money = w => w.has('coinage');
 
 /* scarce goods cost more, plentiful goods less */
@@ -98,7 +98,7 @@ function tradeDay(w) {
   if (w.season === 3 && w.r() < 0.5) { E.nextCaravan = w.day + 2; return }
   if (w.gov.policy.growth < -0.75 && w.r() < 0.7) { E.nextCaravan = w.day + 4; return }        // a closed village discourages visitors
   const sea = w.has('seatrade') && w.of('dock').length > 0 && w.r() < 0.45, name = TRADER_NAMES[(w.r() * TRADER_NAMES.length) | 0];
-  E.caravan = { name, sea, arrived: w.day, leaves: w.day + 3, cap: sea ? 120 : 60, done: false }; E.nextCaravan = w.day + 5 + ((w.r() * 4) | 0);
+  E.caravan = { name, sea, arrived: w.day, leaves: w.day + 3, cap: sea ? 120 : 60, done: false }; E.nextCaravan = w.day + Math.round((5 + ((w.r() * 4) | 0)) * (w.rx ? w.rx.trade : 1));
   w.emit('trade', `${sea ? 'A merchant ship from ' + name.replace(/^the /, '') + ' drops anchor at the dock' : 'A caravan of ' + name.replace(/^the /, '') + ' arrives at the market'}.`, { caravan: E.caravan });
   if (money(w)) E.treasury += 4 * w.of('market').length;           // stall fees
   negotiate(w);

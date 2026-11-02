@@ -41,7 +41,7 @@ const neighName = n => n.name;
 /* ----- how strong is the village if it is attacked? ----- */
 function defenseScore(w) {
   const ad = adultsOf(w), brave = ad.filter(v => v.trait.brave > 0.55 && v.age < 60 && !v.isElder()).length, friendRaiders = w.neigh && w.neigh.some(n => n.kind === 'raiders' && n.pact === 2);
-  return 1 + 2 * Math.max(0, w.gov.policy.defense) + (projBuilt(w, 'bastion') ? 2 : 0) + (w.has('watchtowers') ? 1 : 0) + (w.has('ironwork') ? 1 : 0) + 1.5 * lesson(w, 'raids') + Math.min(3, brave / 6) + (w.fortifyUntil > w.day ? 1.5 : 0) + (friendRaiders ? 1.5 : 0);
+  return 1 + 2 * Math.max(0, w.gov.policy.defense) + (projBuilt(w, 'bastion') ? 2 : 0) + (w.has('watchtowers') ? 1 : 0) + (w.has('ironwork') ? 1 : 0) + 1.5 * lesson(w, 'raids') + Math.min(3, brave / 6) + (w.fortifyUntil > w.day ? 1.5 : 0) + (friendRaiders ? 1.5 : 0) + (w.rx ? w.rx.def : 0);
 }
 
 /* ----- first contact ----- */
@@ -152,7 +152,7 @@ function raidVisit(w, n) {
     n.rel -= 4; n.strength += 2;
     text = `Raiders from ${n.name} ${outcome === 'heavy' ? 'storm ashore and plunder the village' : 'land and carry off loot'}: ${lost.food} food, ${lost.wood} firewood and ${lost.stone} stone taken.${victims.length ? ' ' + victims.map(v => v.name).join(', ') + (victims.length > 1 ? ' fall' : ' falls') + ' defending the village.' : ''}${burned}`;
   }
-  learn(w, 'raids', outcome === 'repelled' ? 0.12 : 0.3); dlog(w, n, text, 'raid');
+  learn(w, 'raids', outcome === 'repelled' ? 0.12 : 0.3); for (const v of w.vills) if (v.isAdult()) experience(v, 'raid', outcome === 'repelled' ? 0.3 : 0.7); dlog(w, n, text, 'raid');
   if (dock && outcome !== 'repelled') w.scars.push({ x: dock.x - 1, y: dock.y - 1, w: 2, h: 2, until: w.tick + CFG.TPD * 4 });
   respondToRaid(w, n, outcome);
 }

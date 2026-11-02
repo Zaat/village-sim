@@ -25,7 +25,7 @@ function unpackArr(str, len) {
   for (let i = 0; i + 1 < bin.length && p < len; i += 2) { const v = bin.charCodeAt(i), n = bin.charCodeAt(i + 1); for (let k = 0; k < n && p < len; k++) u[p++] = v }
   return u;
 }
-const VILL_KEYS = ['id', 'sex', 'age', 'name', 'x', 'y', 'look', 'trait', 'skill', 'role', 'hunger', 'energy', 'social', 'health', 'carry', 'label', 'home', 'sleeping', 'preg', 'father', 'lastBirth', 'wait', 'dir', 'family', 'partner', 'kids', 'parentIds', 'mood', 'debates', 'desire', 'nextDesire', 'bio', 'reputation', 'record', 'duty', 'stocksUntil', 'group', 'friends', 'enemies', 'won', 'mournUntil', 'op', 'cause', '_st', 'coins', 'output', 'earned'];
+const VILL_KEYS = ['char', 'life', 'id', 'sex', 'age', 'name', 'x', 'y', 'look', 'trait', 'skill', 'role', 'hunger', 'energy', 'social', 'health', 'carry', 'label', 'home', 'sleeping', 'preg', 'father', 'lastBirth', 'wait', 'dir', 'family', 'partner', 'kids', 'parentIds', 'mood', 'debates', 'desire', 'nextDesire', 'bio', 'reputation', 'record', 'duty', 'stocksUntil', 'group', 'friends', 'enemies', 'won', 'mournUntil', 'op', 'cause', '_st', 'coins', 'output', 'earned'];
 const ANIMAL_KEYS = ['id', 'kind', 'x', 'y', 'hp', 'tx', 'ty', 'wait', 'life', 'hunger', 'dir', 'sex', 'moving', 'fleeing'];
 const pickKeys = (o, keys) => { const r = {}; for (const k of keys) if (o[k] !== undefined) r[k] = o[k]; return r };
 
@@ -40,7 +40,7 @@ function serializeWorld(w) {
     gov: w.gov, groups: w.groups,
     buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj, hp: b.hp, maxHp: b.maxHp, built: b.built, era: b.era, repairs: b.repairs, last: b.last })),
     bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir })),
-    neigh: w.neigh, voyageCd: w.voyageCd, dip: { fortifyUntil: w.fortifyUntil, dipDay: w.dipDay }, seen: w.seen ? packArr(w.seen) : null,
+    regime: w.regime, neigh: w.neigh, voyageCd: w.voyageCd, dip: { fortifyUntil: w.fortifyUntil, dipDay: w.dipDay }, seen: w.seen ? packArr(w.seen) : null,
     tech: w.tech, econ: w.econ, proj: w.proj, chron: w.chron, boats: w.boats.map(b => ({ id: b.id, dock: b.dock })),
     vills: w.vills.map(v => pickKeys(v, VILL_KEYS)), animals: w.animals.filter(a => a.alive).map(a => pickKeys(a, ANIMAL_KEYS)),
   };
@@ -61,7 +61,7 @@ function deserializeWorld(d) {
   }
   for (const b of w.buildings.values()) if (CFG.SOLID[b.type]) w.markAdj(b, w.adjFor(b.type));
   for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.dir ? { dir: s.dir } : undefined); if (s.proj) { bp.proj = true; bp.maxWorkers = 6 } bp.id = s.id; bp.have = s.have; bp.prog = s.prog }
-  if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (d.chron) w.chron = d.chron;
+  if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (d.chron) w.chron = d.chron; if (d.regime) { w.regime = d.regime; if (!w.regime.ax) w.regime.ax = defaultAxes() } w.rx = rxFrom(w.regime.ax);
   if (d.neigh && w.neigh) { w.neigh = d.neigh; w.voyageCd = d.voyageCd || 0; if (d.dip) { w.fortifyUntil = d.dip.fortifyUntil || 0; w.dipDay = d.dip.dipDay || 0 } if (d.seen) { w.seen.set(unpackArr(d.seen, N)); w.seenVer++ } } else if (!d.neigh) { w.neigh = null; w.fog = false; w.seen = null } if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
   if (d.tech) w.tech = d.tech; w.boats = []; for (const s of d.boats || []) { const dk = w.buildings.get(s.dock); if (dk && dk.dir) { const bt = new Boat(w, dk); bt.id = s.id; w.boats.push(bt) } }
   w.bpnext = d.counters.bpnext;

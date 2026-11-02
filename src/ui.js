@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'neighCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'neighCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -183,7 +183,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderProjects() } else if (curTab === 'world') { renderChron(); renderNeigh() } else if (curTab === 'society') { renderCouncil(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderProjects() } else if (curTab === 'world') { renderChron(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -247,6 +247,16 @@ function renderEcon() {
     ${E.trades.slice(0, 3).map(t => `<div class="techrow">${escapeHtml(t.text)}<span class="hint">day ${t.day}</span></div>`).join('')}
     ${coin ? `<div class="hint" style="margin-top:6px">Wealth: median ${cs.length ? cs[cs.length >> 1] : 0} coins · richest ${rich.map(v => escapeHtml(v.name) + ' ' + (v.coins || 0)).join(', ') || '–'}</div>` : ''}`;
 }
+function renderRegime() {
+  const w = world, R = w.regime, el = $('regimeCard'); if (!R) return;
+  const col = { auth: '#e0705a', comm: '#c4a24a', pious: '#b89cf0', indus: '#9aa3ab', open: '#6fb0e0', cohes: '#7ad07a' }, chief = councilMembers(w).find(m => m.title === 'Chief'), heir = R.heir ? w.vills.find(v => v.id === R.heir) : null;
+  let h = `<div class="big" style="margin-bottom:2px">${escapeHtml(R.label)}</div><div class="hint" style="margin-bottom:8px">${escapeHtml(REGIME_TXT[R.label] || '')}${R.since ? ` <i>(since day ${R.since})</i>` : ''}</div>`;
+  h += AXES.map(k => `<div class="polh"><span>${AXIS_TXT[k]}</span><span class="hint">${Math.round(R.ax[k] * 100)}</span></div><div class="bar"><i style="background:${col[k]};width:${Math.round(R.ax[k] * 100)}%"></i></div>`).join('');
+  if (chief) h += `<div class="hint" style="margin-top:6px"><b style="color:var(--ink)">${escapeHtml(chief.v.name)}</b> leads. ${escapeHtml(R.leaderText.replace(chief.v.name + ' is', 'Is'))}</div>`;
+  h += `<div class="hint" style="margin-top:4px">${R.ax.auth > 0.65 ? 'The Chief names the council.' : 'Councils are elected.'}${heir ? ` Heir: ${escapeHtml(heir.name)}.` : ''}${R.dynasty ? ` ${R.dynasty} inherited leadership${R.dynasty > 1 ? 's' : ''}.` : ''}${R.coups ? ` ${R.coups} coup${R.coups > 1 ? 's' : ''}.` : ''}${R.revolts ? ` ${R.revolts} uprising${R.revolts > 1 ? 's' : ''}.` : ''}${R.purges ? ` ${R.purges} purge${R.purges > 1 ? 's' : ''}.` : ''}${R.prophet ? ` ${escapeHtml(R.prophet.name)} preaches.` : ''}</div>`;
+  if (R.history.length) h += `<div class="hint" style="margin-top:6px">${R.history.slice(0, 3).map(x => `Y${x.year}: ${escapeHtml(x.from)} to ${escapeHtml(x.to)}`).join('<br>')}</div>`;
+  el.innerHTML = h;
+}
 function renderCouncil() {
   const w = world, g = w.gov, el = $('councilCard');
   const meters = ISSUES.map(k => { const p = g.policy[k], t = ISSUE_TXT[k]; return `<div class="pol"><div class="polh"><span>${t.name}</span><span class="hint">${p === 0 ? 'balanced' : (p > 0 ? 'leans: ' : 'leans: ') + (p > 0 ? t.hi : t.lo)}</span></div><div class="polb"><i class="mid"></i><i class="dot" style="left:${(p + 1) / 2 * 100}%"></i></div></div>` }).join('');
@@ -274,6 +284,7 @@ function updateInspector() {
     el.innerHTML = `<h3>Villager</h3><div class="big">${escapeHtml(s.name)} <span class="hint">of House ${escapeHtml(s.family)}</span></div>
       <div class="hint">${s.sex === 'f' ? 'Woman' : 'Man'} · ${s.stage()} · age ${s.age.toFixed(0)} days${tt ? ' · council ' + tt : ''}${s.role && !s.isChild() ? ' · ' + s.role : ''}${s.preg > 0 ? ' · expecting' : ''}</div>
       <div class="tags">${s.traitWords().map(t => `<span class="tag">${t}</span>`).join('') || '<span class="tag">Even-tempered</span>'}${gr ? `<span class="tag" style="border-color:${gr.color}">${escapeHtml(gr.name)}</span>` : ''}</div>
+      ${s.char ? `<div class="hint" style="margin:4px 0">Character: <b style="color:var(--ink)">${ruthWord(s.char)}</b>, ${faithWord(s.char)}, ${ambWord(s.char)}. ${escapeHtml(upbringingText(s))}</div>` : ''}
       <div style="margin-bottom:6px">${escapeHtml(s.label)}${s.carry ? ' · carrying ' + s.carry.amt + ' ' + s.carry.kind : ''}</div>
       ${bar('Mood (' + moodWord(s.mood) + ')', s.mood, '#c678dd')}${bar('Hunger (full)', s.hunger, '#e0a458')}${bar('Energy', s.energy, '#6a8fd0')}${bar('Health', s.health, '#8fd18b')}
       ${s.desire ? `<div class="hint" style="margin:4px 0"><b>Dreams</b> ${escapeHtml(s.desireText())}</div>` : ''}
@@ -410,7 +421,7 @@ function finishTimeTravel() {
   const w = world, T = tt; tt = null; setSpeed(T.prevSpeed > 0 ? T.prevSpeed : 10);
   $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false; $('ttBar').style.width = '100%';
   const newTech = Object.keys(w.tech.known).filter(k => !T.known0.has(k)).map(k => TECHS[k].name), newProj = Object.keys(w.proj.done).filter(k => !T.done0.has(k)).map(k => PROJECTS[k].name);
-  const evs = w.chron ? w.chron.events.slice(0, Math.max(0, w.chron.events.length - T.chron0)).filter(e => e.kind === 'event' || e.kind === 'faction' || e.kind === 'era' || e.kind === 'diplomacy' || e.kind === 'voyage').slice(0, 5) : [];
+  const evs = w.chron ? w.chron.events.slice(0, Math.max(0, w.chron.events.length - T.chron0)).filter(e => e.kind === 'event' || e.kind === 'faction' || e.kind === 'era' || e.kind === 'diplomacy' || e.kind === 'voyage' || e.kind === 'regime').slice(0, 5) : [];
   const spanDays = w.day - T.day0, esc = escapeHtml;
   $('ttInfo').textContent = T.cancel ? 'Stopped early.' : 'Done.';
   $('ttResult').innerHTML = `<b>${spanDays} days passed.</b> Population ${T.pop0} → ${w.vills.length}, ${w.deaths - T.deaths0} died.${newTech.length ? `<br>Discovered: ${esc(newTech.join(', '))}.` : ''}${newProj.length ? `<br>Built: ${esc(newProj.join(', '))}.` : ''}${w.gov.ruling ? `<br>${esc(w.gov.ruling.name)} leads the council.` : ''}${evs.length ? '<br>' + evs.map(e => '· ' + esc(e.text.length > 90 ? e.text.slice(0, 87) + '…' : e.text)).join('<br>') : ''}`;

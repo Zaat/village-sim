@@ -18,7 +18,7 @@ const LESSONS = {
   raids: { name: 'Raids', teaches: 'keep a watch on the dock and stand ready to defend the village' }
 };
 const LESSON_STEPS = [0.3, 0.55, 0.8];
-const CHRON_KINDS = new Set(['diplomacy', 'voyage', 'discovery', 'era', 'project', 'election', 'lesson', 'event', 'cold', 'faction']);
+const CHRON_KINDS = new Set(['regime', 'diplomacy', 'voyage', 'discovery', 'era', 'project', 'election', 'lesson', 'event', 'cold', 'faction']);
 function initHistory(w) { w.chron = { lessons: Object.fromEntries(Object.keys(LESSONS).map(k => [k, 0])), noted: Object.fromEntries(Object.keys(LESSONS).map(k => [k, 0])), events: [] } }
 const lesson = (w, k) => (w.chron ? w.chron.lessons[k] || 0 : 0);
 function chronicle(w, kind, text) {
@@ -48,7 +48,7 @@ function noteEvent(w, type, text, data) {
   else if (CHRON_KINDS.has(type) && type !== 'event') chronicle(w, type, text);
   else if (type === 'death' && data) {
     const why = data.why;
-    if (why === 'starved') { learn(w, 'famine', 0.05); const C = w.chron; if (!C.lastFamine || w.day - C.lastFamine > 20) { C.lastFamine = w.day; chronicle(w, 'event', `Famine: ${data.v.name} ${data.v.family} starved. Food has run short.`) } }
+    if (why === 'starved') { learn(w, 'famine', 0.05); for (const v of w.vills) if (v.isAdult()) experience(v, 'hunger', 0.25); const C = w.chron; if (!C.lastFamine || w.day - C.lastFamine > 20) { C.lastFamine = w.day; chronicle(w, 'event', `Famine: ${data.v.name} ${data.v.family} starved. Food has run short.`) } }
     else if (why === 'froze to death') learn(w, 'cold', 0.07); else if (why === 'was killed by a wolf') learn(w, 'wolves', 0.04); else if (why === 'succumbed to the fever') learn(w, 'fever', 0.02);
   }
 }

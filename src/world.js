@@ -9,7 +9,7 @@ class World {
     this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0; this.visit = null; this.fortifyUntil = 0; this.dipDay = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this);
+    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -214,7 +214,7 @@ class World {
     if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX) return;
     if (this.vills.length + 1 > this.beds()) return;
     const gp = this.gov.policy.growth; if (this.stock.food < this.vills.length * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
-    if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
+    if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
   }
   birth(f) {
     const dad = this.vills.find(v => v.id === f.father), c = new Villager(this, this.r() < 0.5 ? 'f' : 'm', 0, f.tx, f.ty, null, [f, dad]);
@@ -224,9 +224,10 @@ class World {
     this.emit('birth', `${c.name} ${c.family} was born to ${f.name}${dad ? ' and ' + dad.name : ''}.`, { c, f });
   }
   kill(v, why) {
+    try { onChiefDeath(this, v) } catch (e) { this.fault('succession', e) }
     v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; this.causes[why] = (this.causes[why] || 0) + 1;
     for (const h of this.houses()) { const k = h.occ.indexOf(v.id); if (k >= 0) h.occ.splice(k, 1) }
-    const grieve = (id, d, days, txt) => { const o = this.vills.find(x => x.id === id); if (o) { o.mournUntil = this.tick + CFG.TPD * days; o.mood = Math.max(0, o.mood - d); o.story(txt) } };
+    const grieve = (id, d, days, txt) => { const o = this.vills.find(x => x.id === id); if (o) { o.mournUntil = this.tick + CFG.TPD * days; o.mood = Math.max(0, o.mood - d); o.story(txt); experience(o, 'loss', d / 20) } };
     if (v.partner != null) { const p = this.vills.find(x => x.id === v.partner); if (p) p.partner = null; grieve(v.partner, 25, 6, `Lost ${v.name}, their partner.`) }
     for (const id of v.kids) grieve(id, 15, 4, `Lost their parent ${v.name}.`);
     for (const id of v.parentIds) if (id != null) grieve(id, 20, 5, `Lost their child ${v.name}.`);
@@ -265,6 +266,8 @@ class World {
     tradeDay(this);
     neighbourDay(this);
     buildingDay(this);
+    characterDay(this);
+    regimeDay(this);
     projectDay(this);
     historyDay(this);
   }

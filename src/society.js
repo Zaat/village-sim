@@ -202,9 +202,10 @@ function factionDay(w) {
 function voteScore(w, voter, c) {
   let od = 0; for (const k of ISSUES) od += Math.abs(voter.op[k] - c.v.op[k]); od /= ISSUES.length;
   const G = c.v.group ? w.groups.find(x => x.id === c.v.group) : null, R = w.gov.ruling, fatigue = R && c.v.group === R.gid ? Math.min(0.12, 0.04 * (R.terms || 1)) : 0;
-  return 0.5 * relOf(w, voter, c.v) / 100 + 0.3 * (1 - od) + (voter.group && voter.group === c.v.group ? 0.25 : 0) + 0.25 * c.score + (voter === c.v ? 0.15 : 0) + 0.3 * platformAlign(voter, G) - fatigue + w.r() * 0.16;
+  return 0.5 * relOf(w, voter, c.v) / 100 + 0.3 * (1 - od) + (voter.group && voter.group === c.v.group ? 0.25 : 0) + 0.25 * c.score + (voter === c.v ? 0.15 : 0) + 0.3 * platformAlign(voter, G) - fatigue + (w.regime && w.gov.council.some(x => x.id === c.v.id) ? 0.6 * Math.max(0, w.regime.ax.auth - 0.4) : 0) + w.r() * 0.16;
 }
 function holdElection(w, why) {
+  if (managedElection(w, why)) return;
   const g = w.gov, ad = adultsOf(w), cands = candidates(w); if (cands.length < 3) return;
   const votes = new Map(cands.map(c => [c.v.id, 0]));
   for (const voter of ad) { let best = null, bs = -9; for (const c of cands) { const s = voteScore(w, voter, c); if (s > bs) { bs = s; best = c } } votes.set(best.v.id, votes.get(best.v.id) + 1) }
@@ -253,6 +254,7 @@ function councilBase(w) {
 }
 function holdMeeting(w) {
   const g = w.gov, ms = councilMembers(w); if (ms.length < 2) return;
+  if (w.regime && w.regime.ax.cohes < 0.3 && w.r() < 0.5) { w.say('The council meeting dissolves into bickering and nothing is decided.'); g.nextMeeting = w.day + 3; return }
   const pop = w.vills.length, ad = adultsOf(w);
   const rate = crimeRate(w, 8), crisis = w.settings.crime && rate >= Math.max(2, Math.round(pop * 0.05)) && !g.trial;
   const members = ms.map(m => ({ name: m.v.name, title: m.title, traits: m.v.traitWords().join(', ') || 'even-tempered', op: m.v.op, group: (w.groups.find(x => x.id === m.v.group) || {}).name || null }));
@@ -322,7 +324,7 @@ function crimeDay(w) {
     const poor = v.hunger < 35 && w.stock.food < w.vills.length * 2.5;
     let p = 0.0025 * (1.4 - v.trait.kind) * (v.mood < 35 ? 3 : v.mood < 50 ? 1.5 : 1) * (poor ? 5 : 1) * (1 - 0.4 * Math.max(0, law)) * (1 + 0.3 * Math.max(0, -law)) * (1 - 0.25 * Math.max(0, def)) * (warden ? 0.8 : 1) * (1 + Math.min(2, v.record * 0.4)) * (w.settings.survival ? 1.4 : 1) * (g.welfare ? 0.6 : 1) * (w.has('coinage') ? ((v.coins || 0) < 4 ? 1.35 : (v.coins || 0) > 60 ? 0.7 : 1) : 1);
     if (v.trait.kind > 0.75) p *= 0.4;
-    if (w.r() < p * (projBuilt(w, 'bastion') ? 0.67 : 1)) theft(w, v);
+    if (w.r() < p * (projBuilt(w, 'bastion') ? 0.67 : 1) * (w.rx ? w.rx.crime : 1)) theft(w, v);
   }
   const wd = wardenOf(w);
   for (const c of w.crimes) {
@@ -369,12 +371,13 @@ function setupHoliday(w) {
   if (w.seasonDay === h.day && (!h.food || w.stock.food >= w.vills.length * h.food)) { w.festival = true; w.holiday = h.name }
   else if (w.forceFeast) { w.festival = true; w.holiday = 'Community Feast'; w.forceFeast = false }
   else if (w.gov.policy.labor > 0.4 && w.day % 6 === 0) { w.festival = true; w.holiday = 'Day of Rest' }
+  if (!w.festival && w.rx && w.rx.devotion && w.day % 8 === 4) { w.festival = true; w.holiday = 'Day of Devotion' }
   if (w.festival) { w.holidayDone = false; w.emit('holiday', `Today is the ${w.holiday}. The village will gather at the fire tonight.`, { name: w.holiday }); nudge(w, 'labor', 0.03) }
 }
 function resolveHoliday(w) {
   if (w.holidayDone) return; w.holidayDone = true;
   const amph = projBuilt(w, 'amphitheatre'), near = w.vills.filter(v => !v.sleeping && Math.hypot(v.x - w.cx, v.y - w.cy) < (amph ? 16 : 9));
-  for (const v of near) v.mood = Math.min(100, v.mood + (amph ? 14 : 8));
+  for (const v of near) { v.mood = Math.min(100, v.mood + (amph ? 14 : 8) + (w.holiday === 'Day of Devotion' ? 6 * v.char.piety : 0)); experience(v, 'fest', 1) }
   if (w.holiday === 'Midsummer Games') {
     const ps = near.filter(v => !v.isChild() && v.age < 65).sort(() => w.r() - 0.5).slice(0, 10); if (ps.length < 3) return;
     const events = [['footrace', v => v.trait.ind * 0.4 + v.trait.brave * 0.2 - (v.age > 50 ? 0.3 : 0)], ['archery', v => v.skill.hunt + v.trait.cur * 0.2], ['wrestling', v => v.trait.brave * 0.6 + v.trait.ind * 0.3 + (v.sex === 'm' ? 0.1 : 0)], ['riddle contest', v => v.trait.cur * 0.7 + v.trait.soc * 0.2]];

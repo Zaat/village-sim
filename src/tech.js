@@ -38,14 +38,14 @@ const techAvailable = w => Object.keys(TECHS).filter(id => !w.tech.known[id] && 
 
 function addKnowledge(w, pts, v) {
   if (v && v.isElder && v.isElder()) pts *= 1.3;                       // elders pass on what they know
-  if (projBuilt(w, 'library')) pts *= 1.5;
+  if (projBuilt(w, 'library')) pts *= 1.5; if (w.rx) pts *= w.rx.know;
   w.tech.points += pts; if (v) w.tech.contrib[v.id] = (w.tech.contrib[v.id] || 0) + pts;
 }
 /* how much does the village need this discovery right now? (rules-based default for the council) */
 function techNeed(w, id) {
   const pop = w.vills.length, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
   const base = { nets: (w.fishOK ? 0.6 : 0.1) + (w.neigh ? 0.3 : 0), tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: (w.fishOK ? 0.9 : 0.1) + (w.neigh ? 0.35 : 0), rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4 + (w.neigh ? 0.2 : 0), forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0), trade: 0.55 + (food > 6 ? 0.3 : 0), coinage: 0.5, seatrade: 0.35 + (w.of('dock').length ? 0.3 : 0) };
-  return (base[id] || 0.5) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id);
+  return (base[id] || 0.5) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id) + regimeNeed(w, id);
 }
 function techPref(v, id) {         // each council member's taste
   const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4, trade: t.soc * 0.4 + t.cur * 0.2, coinage: t.ind * 0.3 + t.cur * 0.1, seatrade: t.cur * 0.3 + t.brave * 0.3 })[id] || 0;

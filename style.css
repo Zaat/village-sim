@@ -89,3 +89,4 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #side>.tabbar button{flex:1;padding:5px 2px;font-size:12px;border-radius:7px}#side>.tabbar button.on{background:var(--acc);color:#0d1a0d;border-color:var(--acc)}
 .tab{display:none;flex-direction:column;gap:10px}.tab.on{display:flex}.tab>.card{flex:none}
 #log{height:calc(100vh - 150px);min-height:300px}
+#regimeCard{min-height:420px}

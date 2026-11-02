@@ -84,12 +84,13 @@ function projBackers(w, id) {
 /* The council's agenda item. Returns true when it used the meeting. */
 function projectAgenda(w, base, ms) {
   const P = w.proj; if (!P || P.active || P.cooldown > 0) return false;
+  if (w.regime && w.regime.ax.cohes < 0.3 && w.r() < 0.7) return false;                    // a divided village cannot agree on a great work
   const ids = projAvailable(w).filter(id => w.stock.wood >= PROJECTS[id].cost.wood * 0.5 && w.stock.stone >= PROJECTS[id].cost.stone * 0.35);
   if (!ids.length || w.bps.length > 4) return false;
   const ad = adultsOf(w), score = {};
   for (const id of ids) {
     const p = PROJECTS[id], pub = ad.reduce((s, v) => s + p.fit(v), 0) / ad.length, cou = ms.reduce((s, m) => s + p.fit(m.v), 0) / ms.length;
-    score[id] = 0.35 * pub + 0.25 * cou + 0.4 * p.need(w) + (rulingFocus(w) === p.focus ? 0.1 : 0) + w.r() * 0.08;
+    score[id] = 0.35 * pub + 0.25 * cou + 0.4 * p.need(w) + (rulingFocus(w) === p.focus ? 0.1 : 0) + regimeProjectBias(w, id) + w.r() * 0.08;
   }
   const best = ids.slice().sort((a, b) => score[b] - score[a])[0], go = score[best] > 0.46 - Math.min(0.14, 0.035 * (P.waits || 0));       // each refusal makes the next vote a little easier
   const options = ids.map(id => ({ id, text: `Build the ${PROJECTS[id].name}, ${PROJECTS[id].pitch}. Cost ${PROJECTS[id].cost.wood} firewood and ${PROJECTS[id].cost.stone} stone, many days of work. ${PROJECTS[id].gives}` }));

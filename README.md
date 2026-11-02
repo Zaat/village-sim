@@ -1,4 +1,4 @@
-# Village Sim v0.13
+# Village Sim v0.14
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,14 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Villages that turn out differently (new in 0.14)
+Every village now finds its own path. Nothing is rolled or scripted: it emerges from who the people are, how they were raised, who comes to lead them and what they live through.
+- **Character:** besides the basic traits, each villager has a **temperament** (gentle to ruthless), **faith** (doubter to devout) and **ambition**. These are partly inherited. A child's **upbringing** (a warm or harsh household, hungry years, losing a parent, growing up in a climate of fear) shapes who they become when they come of age. Life shapes them later too: loss deepens faith, famine and raids harden people, power feeds ambition. The inspector shows a villager's character and upbringing.
+- **How the village is ruled:** six slow-moving qualities (**Authority, Community, Faith, Industry, Openness, Unity**) are pulled by the character of the Chief and council, by the people's own temper, and by crises, plenty and divisions. They add up to a regime that can be a **Free Council, Commune, Tyranny or Autocracy, Communal State, Spiritual Commonwealth, Theocracy, Merchant Republic, Industrial State** or a **Fractured Town**. See the **Society** tab. A new regime is announced in the chronicle only when the change lasts.
+- **Real consequences:** harder rule drives work and curbs crime but sours moods and slows learning; communal states equalise wealth and tax heavily and discourage trade; faith brings fewer crimes, more festivals (a Day of Devotion) and more children but a more cautious mind; industry speeds work and invention; openness brings visitors and ideas; a divided village stalls councils and great works and sees street fights. The regime also steers research, great projects and people's opinions.
+- **Emergent events:** a **strongman** may seize power in a crisis; a **prophet** may rise and win followers; hard rulers **purge critics**; hated regimes meet **uprisings**; a gentle chief may **ease** a heavy hand; and with enough authority the Chief stops standing for election and names loyalists, then may pass leadership to a **child and heir**.
+- The seed-sweep tool now reports regimes and how much worlds differ.
 
 ## Tabs, speed and a balance sweep (new in 0.13)
 - The side panel is now **tabbed**: Village (stats, history, inspector), Society (council, circles), Progress (knowledge, trade, projects), World (neighbours, chronicle) and Events. Clicking something on the map jumps to the Village tab, and only the visible tab is redrawn. The last tab is remembered.

@@ -33,6 +33,7 @@ class Villager {
     const t = this.trait, o = b => clamp((b - 0.5) * 1.8 + (g() - 0.5) * 0.8, -1, 1);
     this.op = { growth: o(0.4 * t.kind + 0.3 * t.soc + 0.3 * t.cur), labor: o(0.6 * (1 - t.ind) + 0.4 * t.soc), law: o(0.5 * (1 - t.kind) + 0.3 * t.brave + 0.2 * (1 - t.cur)), defense: o(0.6 * (1 - t.brave) + 0.2 * (1 - t.kind) + 0.2), tax: o(0.55 * (1 - t.ind) + 0.45 * t.kind) };
     if (parents && parents[0]) for (const k of ISSUES) { const a = parents[0].op[k], b = parents[1] ? parents[1].op[k] : a; this.op[k] = clamp(0.6 * (a + b) / 2 + 0.4 * this.op[k], -1, 1) }
+    initChar(w, this, parents);
     this._st = this.stage();
   }
   isAdult() { return this.age >= CFG.ADULT_DAYS }
@@ -44,13 +45,13 @@ class Villager {
     const w = this.w;
     if (st === 'child') this.story('Took first steps and began exploring the village.');
     else if (st === 'youth') this.story('Began learning a trade as an apprentice.');
-    else if (st === 'adult') { this.story('Came of age and joined the grown folk of the village.'); w.say(`${this.name} has come of age.`); this.nextDesire = w.day }
+    else if (st === 'adult') { formAdult(w, this); this.story('Came of age and joined the grown folk of the village.'); w.say(`${this.name} has come of age.`); this.nextDesire = w.day }
     else if (st === 'elder') { this.story('Became an elder of the village.'); w.say(`${this.name} is now counted among the village elders.`) }
   }
   updateMood() {
     const w = this.w; let t = 50 + (this.hunger - 50) * 0.25 + (this.energy - 50) * 0.08 + (this.social - 50) * 0.12 + (this.health - 70) * 0.1;
     if (w.cold) t -= 15; t += Math.min(10, this.friends * 2.5) - Math.min(15, this.enemies * 4);
-    let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4;
+    let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4; t += regimeMood(this);
     if (w.has('coinage')) t += clamp(((this.coins || 0) - 25) / 40, -3, 4);
     if (this.partner != null) t += 6; if (this.home == null && this.isAdult()) t -= 6; if (this.mournUntil > w.tick) t -= 18; if (this.desire && w.day - this.desire.since > 40) t -= 4;
     this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
@@ -78,7 +79,7 @@ class Villager {
   isChild() { return this.age < CFG.CHILD_DAYS }
   wt(base, key) {
     const w = this.w, st = this.isElder() ? 1.3 : this.stage() === 'youth' ? 1.35 : 1;
-    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1)));
+    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1)));
   }
   gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)); addKnowledge(this.w, 0.13, this) }
   traitWords() { const o = []; for (const t of TRAITS) { if (this.trait[t] > 0.66) o.push(TRAIT_WORDS[t][1]); else if (this.trait[t] < 0.34) o.push(TRAIT_WORDS[t][0]) } return o }
@@ -93,7 +94,7 @@ class Villager {
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0));
     if (w.cold) { this.health -= 0.012; this.cause = 'cold' }
-    if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : 'starved'); return }
+    if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : this.cause === 'strife' ? 'was killed in the unrest' : 'starved'); return }
     if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
     if ((w.tick + this.id) % 10 === 0 && !this.sleeping && this.checkDanger()) return;
@@ -299,7 +300,7 @@ class Villager {
     };
     let path = w.search(this.tx, this.ty, goal, kind === 'wood' ? 110 : 75);
     if (!path && kind === 'stone' && w.stock.stone < 8 && w.beds() < w.vills.length + 4) path = w.search(this.tx, this.ty, goal, 140, true);       // the only rock may lie behind thick woods: cut a way through
-    if (!path || tgt < 0) return false;
+    if (!path || tgt < 0) return kind === 'wood' ? this.planReplant() : false;       // no trees within reach: plant some
     w.claim[tgt] = this.id; this.claim = tgt; this.jobKind = 'gather';
     const camp = w.campNear(kind, tgt % CFG.W, (tgt / CFG.W) | 0), load = CFG.CARRY + (camp && kind === 'stone' ? 2 : 0), bonus = camp ? 1.25 : 1;       // a camp nearby: bigger loads, better yield, shorter trips
     const amt = Math.round(Math.min(load, w.res[tgt]) * bonus); this.inb = { kind, amt }; w.inbound[kind] += amt;
@@ -310,6 +311,24 @@ class Villager {
       this.carry = { kind, amt: Math.round(take * bonus) }; if (key) this.gain(key);
     }), ...this.deliverSteps(kind)];
     return true;
+  }
+  /* when the woods within reach are gone, woodcutters plant saplings near the village (they sprout into trees in a few days) */
+  planReplant() {
+    const w = this.w; if (w.stock.wood >= w.vills.length * 4 || (w.season >= 3)) return false;
+    if (w.regrow.reduce((n, g) => n + (g.tree ? 1 : 0), 0) >= 60) return false;
+    for (let k = 0; k < 14; k++) {
+      const a = w.r() * 6.28, d = 6 + w.r() * 8, gx = Math.round(w.cx + Math.cos(a) * d), gy = Math.round(w.cy + Math.sin(a) * d), i = gy * CFG.W + gx;
+      if (gx < 2 || gy < 2 || gx >= CFG.W - 2 || gy >= CFG.H - 2 || w.terr[i] !== TERR.GRASS || w.feat[i] || w.road[i] || w.bmap[i] || w.bpAt.has(i) || w.claim[i] >= 0) continue;
+      let busy = false; for (let dy = -1; dy <= 1 && !busy; dy++) for (let dx = -1; dx <= 1; dx++) { const j = (gy + dy) * CFG.W + gx + dx; if (w.bmap[j] || w.road[j]) { busy = true; break } } if (busy) continue;
+      const path = w.search(this.tx, this.ty, (x, y) => x === gx && y === gy, 90); if (!path) continue;
+      w.claim[i] = this.id; this.claim = i; this.jobKind = 'gather';
+      this.steps = [go(null, path, 'To plant saplings'), work(this.wt(50, 'wood'), 'Planting saplings', () => {
+        for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [-1, 0]]) { const j = (gy + dy) * CFG.W + gx + dx; if (w.terr[j] === TERR.GRASS && !w.feat[j] && !w.bmap[j] && !w.road[j]) w.regrow.push({ idx: j, at: w.tick + CFG.TPD * 5, tree: FEAT.OAK }) }
+        this.gain('wood');
+      })];
+      return true;
+    }
+    return false;
   }
   planFarm() {
     const w = this.w, s = w.season; let fb = null, any = false;
