@@ -357,7 +357,7 @@ function trial(w, c) {
       culprit.record++; culprit.reputation = Math.max(0, culprit.reputation - 15); culprit.story(`Faced the council for ${c.type}: ${id}.`);
       if (id === 'duty') culprit.duty = w.tick + CFG.TPD * 2; if (id === 'stocks') culprit.stocksUntil = w.tick + CFG.TPD * 0.6; culprit.mood = Math.max(0, culprit.mood - 6 * sevOf[id]);
       const word = { warning: 'was given a public warning', duty: 'was sentenced to two days of community labor', stocks: 'was put in the stocks for a day', banish: 'was banished from the village' }[id];
-      if (id === 'banish') { w.vills.splice(w.vills.indexOf(culprit), 1); culprit.alive = false; culprit.endJob(); for (const h of w.houses()) { const i = h.occ.indexOf(culprit.id); if (i >= 0) h.occ.splice(i, 1) } w.banished.push(culprit.name) }
+      if (id === 'banish') { w.vills.splice(w.vills.indexOf(culprit), 1); culprit.alive = false; culprit.endJob(); for (const h of w.houses()) { const i = h.occ.indexOf(culprit.id); if (i >= 0) h.occ.splice(i, 1) } w.banished.push(culprit.name); noteFlow(w, 'left') }
       for (const v of adultsOf(w)) v.mood = clamp(v.mood + clamp(v.op.law * (sevOf[id] - 1) * 2, -3, 3), 0, 100);
       w.emit('crime', `${culprit.name} ${word}${c.type === 'theft' ? ' for stealing food' : ' for assault'}.${reason && src === 'claude' ? ' ' + reason : ''}`, { culprit, id, src });
       sp.slice(0, 2).forEach(s => w.say(`   ${s.who}: “${s.line}”`));

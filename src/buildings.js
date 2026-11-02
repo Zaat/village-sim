@@ -48,6 +48,13 @@ function rollBins(w, b, k, sk) {
   const gap = ser - b[sk]; if (gap > 0) { for (let i = 0; i < Math.min(gap, 4); i++) b[k].unshift(0); b[k].length = 4; b[sk] = ser }
   return b;
 }
+/* where the population changes come from: born, arrived (travelers and boat migrants), died, left (banished or sailed away), in seasonal bins */
+function noteFlow(w, kind, n = 1) {
+  const F = w.flow || (w.flow = { born: [0, 0, 0, 0], arrived: [0, 0, 0, 0], died: [0, 0, 0, 0], left: [0, 0, 0, 0], ser: 0, tot: { arrived: 0, left: 0 } }), ser = Math.floor(w.day / CFG.DPS), gap = ser - F.ser;
+  if (gap > 0) { for (const k of ['born', 'arrived', 'died', 'left']) { for (let i = 0; i < Math.min(gap, 4); i++) F[k].unshift(0); F[k].length = 4 } F.ser = ser }
+  F[kind][0] += n; if (F.tot[kind] !== undefined) F.tot[kind] += n;
+}
+const flowYear = (w, kind) => { const F = w.flow; return F ? F[kind].reduce((a, b) => a + b, 0) : 0 };
 function rollVisits(w, b) { if (!b.vh) { b.vtot = 0; b.reg = {} } return rollBins(w, b, 'vh', 'vser') }
 function recordVisit(w, b, v) {
   if (!b || !v) return; v.fav = v.fav || {}; v.fav[b.type] = (v.fav[b.type] || 0) + 1; rollVisits(w, b); b.vh[0]++; b.vtot++; const r = b.reg; r[v.id] = (r[v.id] || 0) + 1;

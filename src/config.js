@@ -27,6 +27,13 @@ const TRAITS = ['soc', 'ind', 'cur', 'brave', 'kind'];
 const TRAIT_WORDS = { soc: ['Reserved', 'Gregarious'], ind: ['Easygoing', 'Hardworking'], cur: ['Practical', 'Curious'], brave: ['Timid', 'Brave'], kind: ['Gruff', 'Kind'] };
 const NB = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+/* a villager's age in days, translated into familiar "human years" for display only: infant 0-3, child to 10, youth to 18, adult to about 62, elder to 90 */
+const HUMAN_AGE = [[0, 0], [3, 3], [8, 10], [14, 18], [80, 62], [120, 90]];
+function humanYears(days) {
+  const A = HUMAN_AGE; if (days <= 0) return 0;
+  for (let i = 1; i < A.length; i++) if (days <= A[i][0]) return Math.round(A[i - 1][1] + (A[i][1] - A[i - 1][1]) * (days - A[i - 1][0]) / (A[i][0] - A[i - 1][0]));
+  return Math.round(90 + (days - 120) * 0.25);
+}
 
 function mulberry32(a) { const f = function () { f.s = (f.s + 0x6D2B79F5) | 0; let t = f.s; t = Math.imul(t ^ t >>> 15, 1 | t); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }; f.s = a | 0; return f }   // f.s is the state, so saves can resume the exact stream
 function hash2(x, y) { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263); h = Math.imul(h ^ h >>> 13, 1274126177); return (h ^ h >>> 16) >>> 0 }

@@ -12,7 +12,8 @@ Object.assign(CFG.SOLID, { plaza: false, tavern: true });
 
 const PLACE_NAMES = { plaza: 'village square', tavern: 'tavern' };
 /* a free standing spot in or around a building */
-function pickSpot(w, b, inside) {
+function pickSpot(w, b, inside, v) {
+  const SP = w.spots || (w.spots = new Map());
   for (let k = 0; k < 16; k++) {
     let x, y;
     if (inside) { x = b.x + ((w.r() * b.w) | 0); y = b.y + ((w.r() * b.h) | 0) }
@@ -22,7 +23,7 @@ function pickSpot(w, b, inside) {
       else if (side === 2) { y = b.y - 1; x = b.x + ((w.r() * b.w) | 0) } else { y = b.y + b.h; x = b.x + ((w.r() * b.w) | 0) }
     }
     if (x < 1 || y < 1 || x >= CFG.W - 1 || y >= CFG.H - 1) continue; const i = y * CFG.W + x;
-    if (w.walkable(i) && !(w.bmap[i] && w.blk[i])) return { x, y };
+    if (w.walkable(i) && !(w.bmap[i] && w.blk[i])) { const h = SP.get(i); if (v && h && h.id !== v.id && h.until > w.tick && k < 12) continue; return { x, y } }
   }
   return null;
 }
@@ -47,7 +48,8 @@ function gatherPlan(w, v, meet, fest) {
   } else if (taverns.length && v.isAdult() && w.r() < 0.25 + 0.55 * v.trait.soc) {
     b = taverns[(w.r() * taverns.length) | 0]; kind = 'tavern'; go = 'To the tavern'; stay = 'Talking over a drink at the tavern'; ticks = 160;
   } else if (plaza && w.r() < 0.7) { b = plaza; inside = true; kind = 'plaza'; go = 'To the village square'; stay = 'Talking in the square' }
-  let spot = b ? pickSpot(w, b, inside) : null;
+  let spot = b ? pickSpot(w, b, inside, v) : null;
+  if (spot) { const SP = w.spots || (w.spots = new Map()); SP.set(spot.y * CFG.W + spot.x, { id: v.id, until: w.tick + ticks + 400 }); if (SP.size > 300) for (const [k, h] of SP) if (h.until < w.tick) SP.delete(k) }
   if (!spot) {                       // the old campfire ring
     kind = kind === 'hall' || kind === 'amph' || kind === 'tavern' || kind === 'plaza' || kind === 'look' ? 'fire' : kind;
     for (let k = 0; k < 10 && !spot; k++) { const x = Math.round(w.cx + (w.r() * 2 - 1) * 3), y = Math.round(w.cy + (w.r() * 2 - 1) * 3); if (w.walkable(y * CFG.W + x)) spot = { x, y } }

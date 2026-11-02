@@ -1,4 +1,4 @@
-# Village Sim v0.17
+# Village Sim v0.18
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Movement and population (new in 0.18)
+- **Natural movement:** paths are smoothed into straight diagonal shortcuts (never leaving roads, never cutting through brush or odd ground, and keeping clear of walls). If something is built across a shortcut, the walker plans again. Trips are a few percent shorter, so villages are a little more productive.
+- **Personal space:** villagers who stand or walk close together are eased apart when drawn, and standing spots at the square, tavern and hall are reserved so people don't stack on one spot. A small hop animates walking.
+- **Ages in human years:** a villager's age shows in game years with a human-years equivalent in brackets (display only).
+- **Where the population changes come from:** the Population card shows the past year's births, arrivals (travelers and boat migrants), deaths and departures (banished or sailed away).
+- **Secret key 5:** runs the simulation as fast as the machine allows (about 270x here), for testing. Keys 1 to 4 return to normal speeds.
+- **Measured:** pathfinding is only about 8% of run time, so no path-engine rewrite was needed yet; terrain-cost paths and connectivity come with the map step, and crowd movement with military units.
+- **Tools:** `tests/move.js` (walls and trip length, smoothing on versus off).
 
 ## A more living world (new in 0.17)
 - **Sightseers:** villagers walk over to look at the Monument, Temple (devout villagers pray there), Library (curious ones browse), Lighthouse, Bastion, Citadel, Foundry and Great Granary. Visits are counted in each building's panel, with popularity trends.

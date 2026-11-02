@@ -194,6 +194,30 @@ class World {
     }
     return null;
   }
+  /* ----- natural movement: straight, diagonal shortcuts instead of staircases ----- */
+  /* can a walker go straight between two tile centres, staying about 0.3 tile clear of obstacles, over plain ground only? */
+  clearLine(x0, y0, x1, y1) {
+    const { W } = CFG, dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy); if (len < 1e-6) return true;
+    const n = Math.ceil(len / 0.2), px = -dy / len * 0.3, py = dx / len * 0.3;
+    for (let k = 1; k < n; k++) {
+      const t = k / n, x = x0 + dx * t, y = y0 + dy * t;
+      for (let m = -1; m <= 1; m++) { const i = Math.floor(y + py * m) * W + Math.floor(x + px * m); if (!this.walkable(i)) return false; const tr = this.terr[i]; if (tr !== TERR.GRASS && tr !== TERR.SAND) return false }
+    }
+    return true;
+  }
+  /* string-pulling: keep only the waypoints that are needed; never leave a road, never cut through brush or odd ground */
+  smoothPath(sx, sy, path) {
+    if (path.length < 3) return path; const W = CFG.W, out = []; let ax = sx + 0.5, ay = sy + 0.5, i = 0;
+    while (i < path.length) {
+      let best = i; const lim = Math.min(path.length - 1, i + 14);
+      for (let j = lim; j > i; j--) {
+        let road = false; for (let k = i; k <= j; k++) if (this.road[path[k]]) { road = true; break } if (road) continue;
+        if (this.clearLine(ax, ay, (path[j] % W) + 0.5, ((path[j] / W) | 0) + 0.5)) { best = j; break }
+      }
+      out.push(path[best]); ax = (path[best] % W) + 0.5; ay = ((path[best] / W) | 0) + 0.5; i = best + 1;
+    }
+    return out;
+  }
   /* ----- social ----- */
   relKey(a, b) { return a.id < b.id ? a.id + '_' + b.id : b.id + '_' + a.id }
   getRel(a, b) { return this.rel.get(this.relKey(a, b)) || 0 }
@@ -220,12 +244,12 @@ class World {
     const dad = this.vills.find(v => v.id === f.father), c = new Villager(this, this.r() < 0.5 ? 'f' : 'm', 0, f.tx, f.ty, null, [f, dad]);
     c.home = f.home; c.parentIds = [f.id, dad ? dad.id : null]; if (f.home != null) { const h = this.buildings.get(f.home); if (h) h.occ.push(c.id) }
     f.kids.push(c.id); if (dad) dad.kids.push(c.id); c.story(`Born to ${f.name}${dad ? ' and ' + dad.name : ''} of House ${c.family}.`); f.story(`Gave birth to ${c.name}.`); if (dad) dad.story(`Became a father to ${c.name}.`);
-    this.vills.push(c); f.lastBirth = this.tick; this.births++;
+    this.vills.push(c); f.lastBirth = this.tick; this.births++; noteFlow(this, 'born');
     this.emit('birth', `${c.name} ${c.family} was born to ${f.name}${dad ? ' and ' + dad.name : ''}.`, { c, f });
   }
   kill(v, why) {
     try { onChiefDeath(this, v) } catch (e) { this.fault('succession', e) }
-    v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; this.causes[why] = (this.causes[why] || 0) + 1;
+    v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; noteFlow(this, 'died'); this.causes[why] = (this.causes[why] || 0) + 1;
     for (const h of this.houses()) { const k = h.occ.indexOf(v.id); if (k >= 0) h.occ.splice(k, 1) }
     const grieve = (id, d, days, txt) => { const o = this.vills.find(x => x.id === id); if (o) { o.mournUntil = this.tick + CFG.TPD * days; o.mood = Math.max(0, o.mood - d); o.story(txt); experience(o, 'loss', d / 20) } };
     if (v.partner != null) { const p = this.vills.find(x => x.id === v.partner); if (p) p.partner = null; grieve(v.partner, 25, 6, `Lost ${v.name}, their partner.`) }

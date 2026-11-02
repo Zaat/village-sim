@@ -204,7 +204,7 @@ function secessionTalks(w, g, leader, ms, why) {
     } });
 }
 function departVillager(w, v) {
-  v.endJob(); v.alive = false; const i = w.vills.indexOf(v); if (i >= 0) w.vills.splice(i, 1);
+  v.endJob(); v.alive = false; const i = w.vills.indexOf(v); if (i >= 0) w.vills.splice(i, 1); noteFlow(w, 'left');
   for (const h of w.houses()) { const k = h.occ.indexOf(v.id); if (k >= 0) h.occ.splice(k, 1) }
   for (const o of w.vills) { if (o.partner === v.id) o.partner = null }
   w.gov.council = w.gov.council.filter(c => c.id !== v.id);

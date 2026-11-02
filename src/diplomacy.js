@@ -105,7 +105,7 @@ function migrantVisit(w, n) {
   const free = w.beds() - w.vills.length; if (free < 2) return false; const dock = w.of('dock')[0]; if (!dock) return false;
   startVisit(w, n, 'migrants', 2); const k = Math.min(free, 2 + ((w.r() * 3) | 0)), names = [];
   for (let i = 0; i < k; i++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 14 + w.r() * 22, dock.x, dock.y); v.hunger = 85; v.story(`Sailed from ${n.name} to make a new home here.`); w.vills.push(v); names.push(v.name) }
-  n.pop = Math.max(6, n.pop - k); n.rel += 2;
+  n.pop = Math.max(6, n.pop - k); n.rel += 2; noteFlow(w, 'arrived', k);
   dlog(w, n, `${names.join(', ')} sail from ${n.name} to settle here.`, 'migrants'); return true;
 }
 function teachVisit(w, n) {

@@ -196,7 +196,7 @@ function townNewDay(w) {
     const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * 3) | 0);
     if (sp) {
       const names = []; for (let k = 0; k < n; k++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 12 + w.r() * 20, sp.x, sp.y); v.hunger = 85; v.story('Arrived at the village as a traveler seeking shelter.'); w.vills.push(v); names.push(v.name) }
-      w.emit('event', `${names.join(', ')} arrive${n === 1 ? 's' : ''} seeking shelter, and ${n === 1 ? 'is' : 'are'} welcomed.`, { kind: 'newcomers', names });
+      noteFlow(w, 'arrived', n); w.emit('event', `${names.join(', ')} arrive${n === 1 ? 's' : ''} seeking shelter, and ${n === 1 ? 'is' : 'are'} welcomed.`, { kind: 'newcomers', names });
     }
   }
   if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most

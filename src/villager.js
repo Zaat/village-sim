@@ -124,6 +124,7 @@ class Villager {
     if (st.type === 'go') {
       this.path = st.path || w.search(this.tx, this.ty, st.goal, st.maxCost); st.path = null;
       if (!this.path && !st.maxCost) this.path = w.search(this.tx, this.ty, st.goal, undefined, true);     // boxed in: hack through brush
+      if (this.path && this.path.length > 2) this.path = w.smoothPath(this.tx, this.ty, this.path);
       if (!this.path && st.onFail) st.onFail();
       if (!this.path) { this.path = []; if (this.hunger < 30) { this.stuck = (this.stuck || 0) + 1; if (this.stuck >= 2) this.rescue() } this.abort(); return false }
     } else { st.t = st.ticks; this.sleeping = !!st.sleep; this.fighting = !!st.fight }
@@ -142,7 +143,13 @@ class Villager {
     if (w.season === 3 && !w.road[here]) speed *= 0.85;
     const nx = (nxt % CFG.W) + 0.5, ny = ((nxt / CFG.W) | 0) + 0.5, dx = nx - this.x, dy = ny - this.y, d = Math.hypot(dx, dy);
     if (Math.abs(dx) > 0.01) this.dir = dx > 0 ? 1 : -1;
-    if (d <= speed) { this.x = nx; this.y = ny; this.path.shift() } else { this.x += dx / d * speed; this.y += dy / d * speed }
+    const arrive = d <= speed, px = arrive ? nx : this.x + dx / d * speed, py = arrive ? ny : this.y + dy / d * speed, ti = Math.floor(py) * CFG.W + Math.floor(px);
+    if (ti !== here && ti !== nxt && !w.walkable(ti) && !w.passable(ti)) {          // a shortcut tile has been built on or blocked since the path was made: plan again
+      const st = this.cur; if (!st.goal) { this.abort(); return }
+      const p = w.search(this.tx, this.ty, st.goal, st.maxCost); if (!p) { this.abort(); return }
+      this.path = p.length > 2 ? w.smoothPath(this.tx, this.ty, p) : p; return;
+    }
+    if (arrive) { this.x = nx; this.y = ny; this.path.shift() } else { this.x = px; this.y = py }
   }
   rescue() {       // stranded and starving: they wade, climb and stumble their way back to camp
     const w = this.w; this.stuck = 0;

@@ -269,8 +269,25 @@ function drawAnimal(g, a, w, now, sel) {
 }
 const SHIRTS_M = ['#6a8fd0', '#5a7fb0', '#7a9a6a', '#a07850', '#8a6aa8'], SHIRTS_F = ['#d77a8f', '#c46a9a', '#e0a050', '#7aa8a0', '#b06a6a'], SKIN = ['#f0cfa8', '#e0b48a', '#c8935f', '#a8714a', '#7a4f33'], HAIR = ['#3d2b1f', '#6b3a2a', '#c9a24a', '#a8a8a8', '#1d1d1d', '#9a4a1f'];
 const HATS = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', builder: '#e8a03a', hunter: '#3f7d4a', fisher: '#4aa3d8' };
+/* personal space (drawing only): villagers standing or walking close together are eased apart so nobody is stacked on one spot */
+function separateVillagers(w) {
+  const vs = w.vills, grid = new Map();
+  for (const v of vs) { v._tx = 0; v._ty = 0; if (v.sleeping || v.boat) continue; const k = Math.floor(v.y) * 4096 + Math.floor(v.x); let a = grid.get(k); if (!a) grid.set(k, a = []); a.push(v) }
+  for (const [k, a] of grid) {
+    const gy = Math.floor(k / 4096), gx = k % 4096;
+    for (let dy = 0; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      if (dy === 0 && dx < 0) continue; const b = dy === 0 && dx === 0 ? a : grid.get((gy + dy) * 4096 + gx + dx); if (!b) continue;
+      for (let i = 0; i < a.length; i++) for (let j = b === a ? i + 1 : 0; j < b.length; j++) {
+        const p = a[i], q = b[j]; let ex = p.x - q.x, ey = p.y - q.y, d = Math.hypot(ex, ey); if (d >= 0.5) continue;
+        if (d < 0.02) { const ang = (p.id * 2.399 + q.id) % 6.283; ex = Math.cos(ang); ey = Math.sin(ang); d = 0.02 } const push = (0.5 - d) * 0.5 / d;
+        p._tx += ex * push; p._ty += ey * push * 0.6; q._tx -= ex * push; q._ty -= ey * push * 0.6;
+      }
+    }
+  }
+  for (const v of vs) { const tx = Math.max(-0.3, Math.min(0.3, v._tx)), ty = Math.max(-0.18, Math.min(0.18, v._ty)); v.sx = (v.sx || 0) + (tx - (v.sx || 0)) * 0.15; v.sy = (v.sy || 0) + (ty - (v.sy || 0)) * 0.15 }
+}
 function drawVillager(g, v, w, now, sel) {
-  const x = Math.round(v.x * CFG.T), y = Math.round(v.y * CFG.T), st = v.stage(), k = { infant: 0.5, child: 0.7, youth: 0.88, adult: 1, elder: 0.96 }[st], s = w.season;
+  const x = Math.round((v.x + (v.sx || 0)) * CFG.T), y = Math.round((v.y + (v.sy || 0)) * CFG.T), st = v.stage(), k = { infant: 0.5, child: 0.7, youth: 0.88, adult: 1, elder: 0.96 }[st], s = w.season;
   if (!v.boat) rc(g, 'rgba(0,0,0,.22)', x - 4 * k, y - 1, 8 * k, 2);
   if (sel === v) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y, 7, 3.5, 0, 0, 7); g.stroke() }
   const shirt = (v.sex === 'f' ? SHIRTS_F : SHIRTS_M)[v.look % 5], skin = SKIN[(v.look >> 3) % 5], hair = st === 'elder' ? '#b9bdc2' : HAIR[(v.look >> 5) % 6], gcol = R.gcol && R.gcol.get(v.group);
@@ -280,6 +297,7 @@ function drawVillager(g, v, w, now, sel) {
     const t = (now / 500) % 3; g.fillStyle = '#fff'; g.font = '6px sans-serif'; g.fillText('z', x + 4 + t, y - 9 - t * 2); return;
   }
   const mv = v.cur && v.cur.type === 'go' && v.path.length > 0, ph = mv ? ((now / 140) | 0) % 2 : 0, work = v.cur && v.cur.type === 'work' && !v.fighting && v.label !== 'Idling' && !/Chat|Talk|Feast|Eat|Hid/.test(v.label), sw = work ? ((now / 160) | 0) % 2 : 0;
+  if (mv && ph && !v.boat) g.translate(0, -0.7);
   if (v.boat) g.translate(0, 2); else { rc(g, '#3b3f4a', -2, -4, 2, 4 - (ph ? 1 : 0)); rc(g, '#3b3f4a', 1, -4, 2, 4 - (ph ? 0 : 1)) }
   rc(g, shirt, -3, -9, 6, 6); rc(g, 'rgba(0,0,0,.15)', -3, -4, 6, 1); if (s === 3) rc(g, '#e8edf0', -3, -9, 6, 1);
   rc(g, skin, -4, -8 + (ph ? 1 : 0), 1, 3); rc(g, skin, 3, -8 - (work ? sw * 2 : (ph ? 0 : 1)), 1, 3);
@@ -318,7 +336,7 @@ function render(w, sel, now) {
   const inView = (bx, by, bw, bh) => bx + bw >= x0 && bx <= x1 && by + bh >= y0 && by <= y1 + 3;
   for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else if (b.type === 'market') marketArt(g, w, b, now); else if (b.type === 'plaza') plazaArt(g, w, b, now, dark); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => { drawBuilding(g, w, b, now, dark); wearArt(g, b, now) } }) } }
   for (const bp of w.bps) if (inView(bp.x, bp.y, bp.w, bp.h)) bpArt(g, w, bp, now);
-  const vflag = visitorFlag(w);
+  const vflag = visitorFlag(w); separateVillagers(w);
   if ((w.econ.caravan && w.econ.caravan.sea) || w.visit) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = bt.mx + d.dir[0] * 2.2, sy = bt.my + d.dir[1] * 2.2, ty = Math.floor(sy); if (rows[ty]) rows[ty].push({ y: sy * T - 1, fn: () => shipArt(g, sx * T, sy * T, d.dir[0] >= 0 ? 1 : -1, now, vflag) }) }
   for (const bt of w.boats) { const ty = Math.floor(bt.y); if (rows[ty]) rows[ty].push({ y: bt.y * T - 2, fn: () => drawBoat(g, bt, w, now) }) }
   for (const a of w.animals) { if (!a.alive) continue; const ty = Math.floor(a.y); if (rows[ty] && a.x / 1 >= x0 - 1 && a.x <= x1 + 1) rows[ty].push({ y: a.y * T, fn: () => drawAnimal(g, a, w, now, sel) }) }
