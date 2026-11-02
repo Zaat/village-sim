@@ -216,13 +216,13 @@ function marketArt(g, w, b, now) {
     rc(g, '#6a4a2a', wx - 6, wy + 3, 6, 4); rc(g, '#6a4a2a', wx - 7, wy + 1, 2, 3); rc(g, '#3a2a1a', wx - 6, wy + 7, 1, 2); rc(g, '#3a2a1a', wx - 2, wy + 7, 1, 2);
   }
 }
-function shipArt(g, x, y, dir, now) {
+function shipArt(g, x, y, dir, now, flag) {
   const bob = Math.round(Math.sin(now / 520) * 1); g.save(); g.translate(Math.round(x), Math.round(y) + bob); g.scale(dir, 1);
   rc(g, 'rgba(255,255,255,.3)', -16, 5, 32, 1);
   rc(g, '#5a3a20', -15, -2, 30, 6); rc(g, '#7a5230', -14, -3, 28, 1); rc(g, '#8f6338', 14, -5, 2, 3); rc(g, '#3e2a18', -13, 2, 26, 1); rc(g, '#c9a070', -10, -2, 3, 2); rc(g, '#c9a070', -2, -2, 3, 2); rc(g, '#c9a070', 6, -2, 3, 2);
   rc(g, '#4a3220', -6, -22, 1, 20); rc(g, '#4a3220', 5, -19, 1, 17);
   for (let i = 0; i < 11; i++) rc(g, i % 2 ? '#e8e2d0' : '#f6f2e6', -5, -21 + i, 10 - (i > 8 ? 2 : 0), 1); for (let i = 0; i < 8; i++) rc(g, i % 2 ? '#e8e2d0' : '#f6f2e6', 6, -18 + i, 7, 1);
-  rc(g, '#c8443c', -6, -24, 4, 2); g.restore();
+  rc(g, flag || '#c8443c', -6, -24, 4, 2); if (flag) { rc(g, flag, -6, -26, 6, 3); rc(g, flag, -4, -14, 3, 7) } g.restore();
 }
 function campfireArt(g, w, b, now, dark) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, f = ((now / 110) | 0) % 3;
@@ -318,7 +318,8 @@ function render(w, sel, now) {
   const inView = (bx, by, bw, bh) => bx + bw >= x0 && bx <= x1 && by + bh >= y0 && by <= y1 + 3;
   for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else if (b.type === 'market') marketArt(g, w, b, now); else if (b.type === 'plaza') plazaArt(g, w, b, now, dark); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
   for (const bp of w.bps) if (inView(bp.x, bp.y, bp.w, bp.h)) bpArt(g, w, bp, now);
-  if (w.econ.caravan && w.econ.caravan.sea) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = bt.mx + d.dir[0] * 2.2, sy = bt.my + d.dir[1] * 2.2, ty = Math.floor(sy); if (rows[ty]) rows[ty].push({ y: sy * T - 1, fn: () => shipArt(g, sx * T, sy * T, d.dir[0] >= 0 ? 1 : -1, now) }) }
+  const vflag = visitorFlag(w);
+  if ((w.econ.caravan && w.econ.caravan.sea) || w.visit) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = bt.mx + d.dir[0] * 2.2, sy = bt.my + d.dir[1] * 2.2, ty = Math.floor(sy); if (rows[ty]) rows[ty].push({ y: sy * T - 1, fn: () => shipArt(g, sx * T, sy * T, d.dir[0] >= 0 ? 1 : -1, now, vflag) }) }
   for (const bt of w.boats) { const ty = Math.floor(bt.y); if (rows[ty]) rows[ty].push({ y: bt.y * T - 2, fn: () => drawBoat(g, bt, w, now) }) }
   for (const a of w.animals) { if (!a.alive) continue; const ty = Math.floor(a.y); if (rows[ty] && a.x / 1 >= x0 - 1 && a.x <= x1 + 1) rows[ty].push({ y: a.y * T, fn: () => drawAnimal(g, a, w, now, sel) }) }
   for (const v of w.vills) { const ty = Math.floor(v.y); if (rows[ty] && v.x >= x0 - 1 && v.x <= x1 + 1) rows[ty].push({ y: v.y * T, fn: () => drawVillager(g, v, w, now, sel) }) }
@@ -478,4 +479,10 @@ function neighArt(g, w, n, now) {
 }
 function neighLabel(g, n) {
   const X = n.x * CFG.T, Y = n.y * CFG.T; g.font = 'bold 9px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(10,14,20,.85)'; g.strokeText(n.name, X, Y - 68); g.fillStyle = '#ffe9b0'; g.fillText(n.name, X, Y - 68); g.textAlign = 'start';
+}
+
+/* the colours a visiting neighbour's ship flies */
+function visitorFlag(w) {
+  if (!w.neigh) return null; const c = w.econ.caravan, id = w.visit ? w.visit.n : c && c.from !== undefined ? c.from : null; if (id === null) return null;
+  if (w.visit && w.visit.type === 'raid') return '#9a1414'; const n = w.neigh.find(x => x.id === id); return n ? { traders: '#3c6fb4', farmers: '#c4a24a', scholars: '#7a5aa8', raiders: '#8a1c1c' }[n.kind] : null;
 }

@@ -88,7 +88,7 @@ $('mindToggle').addEventListener('change', async e => {
 $('mindRetry').addEventListener('click', () => mindEnable());
 
 /* ---------- settings ---------- */
-const SETTING_DEFAULTS = { survival: false, disasters: true, crime: true };
+const SETTING_DEFAULTS = { survival: false, disasters: true, crime: true, raids: false };
 function loadSettings() { let s = {}; try { s = JSON.parse(localStorage.getItem('villagesim.settings') || '{}') } catch (e) { } return { ...SETTING_DEFAULTS, ...s } }
 function saveSettings() { try { localStorage.setItem('villagesim.settings', JSON.stringify(world.settings)) } catch (e) { } }
 for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('change', e => { world.settings[k] = e.target.checked; saveSettings() });
@@ -202,8 +202,16 @@ function renderNeigh() {
   if (!w.has('boats')) { el.innerHTML = '<div class="hint">Beyond the horizon the sea may hide other lands. With boats, the village could one day find out.</div>'; return }
   const found = w.neigh.filter(n => n.found), left = w.neigh.length - found.length, vy = w.voyage && w.vills.find(v => v.id === w.voyage.id);
   let html = vy ? `<div class="hint" style="margin-bottom:6px">⛵ ${escapeHtml(vy.name)} is at sea, bound for unknown shores.</div>` : '';
-  html += found.map(n => `<div class="grp"><b>${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span><div class="hint">${compass(w, n.x, n.y)} of here, ${Math.max(1, Math.round(n.dist / 84 * 10) / 10)} day${n.dist > 100 ? 's' : ''} by boat · found day ${n.foundDay}</div><div class="hint">${escapeHtml(NEIGH_KINDS[n.kind].blurb)}</div></div>`).join('');
-  html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '<div class="hint" style="margin-top:6px">Every nearby land has been found. Trade and diplomacy come next.</div>';
+  if (w.visit) { const vn = w.neigh.find(x => x.id === w.visit.n); if (vn) html += `<div class="hint" style="margin-bottom:6px">${w.visit.type === 'raid' ? '⚔️ Raiders from' : '⛵ A ship from'} ${escapeHtml(vn.name)} is at the dock.</div>` }
+  if (w.fortifyUntil > w.day) html += `<div class="hint" style="margin-bottom:6px">🛡 The village is on guard for ${w.fortifyUntil - w.day} more days.</div>`;
+  html += found.map(n => {
+    const r = Math.round(n.rel || 0), col = r >= 40 ? '#7ad07a' : r >= 12 ? '#b8d070' : r > -12 ? '#d9c26a' : '#e07a5a', pct = Math.round((r + 100) / 2);
+    return `<div class="grp"><b>${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span>
+      <div class="polh" style="margin-top:3px"><span class="hint">${relLabel(r)} (${r > 0 ? '+' : ''}${r})</span><span class="hint">${PACT_NAMES[n.pact || 0]}</span></div><div class="bar"><i style="background:${col};width:${pct}%"></i></div>
+      <div class="hint">${compass(w, n.x, n.y)} · ${Math.max(1, Math.round(n.dist / 84 * 10) / 10)} day${n.dist > 100 ? 's' : ''} by boat · offers ${escapeHtml(NEIGH_PROFILE[n.kind].goods)}</div>
+      ${n.tribute > w.day ? `<div class="hint">Paid for peace until day ${n.tribute}</div>` : ''}${n.hist && n.hist[0] ? `<div class="hint">${escapeHtml(n.hist[0])}</div>` : ''}</div>`;
+  }).join('');
+  html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '';
   el.innerHTML = html;
 }
 function renderChron() {
@@ -387,7 +395,7 @@ function finishTimeTravel() {
   const w = world, T = tt; tt = null; setSpeed(T.prevSpeed > 0 ? T.prevSpeed : 10);
   $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false; $('ttBar').style.width = '100%';
   const newTech = Object.keys(w.tech.known).filter(k => !T.known0.has(k)).map(k => TECHS[k].name), newProj = Object.keys(w.proj.done).filter(k => !T.done0.has(k)).map(k => PROJECTS[k].name);
-  const evs = w.chron ? w.chron.events.slice(0, Math.max(0, w.chron.events.length - T.chron0)).filter(e => e.kind === 'event' || e.kind === 'faction' || e.kind === 'era').slice(0, 5) : [];
+  const evs = w.chron ? w.chron.events.slice(0, Math.max(0, w.chron.events.length - T.chron0)).filter(e => e.kind === 'event' || e.kind === 'faction' || e.kind === 'era' || e.kind === 'diplomacy' || e.kind === 'voyage').slice(0, 5) : [];
   const spanDays = w.day - T.day0, esc = escapeHtml;
   $('ttInfo').textContent = T.cancel ? 'Stopped early.' : 'Done.';
   $('ttResult').innerHTML = `<b>${spanDays} days passed.</b> Population ${T.pop0} → ${w.vills.length}, ${w.deaths - T.deaths0} died.${newTech.length ? `<br>Discovered: ${esc(newTech.join(', '))}.` : ''}${newProj.length ? `<br>Built: ${esc(newProj.join(', '))}.` : ''}${w.gov.ruling ? `<br>${esc(w.gov.ruling.name)} leads the council.` : ''}${evs.length ? '<br>' + evs.map(e => '· ' + esc(e.text.length > 90 ? e.text.slice(0, 87) + '…' : e.text)).join('<br>') : ''}`;

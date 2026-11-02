@@ -82,3 +82,4 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #chronCard{height:470px;overflow-y:auto}
 #ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
 #neighCard{height:230px;overflow-y:auto}
+#neighCard{height:380px}

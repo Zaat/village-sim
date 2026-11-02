@@ -93,7 +93,7 @@ class Villager {
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0));
     if (w.cold) { this.health -= 0.012; this.cause = 'cold' }
-    if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : 'starved'); return }
+    if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : 'starved'); return }
     if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
     if ((w.tick + this.id) % 10 === 0 && !this.sleeping && this.checkDanger()) return;

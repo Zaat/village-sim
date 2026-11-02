@@ -22,7 +22,7 @@ const PROJECTS = {
     name: 'Bastion', tech: 'watchtowers', size: [3, 3], cost: { wood: 30, stone: 90 }, time: 1100, minPop: 30,
     pitch: 'a stone bastion to guard the village', gives: 'Wolves come half as often, thefts and brawls fall by a third.',
     fit: v => 0.45 * v.trait.brave + 0.4 * (v.op.defense + 1) / 2 + 0.15 * (v.op.law + 1) / 2,
-    focus: 'safety', need: w => clamp(0.3 * lesson(w, 'wolves') + crimeRate(w, 16) / Math.max(4, w.vills.length * 0.15) + (w.animals.some(a => a.kind === 'wolf' && a.alive) ? 0.3 : 0), 0, 1)
+    focus: 'safety', need: w => clamp(0.3 * lesson(w, 'wolves') + 0.4 * lesson(w, 'raids') + crimeRate(w, 16) / Math.max(4, w.vills.length * 0.15) + (w.animals.some(a => a.kind === 'wolf' && a.alive) ? 0.3 : 0), 0, 1)
   },
   monument: {
     name: 'Monument', tech: 'masonry', size: [3, 3], cost: { wood: 20, stone: 80 }, time: 1000, minPop: 35,

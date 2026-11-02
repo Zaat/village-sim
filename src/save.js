@@ -29,7 +29,7 @@ function serializeWorld(w) {
     gov: w.gov, groups: w.groups,
     buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj })),
     bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir })),
-    neigh: w.neigh, voyageCd: w.voyageCd, seen: w.seen ? b64enc(w.seen) : null,
+    neigh: w.neigh, voyageCd: w.voyageCd, dip: { fortifyUntil: w.fortifyUntil, dipDay: w.dipDay }, seen: w.seen ? b64enc(w.seen) : null,
     tech: w.tech, econ: w.econ, proj: w.proj, chron: w.chron, boats: w.boats.map(b => ({ id: b.id, dock: b.dock })),
     vills: w.vills.map(v => pickKeys(v, VILL_KEYS)), animals: w.animals.filter(a => a.alive).map(a => pickKeys(a, ANIMAL_KEYS)),
   };
@@ -51,7 +51,7 @@ function deserializeWorld(d) {
   for (const b of w.buildings.values()) if (CFG.SOLID[b.type]) w.markAdj(b, w.adjFor(b.type));
   for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.dir ? { dir: s.dir } : undefined); if (s.proj) { bp.proj = true; bp.maxWorkers = 6 } bp.id = s.id; bp.have = s.have; bp.prog = s.prog }
   if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (d.chron) w.chron = d.chron;
-  if (d.neigh && w.neigh) { w.neigh = d.neigh; w.voyageCd = d.voyageCd || 0; if (d.seen) { w.seen.set(b64dec(d.seen, N)); w.seenVer++ } } else if (!d.neigh) { w.neigh = null; w.fog = false; w.seen = null } if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
+  if (d.neigh && w.neigh) { w.neigh = d.neigh; w.voyageCd = d.voyageCd || 0; if (d.dip) { w.fortifyUntil = d.dip.fortifyUntil || 0; w.dipDay = d.dip.dipDay || 0 } if (d.seen) { w.seen.set(b64dec(d.seen, N)); w.seenVer++ } } else if (!d.neigh) { w.neigh = null; w.fog = false; w.seen = null } if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
   if (d.tech) w.tech = d.tech; w.boats = []; for (const s of d.boats || []) { const dk = w.buildings.get(s.dock); if (dk && dk.dir) { const bt = new Boat(w, dk); bt.id = s.id; w.boats.push(bt) } }
   w.bpnext = d.counters.bpnext;
   for (const s of d.vills) {

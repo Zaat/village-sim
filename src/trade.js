@@ -28,14 +28,14 @@ function dealPreview(w, mode) {
   if (!c || mode === 'refuse') return out;
   for (const k of TRADE_KEYS) { const surplus = w.stock[k] - tgt[k] * 1.1; if (surplus >= 12) out.sell[k] = Math.min(Math.floor(surplus * 0.8), c.cap) }
   if (mode !== 'sell') for (const k of TRADE_KEYS) { const need = tgt[k] * 0.9 - (w.stock[k] + w.inbound[k]); if (need >= 10 && !out.sell[k]) out.buy[k] = Math.min(Math.ceil(need), c.cap) }
-  const val = (o, f) => TRADE_KEYS.reduce((s, k) => s + (o[k] || 0) * pr[k] * f, 0);
+  const val = (o, f, side) => TRADE_KEYS.reduce((s, k) => s + (o[k] || 0) * pr[k] * f * tradeMod(w, c, side, k), 0);
   const scale = (o, f) => { for (const k of TRADE_KEYS) if (o[k]) { o[k] = Math.floor(o[k] * f); if (o[k] < 1) delete o[k] } };
-  let rev = val(out.sell, 0.9), cost = val(out.buy, 1.1);
+  let rev = val(out.sell, 0.9, 'sell'), cost = val(out.buy, 1.1, 'buy');
   if (!coin) {                                                         // barter: both sides must match in value
     if (!rev || !cost) { out.sell = {}; out.buy = {} } else if (rev > cost) scale(out.sell, cost / rev); else scale(out.buy, rev / cost);
     out.revenue = 0; out.cost = 0; return out;
   }
-  const afford = rev + E.treasury; if (cost > afford) { scale(out.buy, afford / cost); cost = val(out.buy, 1.1) }
+  const afford = rev + E.treasury; if (cost > afford) { scale(out.buy, afford / cost); cost = val(out.buy, 1.1, 'buy') }
   out.revenue = Math.round(rev); out.cost = Math.round(cost); out.net = out.revenue - out.cost;
   if (mode === 'full') {
     const after = E.treasury + (out.net > 0 ? out.net * taxRate(w) : out.net);
@@ -52,7 +52,7 @@ function describeDeal(d, coin) {
 
 function executeDeal(w, d, merchants) {
   const E = w.econ, coin = money(w), pr = coin ? E.prices : BASE_PRICE; let revenue = 0, cost = 0;
-  for (const k of TRADE_KEYS) { if (d.sell[k]) { const n = Math.min(d.sell[k], w.stock[k]); w.stock[k] -= n; revenue += n * pr[k] * 0.9; d.sell[k] = n } if (d.buy[k]) { w.stock[k] = Math.min(w.cap(), w.stock[k] + d.buy[k]); cost += d.buy[k] * pr[k] * 1.1 } }
+  for (const k of TRADE_KEYS) { if (d.sell[k]) { const n = Math.min(d.sell[k], w.stock[k]); w.stock[k] -= n; revenue += n * pr[k] * 0.9 * tradeMod(w, E.caravan, 'sell', k); d.sell[k] = n } if (d.buy[k]) { w.stock[k] = Math.min(w.cap(), w.stock[k] + d.buy[k]); cost += d.buy[k] * pr[k] * 1.1 * tradeMod(w, E.caravan, 'buy', k) } }
   let msg = '';
   if (coin) {
     const net = revenue - cost;
@@ -62,6 +62,7 @@ function executeDeal(w, d, merchants) {
   }
   const list = o => Object.entries(o).filter(([, n]) => n > 0).map(([k, n]) => `${n} ${k}`).join(', ');
   const text = `${merchants} ${Object.keys(d.sell).length ? 'took ' + list(d.sell) : ''}${Object.keys(d.sell).length && (Object.keys(d.buy).length || d.luxury) ? ' and ' : ''}${Object.keys(d.buy).length ? 'delivered ' + list(d.buy) : ''}${d.luxury ? (Object.keys(d.buy).length ? ' plus ' : 'delivered ') + d.luxury + ' bundle' + (d.luxury > 1 ? 's' : '') + ' of fine goods' : ''}.${msg}`;
+  neighAfterTrade(w, E.caravan, d);
   w.emit('trade', text, { deal: d }); E.trades.unshift({ day: w.day, text }); if (E.trades.length > 12) E.trades.pop();
 }
 /* sale profit goes to the people whose work produced the goods */
@@ -88,9 +89,10 @@ function negotiate(w) {
 
 /* once a day */
 function tradeDay(w) {
-  const E = w.econ; if (!w.has('trade')) return;
+  const E = w.econ;
+  if (E.caravan && w.day >= E.caravan.leaves) { w.say(`${E.caravan.name.charAt(0).toUpperCase() + E.caravan.name.slice(1)} ${E.caravan.from !== undefined ? 'weigh anchor and sail home' : 'pack up and leave'}.`); E.caravan = null }
+  if (!w.has('trade')) return;
   updatePrices(w);
-  if (E.caravan && w.day >= E.caravan.leaves) { w.say(`${E.caravan.name.charAt(0).toUpperCase() + E.caravan.name.slice(1)} pack up and leave.`); E.caravan = null }
   if (E.caravan && money(w)) shopDay(w);
   if (!w.of('market').length || E.caravan || w.day < E.nextCaravan - (projBuilt(w, 'lighthouse') ? 1 : 0)) return;
   if (w.season === 3 && w.r() < 0.5) { E.nextCaravan = w.day + 2; return }

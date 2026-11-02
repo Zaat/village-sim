@@ -1,6 +1,6 @@
 // Neighbours: node tests/neigh.js SEED DAYS
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','places','neighbours','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,TECHS,CFG,serializeWorld,deserializeWorld});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','places','neighbours','diplomacy','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,TECHS,CFG,serializeWorld,deserializeWorld});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+(process.argv[2]||777),days=+(process.argv[3]||140);const w=new ctx.World(seed);
 console.log('map',ctx.CFG.W+'x'+ctx.CFG.H,'home',w.cx,w.cy,'islands',JSON.stringify(w.neigh.map(n=>[n.name,n.kind,n.x,n.y,n.dist,n.reach])));

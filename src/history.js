@@ -14,10 +14,11 @@ const LESSONS = {
   fever: { name: 'Fever', teaches: 'tend the sick early, so outbreaks come milder and rarer' },
   wolves: { name: 'Wolves', teaches: 'stay ready: the village leans toward a watch and stronger walls' },
   cold: { name: 'Hard winters', teaches: 'stack far more firewood before winter' },
-  crime: { name: 'Crime', teaches: 'take law and order more seriously' }
+  crime: { name: 'Crime', teaches: 'take law and order more seriously' },
+  raids: { name: 'Raids', teaches: 'keep a watch on the dock and stand ready to defend the village' }
 };
 const LESSON_STEPS = [0.3, 0.55, 0.8];
-const CHRON_KINDS = new Set(['voyage', 'discovery', 'era', 'project', 'election', 'lesson', 'event', 'cold', 'faction']);
+const CHRON_KINDS = new Set(['diplomacy', 'voyage', 'discovery', 'era', 'project', 'election', 'lesson', 'event', 'cold', 'faction']);
 function initHistory(w) { w.chron = { lessons: Object.fromEntries(Object.keys(LESSONS).map(k => [k, 0])), noted: Object.fromEntries(Object.keys(LESSONS).map(k => [k, 0])), events: [] } }
 const lesson = (w, k) => (w.chron ? w.chron.lessons[k] || 0 : 0);
 function chronicle(w, kind, text) {
@@ -58,5 +59,5 @@ function historyDay(w) {
 /* what the village has learned adds to how badly it wants a discovery */
 function lessonNeed(w, id) {
   const L = k => lesson(w, k);
-  return ({ granary: 0.4 * L('famine'), rotation: 0.4 * L('famine'), nets: 0.25 * L('famine'), masonry: 0.3 * L('fire'), carpentry: 0.15 * L('storm'), medicine: 0.45 * L('fever'), watchtowers: 0.4 * L('wolves'), ironwork: 0.15 * L('wolves'), forestry: 0.3 * L('cold'), tools: 0.1 * L('cold') })[id] || 0;
+  return ({ granary: 0.4 * L('famine'), rotation: 0.4 * L('famine'), nets: 0.25 * L('famine'), masonry: 0.3 * L('fire'), carpentry: 0.15 * L('storm'), medicine: 0.45 * L('fever'), watchtowers: 0.4 * L('wolves') + 0.35 * L('raids'), ironwork: 0.15 * L('wolves') + 0.2 * L('raids'), forestry: 0.3 * L('cold'), tools: 0.1 * L('cold') })[id] || 0;
 }

@@ -1,5 +1,5 @@
 const fs=require('fs'),path=require('path');const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','places','neighbours','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n');
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','places','neighbours','diplomacy','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n');
 fs.mkdirSync('/tmp/ss',{recursive:true});fs.writeFileSync('/tmp/ss/b.js',code+'\nmodule.exports={World,CFG};');
 const {World,CFG}=require('/tmp/ss/b.js');
 const w=new World(+(process.argv[2]||777));const orig=w.search.bind(w);

@@ -46,6 +46,7 @@ function genNeighbours(w) {
     out.push({ id: k + 1, name, kind: kinds[k], x: site.x, y: site.y, cx, cy, r, pop: 10 + ((R() * 18) | 0), found: false, foundDay: 0, dist: Math.round(dist), reach: 'boats' });
   });
   out.sort((a, b) => a.dist - b.dist); out.forEach((n, i) => { n.reach = i < 2 ? 'boats' : 'navigation' });       // the nearer pair can be reached with plain boats
+  for (const nb of out) initNeighbour(w, nb, R);
   w.neigh = out; w.fog = true; w.seen = new Uint8Array(W * H); revealCircle(w, w.cx, w.cy, 55);
 }
 /* ----- fog of war ----- */
@@ -83,6 +84,7 @@ function discoverNeighbour(w, n, sailor) {
   w.emit('voyage', `${sailor ? sailor.name : 'Sailors'} ${sailor ? 'has' : 'have'} found land to the ${compass(w, n.x, n.y)}: ${n.name}, a settlement of ${NEIGH_KINDS[n.kind].label}. ${NEIGH_KINDS[n.kind].blurb}`, { n });
   if (sailor) { sailor.story(`Sailed to ${n.name} and returned with news of another people.`); sailor.reputation = Math.min(100, sailor.reputation + 8); sailor.mood = Math.min(100, sailor.mood + 12) }
   for (const v of w.vills) v.mood = Math.min(100, v.mood + 2);
+  contactNeighbour(w, n);
 }
 
 /* water connected to the map edge: the open sea (cached) */
