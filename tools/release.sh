@@ -5,7 +5,7 @@
 set -e
 V="$1"; MSG="$2"; [ -z "$V" ] && { echo "usage: tools/release.sh vX.Y \"message\""; exit 1; }
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"; PARENT="$(dirname "$ROOT")"; REPO="$PARENT/village-claudia"; cd "$ROOT"
-for t in save bld regime_events strife_events living; do
+for t in save bld regime_events strife_events living maps; do
   echo "== $t"; if ! node tests/$t.js > /tmp/rel_$t.log 2>&1; then echo "FAILED: $t"; tail -20 /tmp/rel_$t.log; exit 1; fi
   if grep -q "^DIFF" /tmp/rel_$t.log; then echo "DIFF in $t"; grep "^DIFF" /tmp/rel_$t.log; exit 1; fi
   grep -E "passed|no errors|errors 0" /tmp/rel_$t.log | tail -1

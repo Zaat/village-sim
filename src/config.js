@@ -18,7 +18,7 @@ const CFG = {
   BIRTH_CHANCE: 0.35, PREGNANCY: 960, BIRTH_COOLDOWN: 2400,
   LATTICE: 3,                        // buildings snap to a 3-tile grid so lanes stay open
 };
-const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5 };
+const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5, FORD: 6 };      // FORD: shallow river crossing, walkable
 const FEAT = { NONE: 0, OAK: 1, PINE: 2, STONE: 3, BUSH: 4 };
 const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
 const GROW = [1, 1.3, 0.6, 0];       // crop growth multiplier by season

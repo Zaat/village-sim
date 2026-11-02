@@ -81,8 +81,8 @@ function seaPath(w, boat, tgt) {
 const compass = (w, x, y) => { const a = Math.atan2(y - w.cy, x - w.cx) * 180 / Math.PI; return Math.abs(a) < 45 ? 'east' : Math.abs(a) > 135 ? 'west' : a > 0 ? 'south' : 'north' };
 function discoverNeighbour(w, n, sailor) {
   if (n.found) return; n.found = true; n.foundDay = w.day; revealCircle(w, n.x, n.y, n.r + 9);
-  w.emit('voyage', `${sailor ? sailor.name : 'Sailors'} ${sailor ? 'has' : 'have'} found land to the ${compass(w, n.x, n.y)}: ${n.name}, a settlement of ${NEIGH_KINDS[n.kind].label}. ${NEIGH_KINDS[n.kind].blurb}`, { n });
-  if (sailor) { sailor.story(`Sailed to ${n.name} and returned with news of another people.`); sailor.reputation = Math.min(100, sailor.reputation + 8); sailor.mood = Math.min(100, sailor.mood + 12) }
+  const land = n.reach === 'land'; w.emit('voyage', land ? `${sailor ? sailor.name : 'Hunters'} ${sailor ? 'has' : 'have'} found a settlement to the ${compass(w, n.x, n.y)} on foot: ${n.name}, home to ${NEIGH_KINDS[n.kind].label}. ${NEIGH_KINDS[n.kind].blurb}` : `${sailor ? sailor.name : 'Sailors'} ${sailor ? 'has' : 'have'} found land to the ${compass(w, n.x, n.y)}: ${n.name}, a settlement of ${NEIGH_KINDS[n.kind].label}. ${NEIGH_KINDS[n.kind].blurb}`, { n });
+  if (sailor) { sailor.story(`${land ? 'Walked' : 'Sailed'} to ${n.name} and returned with news of another people.`); sailor.reputation = Math.min(100, sailor.reputation + 8); sailor.mood = Math.min(100, sailor.mood + 12) }
   for (const v of w.vills) v.mood = Math.min(100, v.mood + 2);
   contactNeighbour(w, n);
 }

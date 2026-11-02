@@ -95,6 +95,7 @@ for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('c
 
 /* ---------- world lifecycle ---------- */
 function adoptWorld(w) {
+  try { $('mapnow').textContent = 'This world: ' + MAP_TYPES[w.arch].label + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
   if (tt) { tt = null; $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false }
   world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
@@ -102,7 +103,9 @@ function adoptWorld(w) {
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k];
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); updateUI();
 }
-function newWorld(seed) { seed = seed >>> 0; $('seed').value = seed; adoptWorld(new World(seed, loadSettings())) }
+function mapChoice() { let m = 'auto'; try { m = localStorage.getItem('villagesim.maptype') || 'auto' } catch (e) { } return MAP_TYPES[m] ? m : 'auto' }
+function newWorld(seed) { seed = seed >>> 0; $('seed').value = seed; const mc = mapChoice(); adoptWorld(new World(seed, { ...loadSettings(), fade: true, map: mc === 'auto' ? pickMapType(seed) : mc })) }
+$('maptype').value = mapChoice(); $('maptype').addEventListener('change', e => { try { localStorage.setItem('villagesim.maptype', e.target.value) } catch (x) { } });
 
 /* ---------- save & load ----------
    Autosave and "Save now" use this browser's storage; Export/Import use a file, which is the
@@ -200,16 +203,18 @@ function renderTech() {
 }
 function renderNeigh() {
   const w = world, el = $('neighCard'), box = el.parentElement; box.style.display = w.neigh ? '' : 'none'; if (!w.neigh) return;
-  if (!w.has('boats')) { el.innerHTML = '<div class="hint">Beyond the horizon the sea may hide other lands. With boats, the village could one day find out.</div>'; return }
+  const anyLand = w.neigh.some(n => n.reach === 'land');
+  if (!w.has('boats') && !anyLand) { el.innerHTML = '<div class="hint">Beyond the horizon the sea may hide other lands. With boats, the village could one day find out.</div>'; return }
+  if (!w.has('boats') && !w.neigh.some(n => n.found)) { el.innerHTML = '<div class="hint">Other peoples live beyond the hills. Hunters and curious villagers will go looking for them.</div>'; return }
   const found = w.neigh.filter(n => n.found), left = w.neigh.length - found.length, vy = w.voyage && w.vills.find(v => v.id === w.voyage.id);
-  let html = vy ? `<div class="hint" style="margin-bottom:6px">⛵ ${escapeHtml(vy.name)} is at sea, bound for unknown shores.</div>` : '';
-  if (w.visit) { const vn = w.neigh.find(x => x.id === w.visit.n); if (vn) html += `<div class="hint" style="margin-bottom:6px">${w.visit.type === 'raid' ? '⚔️ Raiders from' : '⛵ A ship from'} ${escapeHtml(vn.name)} is at the dock.</div>` }
+  let html = vy ? (w.voyage.land ? `<div class="hint" style="margin-bottom:6px">🥾 ${escapeHtml(vy.name)} is exploring on foot, looking for other peoples.</div>` : `<div class="hint" style="margin-bottom:6px">⛵ ${escapeHtml(vy.name)} is at sea, bound for unknown shores.</div>`) : '';
+  if (w.visit) { const vn = w.neigh.find(x => x.id === w.visit.n); if (vn) html += `<div class="hint" style="margin-bottom:6px">${w.visit.type === 'raid' ? '⚔️ Raiders from' : vn.reach === 'land' ? '🛖 Visitors from' : '⛵ A ship from'} ${escapeHtml(vn.name)} ${vn.reach === 'land' ? 'are in the village.' : 'is at the dock.'}</div>` }
   if (w.fortifyUntil > w.day) html += `<div class="hint" style="margin-bottom:6px">🛡 The village is on guard for ${w.fortifyUntil - w.day} more days.</div>`;
   html += found.map(n => {
     const r = Math.round(n.rel || 0), col = r >= 40 ? '#7ad07a' : r >= 12 ? '#b8d070' : r > -12 ? '#d9c26a' : '#e07a5a', pct = Math.round((r + 100) / 2);
     return `<div class="grp"><b>${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span>
       <div class="polh" style="margin-top:3px"><span class="hint">${relLabel(r)} (${r > 0 ? '+' : ''}${r})</span><span class="hint">${PACT_NAMES[n.pact || 0]}</span></div><div class="bar"><i style="background:${col};width:${pct}%"></i></div>
-      <div class="hint">${compass(w, n.x, n.y)} · ${Math.max(1, Math.round(n.dist / 84 * 10) / 10)} day${n.dist > 100 ? 's' : ''} by boat · offers ${escapeHtml(NEIGH_PROFILE[n.kind].goods)}</div>
+      <div class="hint">${compass(w, n.x, n.y)} · ${n.reach === 'land' ? Math.max(1, Math.round(n.dist / 108 * 10) / 10) + ' day' + (n.dist > 140 ? 's' : '') + ' on foot' : Math.max(1, Math.round(n.dist / 84 * 10) / 10) + ' day' + (n.dist > 100 ? 's' : '') + ' by boat'} · offers ${escapeHtml(NEIGH_PROFILE[n.kind].goods)}</div>
       ${n.colony ? `<div class="hint">Founded on day ${n.colony.day} by ${escapeHtml(n.colony.circle)}, who left ${n.colony.mode === 'peace' ? 'in peace' : 'in bitterness'}.</div>` : ''}${n.tribute > w.day ? `<div class="hint">Paid for peace until day ${n.tribute}</div>` : ''}${n.hist && n.hist[0] ? `<div class="hint">${escapeHtml(n.hist[0])}</div>` : ''}</div>`;
   }).join('');
   html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '';

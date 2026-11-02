@@ -15,7 +15,7 @@ function launch() {
 function std(a) { const m = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - m) * (y - m), 0) / a.length) }
 function report() {
   out.sort((a, b) => a.seed - b.seed); const ok = out.filter(r => !r.crashed);
-  console.log(`Seed sweep: ${n} worlds x ${days} days (${forced ? 'forced tech' : 'natural pace'})\n`);
+  console.log(`Seed sweep: ${n} worlds x ${days} days (${forced ? 'forced tech' : 'natural pace'}) map: ${process.env.MAP || 'island'}\n`);
   console.log('seed  pop peak min  homes tech proj grp elec mood appr gini found/pact raids  ruling                 err  ms/tick');
   for (const r of out) { if (r.crashed) { console.log(r.seed, 'CRASHED', r.err); continue }
     console.log(String(r.seed).padEnd(5), String(r.pop).padStart(3), String(r.peak).padStart(4), String(r.minPop).padStart(4), String(r.houses).padStart(5), String(r.techs).padStart(4), String(r.projects).padStart(4), String(r.groups).padStart(3), String(r.elections).padStart(4), String(r.mood).padStart(4), String(r.approval).padStart(4), String(r.gini).padStart(5), `${r.found}/${r.pacts}`.padStart(8), String(r.raids).padStart(5), ' ' + String(r.ruling || '-').slice(0, 22).padEnd(22), String(r.errors).padStart(3), String(r.msTick).padStart(7)) }

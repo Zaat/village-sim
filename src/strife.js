@@ -20,7 +20,7 @@ function initStrife(w) {
 }
 const sOf = w => { if (!w.strife) initStrife(w); return w.strife };
 const vOf = (w, ids) => ids.map(i => memberOf(w, i)).filter(Boolean);
-const canSail = w => !!(w.neigh && w.neigh.length && (w.has('boats') || w.of('dock').length > 0));
+const canSail = w => !!(w.neigh && w.neigh.length && (w.has('boats') || w.of('dock').length > 0 || w.neigh.some(n => n.reach === 'land')));
 const bestOf = (list, f) => list.reduce((a, b) => (a && f(a) >= f(b) ? a : b), null);
 const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
 const firstName = n => String(n).split(' ')[0];

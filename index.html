@@ -22,6 +22,9 @@
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
+      <div class="hint" style="margin-top:10px">Map type for the next new world</div>
+      <select id="maptype" style="width:100%;margin-top:3px"><option value="auto">Auto (chosen by the seed)</option><option value="island">Island</option><option value="archipelago">Archipelago</option><option value="continent">Continent</option><option value="peninsula">Peninsula</option><option value="lakeland">Lakeland</option><option value="river">River land</option></select>
+      <div class="hint" id="mapnow" style="margin-top:4px"></div>
     </div>
     <div class="card"><h3>Save &amp; load</h3>
       <div class="hint" id="saveInfo">Nothing saved yet.</div>
@@ -100,6 +103,7 @@
 <script src="src/strife.js"></script>
 <script src="src/places.js"></script>
 <script src="src/neighbours.js"></script>
+<script src="src/mapgen.js"></script>
 <script src="src/diplomacy.js"></script>
 <script src="src/save.js"></script>
 <script src="src/world.js"></script>

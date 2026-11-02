@@ -278,6 +278,7 @@ class Villager {
     const foodAny = () => this.planFarm() || (this.role === 'fisher' ? this.planBoatFish() || this.planFish() || this.planHunt() : this.planHunt() || this.planBoatFish() || this.planFish()) || this.planGather('food');
     if (w.stock.food < pop * 1.5) T('crisis', foodAny);
     if (w.neigh && !w.voyage && w.stock.food >= pop * 3 && (this.role === 'fisher' || this.trait.cur > 0.6) && this.isAdult()) T('voyage', () => this.planVoyage());
+    if (w.neigh && !w.voyage && w.stock.food >= pop * 2.2 && (this.role === 'hunter' || this.trait.cur > 0.55 || this.trait.brave > 0.6) && this.isAdult()) T('explore', () => this.planExplore());
     switch (this.role) {
       case 'builder': T('build', () => this.planBuild()); break;
       case 'farmer': if (!winter) T('farm', () => this.planFarm()); break;
@@ -373,19 +374,32 @@ class Villager {
   }
   planFish() {
     const w = this.w; if (!w.fishOK) return false; let spot = -1, wt = -1;
-    const path = w.search(this.tx, this.ty, (x, y, i) => {
+    let path = w.search(this.tx, this.ty, (x, y, i) => {
       if (w.claim[i] >= 0) return false;
       for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false;
     }, 80);
+    if ((!path || spot < 0) && w.stock.food < w.vills.length * 4) { spot = -1; path = w.search(this.tx, this.ty, (x, y, i) => { if (w.claim[i] >= 0) return false; for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false }, 130, true) }      // the only shore may lie behind thick woods: cut a way through
     if (!path || spot < 0) return false;
     w.claim[spot] = this.id; this.claim = spot; this.jobKind = 'fish'; const amt = 2 + (this.skill.fish > 0.6 ? 1 : 0) + (w.has('nets') ? 1 : 0); this.inb = { kind: 'food', amt }; w.inbound.food += amt;
     this.steps = [go(null, path, 'To the shore'), work(this.wt(100, 'fish'), 'Fishing', () => { if (w.fish[wt] > 0) { w.fish[wt]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }), ...this.deliverSteps()];
     return true;
   }
+  /* an expedition on foot to the nearest settlement nobody here has seen yet */
+  planExplore() {
+    const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.vills.length < 16 || w.day < 24 || this.age > 55 || this.energy < 50) return false;
+    const tgt = N.filter(n => !n.found && n.reach === 'land').sort((a, b) => a.dist - b.dist)[0]; if (!tgt) return false;
+    const goal = (x, y) => Math.hypot(x - tgt.x, y - tgt.y) <= 8; let path = w.search(this.tx, this.ty, goal, 520);
+    if (!path) path = w.search(this.tx, this.ty, goal, 520, true); if (!path) { w.voyageCd = w.day + 20; return false }
+    this.jobKind = 'voyage'; w.voyage = { id: this.id, target: tgt.id, since: w.day, land: true };
+    this.hunger = Math.max(this.hunger, 85); this.energy = Math.max(this.energy, 80);
+    this.steps = [go(null, path, 'Exploring beyond the hills'), work(40, 'Looking around', () => { this.hunger = Math.max(this.hunger, 80); this.energy = Math.max(this.energy, 70); discoverNeighbour(w, tgt, this) }),
+      go((x, y) => Math.abs(x - w.cx) + Math.abs(y - w.cy) <= 3, null, 'Walking home with news', { maxCost: 600 }), work(1, 'Back in the village', () => { w.voyage = null; w.voyageCd = w.day + 6 })];
+    return true;
+  }
   /* an expedition to the nearest island nobody here has seen yet */
   planVoyage() {
     const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.vills.length < 22 || !w.has('boats') || this.age > 55) return false;
-    const tgt = N.find(n => !n.found && (n.reach === 'boats' || w.has('navigation'))); if (!tgt) return false;
+    const tgt = N.find(n => !n.found && n.reach !== 'land' && (n.reach === 'boats' || w.has('navigation'))); if (!tgt) return false;
     let boat = null, path = null;
     for (const bt of w.boats) { if (bt.crew != null || bt.state !== 'moored' || bt.noSea) continue; const p = seaPath(w, bt, tgt); if (p) { boat = bt; path = p; break } bt.noSea = true }       // docks on an inland pond cannot reach the sea
     if (!boat) { if (w.boats.some(b => b.crew == null && b.state === 'moored' && !b.noSea) === false && w.boats.length) w.voyageCd = w.day + 10; return false }

@@ -88,11 +88,12 @@ function aidRequest(w, n) {
 }
 
 /* ----- visits by ship ----- */
+const byLand = n => n.reach === 'land';
 function startVisit(w, n, type, days) { w.visit = { n: n.id, type, until: w.day + (days || 2) } }
 function tradeVisit(w, n) {
   const E = w.econ; if (E.caravan) return false;
-  E.caravan = { name: `the ships of ${n.name}`, sea: true, arrived: w.day, leaves: w.day + 3, cap: 70 + 25 * n.pact, done: false, from: n.id };
-  dlog(w, n, `Ships from ${n.name} (${NEIGH_KINDS[n.kind].label}) drop anchor to trade.`, 'trade');
+  E.caravan = { name: byLand(n) ? `the wagons of ${n.name}` : `the ships of ${n.name}`, sea: !byLand(n), arrived: w.day, leaves: w.day + 3, cap: 70 + 25 * n.pact, done: false, from: n.id };
+  dlog(w, n, byLand(n) ? `Wagons from ${n.name} (${NEIGH_KINDS[n.kind].label}) roll in to trade.` : `Ships from ${n.name} (${NEIGH_KINDS[n.kind].label}) drop anchor to trade.`, 'trade');
   if (money(w)) E.treasury += 4;
   negotiate(w); return true;
 }
@@ -102,11 +103,11 @@ function envoyVisit(w, n) {
   dlog(w, n, `An envoy from ${n.name} arrives with greetings and a gift of ${gift[1]} ${gift[0]}.`, 'envoy');
 }
 function migrantVisit(w, n) {
-  const free = w.beds() - w.vills.length; if (free < 2) return false; const dock = w.of('dock')[0]; if (!dock) return false;
+  const free = w.beds() - w.vills.length; if (free < 2) return false; const dock = byLand(n) ? ringSpot(w, 22, 30) : w.of('dock')[0]; if (!dock) return false;
   startVisit(w, n, 'migrants', 2); const k = Math.min(free, 2 + ((w.r() * 3) | 0)), names = [];
-  for (let i = 0; i < k; i++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 14 + w.r() * 22, dock.x, dock.y); v.hunger = 85; v.story(`Sailed from ${n.name} to make a new home here.`); w.vills.push(v); names.push(v.name) }
+  for (let i = 0; i < k; i++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 14 + w.r() * 22, dock.x, dock.y); v.hunger = 85; v.story(`${byLand(n) ? 'Walked' : 'Sailed'} from ${n.name} to make a new home here.`); w.vills.push(v); names.push(v.name) }
   n.pop = Math.max(6, n.pop - k); n.rel += 2; noteFlow(w, 'arrived', k);
-  dlog(w, n, `${names.join(', ')} sail from ${n.name} to settle here.`, 'migrants'); return true;
+  dlog(w, n, `${names.join(', ')} ${byLand(n) ? 'walk' : 'sail'} from ${n.name} to settle here.`, 'migrants'); return true;
 }
 function teachVisit(w, n) {
   const avail = techAvailable(w).filter(id => n.knows.includes(id)).sort((a, b) => TECHS[a].cost - TECHS[b].cost); if (!avail.length) return false;
@@ -140,7 +141,7 @@ function raidVisit(w, n) {
   const attackers = 2 + Math.floor(n.strength / 10) + (n.grudge > 0.3 ? 1 : 0), D = defenseScore(w), ratio = attackers * 1.1 / D, dock = w.of('dock')[0];
   let outcome = ratio < 0.75 ? 'repelled' : ratio < 1.4 ? 'partial' : 'heavy', text;
   if (outcome === 'repelled') {
-    n.rel -= 8; n.strength = Math.max(8, n.strength - 3); text = `Raiders from ${n.name} land at the dock, but the watch drives them off!`;
+    n.rel -= 8; n.strength = Math.max(8, n.strength - 3); text = byLand(n) ? `Raiders from ${n.name} march on the village, but the watch drives them off!` : `Raiders from ${n.name} land at the dock, but the watch drives them off!`;
     for (const v of w.vills) if (v.isAdult() && v.trait.brave > 0.55) { v.mood = Math.min(100, v.mood + 4); v.reputation = Math.min(100, (v.reputation || 50) + 2) }
   } else {
     const f = outcome === 'partial' ? 0.2 + 0.15 * w.r() : 0.4 + 0.2 * w.r(), lost = {}; for (const k of ['food', 'wood', 'stone']) { lost[k] = Math.round(w.stock[k] * f); w.stock[k] -= lost[k] }
@@ -187,6 +188,7 @@ function neighbourDay(w) {
   if (w.visit && w.day >= w.visit.until) w.visit = null;
   const docks = w.of('dock').length, E = w.econ; let busy = w.dipDay === w.day;
   for (const n of w.neigh) {
+    if (!n.found && byLand(n) && w.seen && w.seen[n.y * CFG.W + n.x]) discoverNeighbour(w, n, null);
     initNeighbour(w, n); if (!n.met) continue; n.rel = clamp(n.rel, -100, 100);
     // relations drift toward what the village's behaviour deserves
     const P = NEIGH_PROFILE[n.kind], weak = clamp(1 - defenseScore(w) / 4, 0, 1);
@@ -207,9 +209,9 @@ function neighbourDay(w) {
     // a friend in need of nothing sends help when the village starves
     if ((n.pact === 2 || n.owes > 0) && n.rel > 20 && w.stock.food < w.vills.length * 1.2 && w.day >= n.aidCd) {
       n.aidCd = w.day + 30; n.owes = Math.max(0, n.owes - 1); const f = Math.min(70, Math.round(w.vills.length * 1.6)); w.stock.food = Math.min(w.cap(), w.stock.food + f); n.rel += 3; startVisit(w, n, 'aid', 2);
-      dlog(w, n, `${n.name} sends ${f} food by ship to ease the hunger. Friends remember friends.`, 'aid'); busy = true; w.dipDay = w.day; continue
+      dlog(w, n, `${n.name} sends ${f} food ${byLand(n) ? 'by wagon' : 'by ship'} to ease the hunger. Friends remember friends.`, 'aid'); busy = true; w.dipDay = w.day; continue
     }
-    if (!docks || w.day < n.nextVisit || (w.season === 3 && w.r() < 0.6)) continue;
+    if ((!docks && !byLand(n)) || w.day < n.nextVisit || (w.season === 3 && w.r() < 0.6)) continue;
     n.nextVisit = w.day + (n.pact === 2 ? 6 + ((w.r() * 4) | 0) : n.pact === 1 ? 8 + ((w.r() * 5) | 0) : 14 + ((w.r() * 7) | 0));
     let did = false;
     if (n.kind === 'raiders' && n.rel < -15 && n.tribute <= w.day) {

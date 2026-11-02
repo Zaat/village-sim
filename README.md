@@ -1,4 +1,4 @@
-# Village Sim v0.18
+# Village Sim v0.19
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,20 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Map types (new in 0.19)
+New worlds now come in six map types, chosen in Settings (or **Auto**, picked by the seed):
+- **Island:** one island in open sea, other islands beyond (the original map).
+- **Archipelago:** a smaller home island among several others; boats matter early.
+- **Continent:** land across the whole 260x180 map with a coast on one or two sides and mountains along the rest.
+- **Peninsula:** a tongue of land with sea on three sides and a narrow neck to the mainland.
+- **Lakeland:** landlocked with big lakes; boats work the lakes.
+- **River land:** one or two winding rivers divide the land; they can be crossed only at **fords** (a new walkable shallow terrain).
+- **Neighbours on foot:** on the land maps, other peoples live a few days' walk away. Hunters and curious villagers go exploring to find them; they trade by wagon, send envoys, migrants and aid on foot, and can raid by land. Coastal maps also have an island or two reached by boat.
+- **Starts that work:** the village starts on the biggest connected land, with a shore fishers can actually walk to. If the only shore lies behind thick woods, fishers cut a way through when food runs short.
+- **Old saves** load as the original island map. New islands now also fade out toward the edge of the home area instead of being cut off.
+- **Not yet:** bridges (only fords) and wildlife migration between regions.
+- **Tools:** `tests/maps.js [seeds] [show]` (ASCII previews and checks), `tests/mapsweep.js` (a short sweep for each map type), `tests/shot17.js` (overview images).
 
 ## Movement and population (new in 0.18)
 - **Natural movement:** paths are smoothed into straight diagonal shortcuts (never leaving roads, never cutting through brush or odd ground, and keeping clear of walls). If something is built across a shortcut, the walker plans again. Trips are a few percent shorter, so villages are a little more productive.
@@ -138,6 +152,7 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 | `src/history.js` | the chronicle and the lessons a village remembers |
 | `src/buildings.js` | building hit points, wear and repair |
 | `src/places.js` | the square, tavern and where villagers gather |
+| `src/mapgen.js` | map types: shapes, rivers and fords, connected land, neighbours on foot |
 | `src/neighbours.js` | other islands, fog of war, first contact by boat |
 | `src/diplomacy.js` | treaties, aid, visits, tribute and raids |
 | `src/character.js` | temperament, faith, ambition and upbringing |

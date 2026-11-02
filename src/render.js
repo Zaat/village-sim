@@ -49,6 +49,9 @@ function buildTerrain(w) {
       }
       continue;
     }
+    if (t === TERR.FORD) {
+      rc(g, P.shallow, X, Y, T, T); rc(g, P.sand, X + 2 + (h & 3), Y + 3, 6, 3); rc(g, P.sand, X + 8 + ((h >> 3) & 3), Y + 9, 5, 3); rc(g, 'rgba(255,255,255,.35)', X + ((h >> 6) & 7), Y + ((h >> 9) & 7) + 4, 5, 1); continue;
+    }
     if (t === TERR.SAND) {
       rc(g, P.sand, X, Y, T, T); rc(g, 'rgba(0,0,0,.07)', X + (h & 15), Y + ((h >> 4) & 15), 2, 1); rc(g, 'rgba(255,255,255,.18)', X + ((h >> 8) & 15), Y + ((h >> 12) & 15), 2, 1); continue;
     }
@@ -315,7 +318,7 @@ function drawVillager(g, v, w, now, sel) {
 
 /* ---------- main draw ---------- */
 function render(w, sel, now) {
-  const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.season + ':' + W;
+  const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.arch + ':' + w.season + ':' + W;
   if (R.terrKey !== key) { buildTerrain(w); R.terrKey = key }
   R.hasPlaza = w.of('plaza').length > 0;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d1114'; g.fillRect(0, 0, R.cv.width, R.cv.height);

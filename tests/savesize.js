@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','character','regime','strife','save','world'].map(f=>fs.readFileSync('/home/claude/village-sim/src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,TECHS,CFG,serializeWorld,deserializeWorld,b64enc,packArr});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync('/home/claude/village-sim/src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,TECHS,CFG,serializeWorld,deserializeWorld,b64enc,packArr});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let d=1;d<=150;d++){for(let t=0;t<1200;t++)w.step();if(d===24)for(const id of Object.keys(ctx.TECHS))w.tech.known[id]=24}
 const d=ctx.serializeWorld(w),json=JSON.stringify(d);

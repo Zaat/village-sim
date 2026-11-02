@@ -69,11 +69,12 @@ class Animal {
 }
 
 function spawnWildlife(w) {
-  const { W, H } = CFG, far = (x, y) => Math.hypot(x - w.cx, y - w.cy) > 22;
-  const put = (kind, n, cx, cy, spread) => { for (let k = 0; k < n; k++) for (let g = 0; g < 8; g++) { const x = Math.round(cx + (w.r() * 2 - 1) * spread), y = Math.round(cy + (w.r() * 2 - 1) * spread); if (x > 2 && y > 2 && x < W - 2 && y < H - 2 && w.walkable(y * W + x)) { w.animals.push(new Animal(w, kind, x, y)); break } } };
-  for (let h = 0; h < 9; h++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (far(x, y)) put('deer', 3 + ((w.r() * 3) | 0), x, y, 5) }
-  for (let k = 0; k < 28; k++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (w.r() < 0.5 || far(x, y)) put('rabbit', 1, x, y, 2) }
-  for (let k = 0; k < 4; k++) { const a = w.r() * 6.28, d = 14 + w.r() * 8; put('deer', 2, w.cx + Math.cos(a) * d, w.cy + Math.sin(a) * d, 3) }   // a few within hunting range
+  const { W, H } = CFG, far = (x, y) => Math.hypot(x - w.cx, y - w.cy) > 22; let homeOnly = false;
+  const put = (kind, n, cx, cy, spread) => { for (let k = 0; k < n; k++) for (let g = 0; g < 8; g++) { const x = Math.round(cx + (w.r() * 2 - 1) * spread), y = Math.round(cy + (w.r() * 2 - 1) * spread); if (x > 2 && y > 2 && x < W - 2 && y < H - 2 && w.walkable(y * W + x) && (!homeOnly || sameLand(w, w.cx, w.cy, x, y))) { w.animals.push(new Animal(w, kind, x, y)); break } } };
+  const grp = () => { homeOnly = w.arch !== 'island' && w.r() < 0.85 };
+  for (let h = 0; h < (w.full ? 16 : 9); h++) { grp(); const x = w.hx + 8 + ((w.r() * 144) | 0), y = w.hy + 8 + ((w.r() * 96) | 0); if (far(x, y)) put('deer', 3 + ((w.r() * 3) | 0), x, y, 5) }
+  for (let k = 0; k < (w.full ? 44 : 28); k++) { grp(); const x = w.hx + 8 + ((w.r() * 144) | 0), y = w.hy + 8 + ((w.r() * 96) | 0); if (w.r() < 0.5 || far(x, y)) put('rabbit', 1, x, y, 2) }
+  homeOnly = w.arch !== 'island'; for (let k = 0; k < 4; k++) { const a = w.r() * 6.28, d = 14 + w.r() * 8; put('deer', 2, w.cx + Math.cos(a) * d, w.cy + Math.sin(a) * d, 3) }   // a few within hunting range
 }
 function animalsNewDay(w) {
   const count = k => w.animals.filter(a => a.alive && a.kind === k).length;
@@ -83,5 +84,5 @@ function animalsNewDay(w) {
     if (rc < 90) for (const a of w.animals.slice()) if (a.kind === 'rabbit' && a.alive && w.r() < 0.12) { const n = new Animal(w, 'rabbit', a.x | 0, a.y | 0); n.x = a.x; n.y = a.y; w.animals.push(n) }
   }
   { const wc = count('wolf'); if (wc >= 2 && wc < 8 && count('deer') >= 14 && w.season < 2 && w.r() < 0.03) { const m = w.animals.find(a => a.alive && a.kind === 'wolf'); if (m) { const n = new Animal(w, 'wolf', m.x | 0, m.y | 0); n.x = m.x; n.y = m.y; w.animals.push(n) } } }
-  if (count('deer') < 8) { for (let g = 0; g < 20; g++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (Math.hypot(x - w.cx, y - w.cy) > 24 && w.walkable(y * CFG.W + x)) { for (let k = 0; k < 3; k++)w.animals.push(new Animal(w, 'deer', x, y)); break } } }
+  if (count('deer') < 8) { for (let g = 0; g < 20; g++) { const x = w.hx + 8 + ((w.r() * 144) | 0), y = w.hy + 8 + ((w.r() * 96) | 0); if (Math.hypot(x - w.cx, y - w.cy) > 24 && w.walkable(y * CFG.W + x)) { for (let k = 0; k < 3; k++)w.animals.push(new Animal(w, 'deer', x, y)); break } } }
 }
