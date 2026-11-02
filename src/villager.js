@@ -237,7 +237,8 @@ class Villager {
     work(P.ticks, P.stay, () => {
       recordVisit(w, P.bld, this); let n = 0; const lim = P.kind === 'tavern' ? 3 : 2, rad = P.kind === 'plaza' ? 6 : 4.5;
       for (const o of w.vills) { if (o === this || o.isChild() || o.sleeping || Math.hypot(o.x - this.x, o.y - this.y) > rad) continue; if (n >= lim) break; if (fest || w.r() < 0.55) { w.interact(this, o); n++ } }
-      if (fest) this.social = Math.min(100, this.social + 40);
+      if (P.kind === 'look') { this.social = Math.min(100, this.social + 5); this.mood = Math.min(100, this.mood + 1.5) }
+      else if (fest) this.social = Math.min(100, this.social + 40);
       else if (P.kind === 'tavern') { this.social = Math.min(100, this.social + 18); this.mood = Math.min(100, this.mood + 1.5) }
       else if (P.kind === 'plaza') { this.social = Math.min(100, this.social + 8); this.mood = Math.min(100, this.mood + 0.4) }
     })];
@@ -299,7 +300,7 @@ class Villager {
     const goal = (x, y) => {
       for (const [dx, dy] of NB) {
         const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= CFG.W || ny >= CFG.H) continue; const n = ny * CFG.W + nx, f = w.feat[n];
-        const ok = kind === 'wood' ? (f === FEAT.OAK || f === FEAT.PINE) : kind === 'stone' ? f === FEAT.STONE : f === FEAT.BUSH && w.res[n] > 0;
+        const ok = kind === 'wood' ? ((f === FEAT.OAK || f === FEAT.PINE) && w.res[n] >= 3) : kind === 'stone' ? f === FEAT.STONE : f === FEAT.BUSH && w.res[n] > 0;
         if (ok && w.claim[n] < 0) { tgt = n; return true }
       } return false;
     };
@@ -311,9 +312,9 @@ class Villager {
     const amt = Math.round(Math.min(load, w.res[tgt]) * bonus); this.inb = { kind, amt }; w.inbound[kind] += amt;
     const key = kind === 'wood' ? 'wood' : kind === 'stone' ? 'stone' : null, time = Math.max(4, Math.round(this.wt(kind === 'wood' ? 60 : kind === 'stone' ? 80 : 35, key) * (camp ? 0.85 : 1)));
     this.steps = [go(null, path, 'Heading out'), work(time, kind === 'wood' ? 'Chopping wood' : kind === 'stone' ? 'Quarrying stone' : 'Picking berries', () => {
-      const take = Math.min(load, w.res[tgt]); w.res[tgt] -= take;
-      if (w.res[tgt] === 0) { if (w.feat[tgt] === FEAT.BUSH) w.regrow.push({ idx: tgt, at: w.tick + 2400 }); else { const kindF = w.feat[tgt]; w.clearTile(tgt); if (kindF !== FEAT.STONE && w.r() < (w.has('forestry') ? 0.9 : 0.5)) w.regrow.push({ idx: tgt, at: w.tick + CFG.TPD * (w.has('forestry') ? 2 : 4), tree: kindF }) } }
-      this.carry = { kind, amt: Math.round(take * bonus) }; if (key) this.gain(key);
+      const take = Math.min(load, w.res[tgt]); w.res[tgt] -= take; if (w.res[tgt] > 0 && (w.feat[tgt] === FEAT.OAK || w.feat[tgt] === FEAT.PINE) && !w.young.includes(tgt)) w.young.push(tgt);       // a partly cut tree grows back
+      if (w.res[tgt] === 0) { if (w.feat[tgt] === FEAT.BUSH) w.regrow.push({ idx: tgt, at: w.tick + CFG.TPD * 5 }); else { const kindF = w.feat[tgt]; w.clearTile(tgt); if (kindF !== FEAT.STONE && w.r() < (w.has('forestry') ? 0.9 : 0.5)) w.regrow.push({ idx: tgt, at: w.tick + CFG.TPD * (w.has('forestry') ? 2 : 4), tree: kindF }) } }
+      this.carry = { kind, amt: Math.round(take * bonus) }; if (camp) recordOutput(w, camp, this.carry.amt); if (key) this.gain(key);
     }), ...this.deliverSteps(kind)];
     return true;
   }
@@ -345,9 +346,9 @@ class Villager {
     }, 90);
     if (!path || !fb) return false;
     const b = fb, harvest = b.state === 2; b.claim = this.id; this.claimB = b; this.jobKind = 'farm';
-    const amt = Math.round(CFG.FARM_YIELD * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1));
+    const amt = Math.round(CFG.FARM_YIELD * (fb.fert ?? 1) * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1));
     this.steps = [go(null, path, 'To the field'), work(this.wt(harvest ? 55 : 40, 'farm'), harvest ? 'Harvesting' : 'Sowing seeds', () => {
-      if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
+      if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; b.fert = Math.max(0.5, (b.fert ?? 1) - 0.035 * (w.has('rotation') ? 0.5 : 1)); recordOutput(w, b, amt); this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
     })];
     if (harvest) { this.inb = { kind: 'food', amt }; w.inbound.food += amt; this.steps.push(...this.deliverSteps()) }
     return true;
@@ -409,7 +410,7 @@ class Villager {
       work(trip, 'Sailing out', null, { onTick: at }),
       work(this.wt(100, 'fish'), 'Fishing at sea', () => { if (w.fish[best.idx] > 0) { w.fish[best.idx]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }),
       work(trip, 'Sailing home', null, { onTick: p => at(1 - p) }),
-      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; recordVisit(w, dock, this); if (this.carry) { dock.catch = (dock.catch || 0) + this.carry.amt; this.output = (this.output || 0) + this.carry.amt; w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
+      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; recordVisit(w, dock, this); if (this.carry) { dock.catch = (dock.catch || 0) + this.carry.amt; recordOutput(w, dock, this.carry.amt); this.output = (this.output || 0) + this.carry.amt; w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
     return true;
   }
   planBuild() {

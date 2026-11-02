@@ -1,4 +1,4 @@
-# Village Sim v0.16
+# Village Sim v0.17
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## A more living world (new in 0.17)
+- **Sightseers:** villagers walk over to look at the Monument, Temple (devout villagers pray there), Library (curious ones browse), Lighthouse, Bastion, Citadel, Foundry and Great Granary. Visits are counted in each building's panel, with popularity trends.
+- **Output statistics:** logging and mining camps, farms and docks track what they produce: this season, last season, past year, all time, with a trend and a small four-season chart.
+- **Trees:** new trees start as saplings and take about 12 days of growing weather to mature. Woodcutters only fell mature trees, and partly cut trees grow back.
+- **Soil:** every field has a fertility that falls with each harvest and recovers over time (faster when left bare in winter; rotation halves the wear). Tired soil gives smaller harvests.
+- **Weather years:** each spring brings a wet, dry or ordinary year that raises or lowers crop growth.
+- **Animals:** wolf packs return to where there is deer and can breed (capped); berry bushes regrow more slowly.
+- **Tools:** `tools/release.sh` (tests, zip, repo sync, commit, push), `node tests/sweep.js quick` (6 worlds x 192 days), `tests/living.js`.
 
 ## Inspector overhaul (new in 0.16)
 - **Buildings:** fixed the age bugs (day-0 buildings always read 0 days; upgrades overwrote the original era). Panels now have Usage, People and Details sections. Venues (square, tavern, hall, amphitheatre, market, campfire, docks) track visits this season, last season, the past year, all time, a popularity trend (growing, steady, fading) with a small four-season chart, and regulars. Houses list residents; camps list workers; docks list boats and total catch; great works say who built them.

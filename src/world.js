@@ -17,7 +17,7 @@ class World {
     this.shade = new Uint8Array(N); this.fish = new Uint8Array(N).fill(CFG.FISH_MAX); this.claim = new Int32Array(N).fill(-1);
     this.grid = []; this.wolfList = []; for (let i = 0; i < Math.ceil(CFG.W / 6) * Math.ceil(CFG.H / 6); i++) this.grid.push([]); this._hk = new Float32Array(N * 4 + 16); this._hv = new Int32Array(N * 4 + 16); this._d = new Float32Array(N); this._p = new Int32Array(N); this._seen = new Int32Array(N); this._ds = new Int32Array(N); this._st = 0;
     this.buildings = new Map(); this.bnext = 1; this.bps = []; this.bpAt = new Map(); this.bpnext = 1;
-    this.regrow = []; this.log = []; this.hist = []; this.listeners = []; this.connected = new Set();
+    this.regrow = []; this.young = []; this.wet = 0; this.log = []; this.hist = []; this.listeners = []; this.connected = new Set();
     this.vills = []; this.animals = []; this.nextId = 1; this.tick = 0; this.rel = new Map();
     this.stock = { ...CFG.START_STOCK }; if (this.settings.survival) for (const k in this.stock) this.stock[k] = Math.floor(this.stock[k] * 0.6); this.inbound = { wood: 0, stone: 0, food: 0 };
     this.nameUse = 0; this.births = 0; this.deaths = 0; this.causes = {};
@@ -135,7 +135,7 @@ class World {
   of(type) { const a = []; for (const b of this.buildings.values()) if (b.type === type) a.push(b); return a }
   adjFor(type) { return type === 'store' ? this.storeAdj : type === 'logcamp' ? this.campAdj.wood : type === 'minecamp' ? this.campAdj.stone : type === 'lodge' ? this.campAdj.food : null }
   /* is there a camp for this resource close by? (logging camp for wood, mining camp for stone, lodge for food) */
-  campNear(kind, x, y, r = 14) { const type = kind === 'wood' ? 'logcamp' : kind === 'stone' ? 'minecamp' : 'lodge'; for (const b of this.buildings.values()) if (b.type === type && Math.hypot(b.x + 1 - x, b.y + 1 - y) <= r) return true; return false }
+  campNear(kind, x, y, r = 14) { const type = kind === 'wood' ? 'logcamp' : kind === 'stone' ? 'minecamp' : 'lodge'; for (const b of this.buildings.values()) if (b.type === type && Math.hypot(b.x + 1 - x, b.y + 1 - y) <= r) return b; return null }
   has(id) { return !!this.tech.known[id] }
   beds() { let n = 0; for (const b of this.buildings.values()) if (b.type === 'house') n += bedsOf(b); return n }
   cap() { return 60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length + (projBuilt(this, 'granaryhall') ? 120 : 0) }
@@ -249,6 +249,7 @@ class World {
       if (s === 1) this.say('Summer begins. Long warm days.')
       if (s === 2) { this.drought = false; this.say('Autumn comes. Time to bring in the harvest and stack firewood.') }
       if (s === 3) this.say('Winter settles in. The fields are frozen.');
+      if (s === 0) { this.wet = Math.round((this.r() * 2 - 1) * 100) / 100; if (this.day > 8 && Math.abs(this.wet) > 0.55) this.say(this.wet > 0 ? 'A wet year: crops should do well and the streams run full.' : 'A dry year: the fields will struggle without rain.') }
       this.emit('season', null, { season: s });
     }
     const stc = this.gov.council.find(c => c.title === 'Steward'), std = stc ? this.vills.find(v => v.id === stc.id) : null;
@@ -318,9 +319,12 @@ class World {
   }
   /* ----- main step ----- */
   nature() {
-    const g = GROW[this.season] * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1) * (this.has('rotation') ? 1.15 : 1);
+    if (this.tick % 4800 === 0 && this.season < 3 && this.young.length) {                  // saplings take about 12 days of growing weather to reach full size
+      for (let k = this.young.length - 1; k >= 0; k--) { const i = this.young[k], f = this.feat[i]; if (f !== FEAT.OAK && f !== FEAT.PINE || this.res[i] >= 4) { this.young.splice(k, 1); continue } this.res[i]++; if (this.res[i] >= 4) this.young.splice(k, 1) }
+    }
+    const g = GROW[this.season] * (1 + 0.15 * this.wet) * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1) * (this.has('rotation') ? 1.15 : 1);
     for (const b of this.buildings.values()) if (b.type === 'farm' && b.state === 1) { b.g += g / CFG.FARM_GROW; if (b.g >= 1) { b.state = 2; b.g = 1 } }
-    if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) { const g = this.regrow[k]; if (g.at > this.tick || this.season >= 3) continue; if (g.tree) { const i = g.idx; if (this.terr[i] === TERR.GRASS && !this.feat[i] && !this.bmap[i] && !this.road[i] && !this.bpAt.has(i)) { this.feat[i] = g.tree; this.res[i] = 4; this.trees++ } } else this.res[g.idx] = 4; this.regrow.splice(k, 1) }
+    if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) { const g = this.regrow[k]; if (g.at > this.tick || this.season >= 3) continue; if (g.tree) { const i = g.idx; if (this.terr[i] === TERR.GRASS && !this.feat[i] && !this.bmap[i] && !this.road[i] && !this.bpAt.has(i)) { this.feat[i] = g.tree; this.res[i] = 1; this.young.push(i); this.trees++ } } else this.res[g.idx] = 4; this.regrow.splice(k, 1) }
     if (this.tick % Math.round((this.settings.survival ? 400 : 200) * (projBuilt(this, 'lighthouse') ? 0.7 : 1)) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if ((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) this.fish[i]++;
     if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * (this.has('forestry') ? 1.6 : 1.3)) {      // saplings spread from existing woods (capped, and never beside roads or buildings); foresters replant more
       for (let a = 0; a < (this.has('forestry') ? 24 : 14); a++) {
@@ -329,7 +333,7 @@ class World {
         if (Math.hypot(x - this.cx, y - this.cy) < 8) continue;
         let busy = false; for (let dy = -2; dy <= 2 && !busy; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * CFG.W + x + dx; if (this.road[j] || this.bmap[j]) { busy = true; break } } if (busy) continue;
         let near = false; for (const [dx, dy] of NB) { const f = this.feat[(y + dy) * CFG.W + x + dx]; if (f === FEAT.OAK || f === FEAT.PINE) { near = true; break } }
-        if (near && this.r() < 0.5) { this.feat[i] = this.E[i] > 0.58 ? FEAT.PINE : FEAT.OAK; this.res[i] = 4; this.trees++ }
+        if (near && this.r() < 0.5) { this.feat[i] = this.E[i] > 0.58 ? FEAT.PINE : FEAT.OAK; this.res[i] = 1; this.young.push(i); this.trees++ }
       }
     }
   }

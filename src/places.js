@@ -26,6 +26,12 @@ function pickSpot(w, b, inside) {
   }
   return null;
 }
+/* landmarks people walk over to look at, and why */
+const LANDMARKS = { monument: 'Monument', temple: 'Temple', library: 'Library', lighthouse: 'Lighthouse', bastion: 'Bastion', citadel: 'Citadel', foundry: 'Foundry', granaryhall: 'Great Granary' };
+function pickLandmark(w, v) {
+  const list = []; for (const t in LANDMARKS) for (const b of w.of(t)) { const pull = t === 'temple' ? 1 + 2 * (v.char ? v.char.piety : 0.3) : t === 'monument' ? 1.5 : t === 'library' ? 0.5 + 2 * v.trait.cur : 1; list.push({ b, pull }) }
+  if (!list.length) return null; let tot = 0; for (const x of list) tot += x.pull; let r = w.r() * tot; for (const x of list) { r -= x.pull; if (r <= 0) return x.b } return list[0].b;
+}
 /* decide where this villager heads for the evening / a session / a holiday */
 function gatherPlan(w, v, meet, fest) {
   const first = t => w.of(t)[0], plaza = first('plaza'), hall = first('hall'), amph = first('amphitheatre'), taverns = w.of('tavern');
@@ -36,12 +42,14 @@ function gatherPlan(w, v, meet, fest) {
   } else if (fest) {
     ticks = 200; stay = w.holiday; go = 'Off to the ' + w.holiday;
     if (amph) { b = amph; kind = 'amph' } else if (plaza) { b = plaza; inside = true; kind = 'plaza' }
+  } else if (v.isAdult() && w.r() < 0.1 + 0.18 * v.trait.cur + 0.12 * (v.char ? v.char.piety : 0) && (b = pickLandmark(w, v))) {
+    kind = 'look'; go = `To look at the ${LANDMARKS[b.type]}`; stay = b.type === 'temple' ? 'Praying at the temple' : b.type === 'library' ? 'Browsing the library' : `Admiring the ${LANDMARKS[b.type]}`; ticks = 100;
   } else if (taverns.length && v.isAdult() && w.r() < 0.25 + 0.55 * v.trait.soc) {
     b = taverns[(w.r() * taverns.length) | 0]; kind = 'tavern'; go = 'To the tavern'; stay = 'Talking over a drink at the tavern'; ticks = 160;
   } else if (plaza && w.r() < 0.7) { b = plaza; inside = true; kind = 'plaza'; go = 'To the village square'; stay = 'Talking in the square' }
   let spot = b ? pickSpot(w, b, inside) : null;
   if (!spot) {                       // the old campfire ring
-    kind = kind === 'hall' || kind === 'amph' || kind === 'tavern' || kind === 'plaza' ? 'fire' : kind;
+    kind = kind === 'hall' || kind === 'amph' || kind === 'tavern' || kind === 'plaza' || kind === 'look' ? 'fire' : kind;
     for (let k = 0; k < 10 && !spot; k++) { const x = Math.round(w.cx + (w.r() * 2 - 1) * 3), y = Math.round(w.cy + (w.r() * 2 - 1) * 3); if (w.walkable(y * CFG.W + x)) spot = { x, y } }
   }
   const bld = spot && b && kind !== 'fire' ? b : (spot ? w.of('campfire')[0] || null : null);

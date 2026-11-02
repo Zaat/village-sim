@@ -204,7 +204,7 @@ function townNewDay(w) {
     for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
-  const wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1);
+  const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4);       // packs return to where there is game
   if (pop >= 6 && w.r() < wolfChance && !w.animals.some(a => a.kind === 'wolf' && a.alive)) {
     const sp = ringSpot(w, 24, 32), n = 2 + ((w.r() * 3) | 0);
     if (sp) { for (let k = 0; k < n; k++) w.animals.push(new Animal(w, 'wolf', sp.x, sp.y)); w.emit('event', `A pack of ${n} wolves has been spotted near the village!`, { kind: 'wolves' }) }

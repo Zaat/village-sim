@@ -11,7 +11,7 @@ const { chromium } = require('playwright');
     return {day:w.day,pop:w.vills.length,vis,oldest:old,favs:w.vills.filter(v=>v.fav).length}});
   console.log(JSON.stringify(r));
   const shot=async(name,fn,arg)=>{await p.evaluate(fn,arg);await p.evaluate(()=>{document.getElementById('side').scrollTop=200});await p.waitForTimeout(300);await p.screenshot({path:`tests/ui_insp_${name}.png`,clip:{x:1160,y:0,width:340,height:950}})};
-  for(const t of ['tavern','plaza','house','dock','logcamp','hall']) await shot(t,t=>{const w=__sim.world;const b=w.of(t)[0];if(b)__sim.select(b)},t);
+  for(const t of ['tavern','plaza','house','dock','logcamp','farm','minecamp','hall']) await shot(t,t=>{const w=__sim.world;const b=w.of(t)[0];if(b)__sim.select(b)},t);
   // the generic click-through: select a house, click a resident link
   await p.evaluate(()=>{const w=__sim.world;__sim.select(w.of('house')[0])}); await p.waitForTimeout(300);
   const link=await p.$('#sel a.lnk'); if(link){await link.click();await p.waitForTimeout(300)}

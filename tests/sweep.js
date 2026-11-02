@@ -1,6 +1,7 @@
 // Seed sweep: node tests/sweep.js [seeds=8] [days=192] [conc=4] [forced]  -> table + variety/degeneracy report
 const { spawn } = require('child_process'), path = require('path');
-const n = +(process.argv[2] || 8), days = +(process.argv[3] || 192), conc = +(process.argv[4] || 4), forced = process.argv[5] === 'forced';
+const quick = process.argv[2] === 'quick';   // node tests/sweep.js quick  -> 6 worlds x 192 days at concurrency 2
+const n = quick ? 6 : +(process.argv[2] || 8), days = quick ? 192 : +(process.argv[3] || 192), conc = quick ? 2 : +(process.argv[4] || 4), forced = process.argv[5] === 'forced';
 const seeds = Array.from({ length: n }, (_, i) => 101 + i * 37), out = [];
 let next = 0, running = 0, done = 0;
 function launch() {

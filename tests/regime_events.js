@@ -7,9 +7,9 @@ const log=[];w.listeners.push((t,txt)=>{if(t==='regime'||t==='election')log.push
 const R=w.regime,ad=()=>ctx.adultsOf(w),force=fn=>{const o=w.rng;w.rng=()=>0.001;try{fn()}finally{w.rng=o}};
 let ok=0,bad=0;const check=(name,cond,extra)=>{console.log((cond?'PASS ':'FAIL ')+name+(extra?'  '+extra:''));cond?ok++:bad++};
 // 1 prophet
-{const a=ad().filter(v=>v.age<70).sort((x,y)=>y.charisma()-x.charisma())[0];a.char.piety=0.95;R.prophet=null;R.lastProphet=-999;const p0=R.ax.pious;force(()=>ctx.regimeEvents(w,0.6,70,ad()));check('prophet rises',!!R.prophet&&R.ax.pious>p0,R.prophet&&R.prophet.name)}
+{const a=ad().filter(v=>v.age<70).sort((x,y)=>y.charisma()-x.charisma())[0];a.char.piety=0.95;R.prophet=null;R.lastProphet=-999;R.lastCoup=w.day;const p0=R.ax.pious;force(()=>ctx.regimeEvents(w,0.6,70,ad()));check('prophet rises',!!R.prophet&&R.ax.pious>p0,R.prophet&&R.prophet.name)}
 // 2 coup
-{R.ax.auth=0.4;const chief=ctx.chiefOf(w),c=ad().filter(v=>v!==chief&&v.age<60)[0];c.char.amb=0.95;c.char.ruth=0.9;c.reputation=100;c.trait.soc=0.95;const grp=ad().filter(v=>v!==chief&&v!==c).slice(0,6);for(const g of grp){g.char.ruth=0.6;w.rel.set(w.relKey(c,g),60)}R.lastCoup=-999;const a0=R.ax.auth;force(()=>ctx.regimeEvents(w,0.8,45,ad()));const nc=ctx.chiefOf(w);check('coup seizes power',R.coups===1&&nc&&nc.id===c.id&&R.ax.auth>a0,nc&&nc.name)}
+{R.lastCoup=-999;R.ax.auth=0.4;const chief=ctx.chiefOf(w),c=ad().filter(v=>v!==chief&&v.age<60)[0];c.char.amb=0.95;c.char.ruth=0.9;c.reputation=100;c.trait.soc=0.95;const grp=ad().filter(v=>v!==chief&&v!==c).slice(0,6);for(const g of grp){g.char.ruth=0.6;w.rel.set(w.relKey(c,g),60)}R.lastCoup=-999;const a0=R.ax.auth;force(()=>ctx.regimeEvents(w,0.8,45,ad()));const nc=ctx.chiefOf(w);check('coup seizes power',R.coups===1&&nc&&nc.id===c.id&&R.ax.auth>a0,nc&&nc.name)}
 // 3 managed election under high authority
 {R.ax.auth=0.8;R.noManage=0;const chief=ctx.chiefOf(w);ctx.holdElection(w,'term');const nc=ctx.chiefOf(w);check('managed election keeps the chief',nc&&nc.id===chief.id&&log.some(l=>/does not stand/.test(l)))}
 // 4 purge

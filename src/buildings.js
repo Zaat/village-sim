@@ -29,6 +29,7 @@ function damageBuilding(w, b, amt, cause) {
 }
 /* once a day: wear, and collapse when nothing is left */
 function buildingDay(w) {
+  soilDay(w);
   const mult = (w.season === 3 ? 1.4 : 1) * (w.harsh ? 1.3 : 1) * (w.drought ? 1 : 1);
   for (const b of [...w.buildings.values()]) {
     ensureStats(w, b); if (b.type === 'campfire') continue; const rate = (BLD_WEAR[b.type] || [0.003])[b.style || 0] || (BLD_WEAR[b.type] || [0.003])[0];
@@ -41,24 +42,27 @@ function buildingDay(w) {
 }
 function ageText(w, b) { const d = Math.max(0, w.day - (b.built ?? w.day)), y = d / (CFG.DPS * 4); return d < 32 ? `${d} day${d === 1 ? '' : 's'} old` : `${y.toFixed(1)} years old` }
 
-/* ----- how much a building is used: visits per season, a rolling year, regulars and the trend ----- */
-function rollVisits(w, b) {
-  const ser = Math.floor(w.day / CFG.DPS);
-  if (!b.vh) { b.vh = [0, 0, 0, 0]; b.vser = ser; b.vtot = 0; b.reg = {} }
-  const gap = ser - b.vser; if (gap > 0) { for (let i = 0; i < Math.min(gap, 4); i++) b.vh.unshift(0); b.vh.length = 4; b.vser = ser }
+/* ----- how much a building is used and what it produces: counters in seasonal bins (this season and the last three) ----- */
+function rollBins(w, b, k, sk) {
+  const ser = Math.floor(w.day / CFG.DPS); if (!b[k]) { b[k] = [0, 0, 0, 0]; b[sk] = ser }
+  const gap = ser - b[sk]; if (gap > 0) { for (let i = 0; i < Math.min(gap, 4); i++) b[k].unshift(0); b[k].length = 4; b[sk] = ser }
   return b;
 }
+function rollVisits(w, b) { if (!b.vh) { b.vtot = 0; b.reg = {} } return rollBins(w, b, 'vh', 'vser') }
 function recordVisit(w, b, v) {
   if (!b || !v) return; v.fav = v.fav || {}; v.fav[b.type] = (v.fav[b.type] || 0) + 1; rollVisits(w, b); b.vh[0]++; b.vtot++; const r = b.reg; r[v.id] = (r[v.id] || 0) + 1;
   const ks = Object.keys(r); if (ks.length > 40) { let mk = ks[0]; for (const k of ks) if (r[k] < r[mk]) mk = k; delete r[mk] }
 }
-/* popularity: the last two seasons (this one scaled to a full season) against the two before */
-function popularity(w, b) {
-  rollVisits(w, b); const vh = b.vh, year = vh[0] + vh[1] + vh[2] + vh[3], age = w.day - (b.built ?? w.day), el = (w.day % CFG.DPS) + 1;
-  const cur = el >= 3 ? vh[0] * CFG.DPS / el : vh[1], recent = (cur + vh[1]) / 2, older = (vh[2] + vh[3]) / 2;
+function recordOutput(w, b, amt) { if (!b || !(amt > 0)) return; rollBins(w, b, 'oh', 'oser'); b.oh[0] += amt; b.otot = (b.otot || 0) + amt }
+/* trend: the last two seasons (this one scaled to a full season) against the two before */
+function popularity(w, b, key = 'vh') {
+  rollBins(w, b, key, key === 'vh' ? 'vser' : 'oser'); const vh = b[key], year = vh[0] + vh[1] + vh[2] + vh[3], age = w.day - (b.built ?? w.day), el = (w.day % CFG.DPS) + 1;
+  const cur = el >= 3 ? vh[0] * CFG.DPS / el : vh[1], recent = (cur + vh[1]) / 2, older = (vh[2] + vh[3]) / 2, out = key !== 'vh';
   let trend = 'steady', arrow = '→';
   if (age < CFG.DPS * 2) { trend = 'too new to tell'; arrow = '·' }
-  else if (recent + older < 4) { trend = year < 3 ? 'rarely used' : 'quiet'; arrow = '·' }
+  else if (recent + older < 4) { trend = out ? 'barely producing' : year < 3 ? 'rarely used' : 'quiet'; arrow = '·' }
   else if (recent > older * 1.2 + 1) { trend = 'growing'; arrow = '▲' } else if (recent < older * 0.8 - 1) { trend = 'fading'; arrow = '▼' }
   return { year, season: vh[0], last: vh[1], trend, arrow, perDay: year / Math.max(1, Math.min(CFG.DPS * 4, age)), hist: vh.slice().reverse() };
 }
+/* soil slowly recovers; fields left bare in winter recover faster */
+function soilDay(w) { for (const b of w.buildings.values()) if (b.type === 'farm') b.fert = Math.min(1.05, (b.fert ?? 1) + 0.01 * (1 + (b.state === 0 && w.season === 3 ? 1 : 0))) }

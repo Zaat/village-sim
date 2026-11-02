@@ -295,7 +295,8 @@ const ageYears = days => { const y = days / (CFG.DPS * 4); return y < 1 ? `${Mat
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
 const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
 const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0] : BUILDING_NAMES[s.type] || s.type;
-const VENUES = { plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
+const OUTPUT = { logcamp: 'firewood', minecamp: 'stone', lodge: 'food', farm: 'food', dock: 'food' };
+const VENUES = { monument: 'sightseers', temple: 'visitors', library: 'readers', lighthouse: 'sightseers', bastion: 'sightseers', citadel: 'sightseers', foundry: 'sightseers', granaryhall: 'sightseers', plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
 function buildingPanel(w, s, extra) {
   const pct = Math.max(0, Math.round(100 * s.hp / s.maxHp)), cx = s.x + s.w / 2, cy = s.y + s.h / 2;
   const near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - cx, v.y - cy) < Math.max(s.w, s.h) + 2.5);
@@ -307,7 +308,8 @@ function buildingPanel(w, s, extra) {
     const res = s.occ.map(id => w.vills.find(v => v.id === id)).filter(Boolean), beds = bedsOf(s);
     people = sec('Residents', `<div class="hint">${res.length ? res.length + ' living here' : 'Empty'} · ${beds} beds${res.length > beds ? ' (children and newborns share)' : ''}</div>` + res.map(v => `<div>${vlink(v, `${ageYears(v.age)}${v.role && !v.isChild() ? ' · ' + v.role : ''}`)}</div>`).join(''));
   } else if (s.type === 'farm') {
-    people = sec('Field', `<div class="hint">${['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]}</div>`);
+    const fe = s.fert ?? 1;
+    people = sec('Field', `<div class="hint">${['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]}</div><div class="hint">Soil: <b>${fe >= 1.03 ? 'rich' : fe >= 0.9 ? 'good' : fe >= 0.75 ? 'tired' : 'worn out'}</b> (${Math.round(fe * 100)}% yield). ${fe < 0.85 ? 'Fields left bare in winter recover faster; crop rotation wears the soil half as fast.' : ''}</div>`);
   } else if (s.type === 'store') {
     people = sec('Stores', `<div class="hint">The village holds ${Math.round(w.stock.food)} food, ${Math.round(w.stock.wood)} firewood and ${Math.round(w.stock.stone)} stone of ${w.cap()} it can keep. Stores raise the limit by ${100 + (w.has('granary') ? 40 : 0)}.</div>`);
   } else if (s.type === 'dock') {
@@ -326,6 +328,10 @@ function buildingPanel(w, s, extra) {
     use = sec('Usage', kvs([['This season', P.season], ['Last season', P.last], ['Past year', P.year], ['All time', s.vtot || 0]]) + `<div class="polh" style="margin-top:6px"><span><span style="color:${col}">${P.arrow}</span> Popularity: <b>${P.trend}</b></span>${spark(P.hist)}</div>`
       + `<div class="hint">${P.year ? 'About ' + P.perDay.toFixed(1) + ' ' + (VENUES[s.type] || 'visits') + ' a day. ' : ''}${near.length} villager${near.length === 1 ? '' : 's'} here right now${near.length ? ': ' + near.slice(0, 4).map(v => vlink(v)).join(', ') + (near.length > 4 ? '…' : '') : ''}.</div>`
       + (regs.length ? `<div class="hint">Regulars: ${regs.map(x => vlink(x.v, '×' + x.n)).join(', ')}</div>` : ''));
+  }
+  if (OUTPUT[s.type]) {
+    const O = popularity(w, s, 'oh'), col = O.arrow === '▲' ? '#7ad07a' : O.arrow === '▼' ? '#e0985a' : '#9aa5ae', u = OUTPUT[s.type];
+    use += sec('Output', kvs([['This season', Math.round(O.season) + ' ' + u], ['Last season', Math.round(O.last) + ' ' + u], ['Past year', Math.round(O.year) + ' ' + u], ['All time', Math.round(s.otot || 0) + ' ' + u]]) + `<div class="polh" style="margin-top:6px"><span><span style="color:${col}">${O.arrow}</span> Output: <b>${O.trend}</b></span>${spark(O.hist.map(Math.round))}</div>`);
   }
   const hist = [s.last ? `Last event: ${escapeHtml(s.last)}` : '', s.hp / s.maxHp < 0.75 ? (s.repairer ? 'A builder is on the way to mend it.' : 'Needs repair: builders will mend it when wood is available.') : ''].filter(Boolean);
   return `<h3>Building</h3><div class="big">${bName(s)}</div><div class="hint">${escapeHtml(purpose || (s.type === 'logcamp' || s.type === 'minecamp' || s.type === 'lodge' ? extra : '') || '')}</div>

@@ -82,5 +82,6 @@ function animalsNewDay(w) {
     if (dc < 40) for (const a of w.animals.slice()) if (a.kind === 'deer' && a.alive && a.sex === 'f' && w.r() < 0.06) { const n = new Animal(w, 'deer', a.x | 0, a.y | 0); n.x = a.x; n.y = a.y; w.animals.push(n) }
     if (rc < 90) for (const a of w.animals.slice()) if (a.kind === 'rabbit' && a.alive && w.r() < 0.12) { const n = new Animal(w, 'rabbit', a.x | 0, a.y | 0); n.x = a.x; n.y = a.y; w.animals.push(n) }
   }
+  { const wc = count('wolf'); if (wc >= 2 && wc < 8 && count('deer') >= 14 && w.season < 2 && w.r() < 0.03) { const m = w.animals.find(a => a.alive && a.kind === 'wolf'); if (m) { const n = new Animal(w, 'wolf', m.x | 0, m.y | 0); n.x = m.x; n.y = m.y; w.animals.push(n) } } }
   if (count('deer') < 8) { for (let g = 0; g < 20; g++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (Math.hypot(x - w.cx, y - w.cy) > 24 && w.walkable(y * CFG.W + x)) { for (let k = 0; k < 3; k++)w.animals.push(new Animal(w, 'deer', x, y)); break } } }
 }
