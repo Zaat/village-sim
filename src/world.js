@@ -155,8 +155,9 @@ class World {
     bp.alive = false; this.bps.splice(this.bps.indexOf(bp), 1);
     for (let dy = 0; dy < bp.h; dy++) for (let dx = 0; dx < bp.w; dx++) this.bpAt.delete((bp.y + dy) * CFG.W + bp.x + dx);
     if (bp.type === 'road') { this.road[bp.idx] = this.has('masonry') ? 2 : 1; return }
-    if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
+    if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
     const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' || bp.type === 'store' ? styleNow(this) : 0;
+    ensureStats(this, b);
     if (PROJECTS[bp.type]) { projectDone(this, b, bp); return }
     if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.say('A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
     if (bp.type === 'market') this.say('A market square is opened. Merchants will know where to find us.');
@@ -263,6 +264,7 @@ class World {
     techDay(this);
     tradeDay(this);
     neighbourDay(this);
+    buildingDay(this);
     projectDay(this);
     historyDay(this);
   }

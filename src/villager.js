@@ -156,6 +156,7 @@ class Villager {
     if (this.inb) { w.inbound[this.inb.kind] -= this.inb.amt; this.inb = null }
     if (this.haul) { if (!this.haul.done && this.haul.bp.alive) this.haul.bp.inc[this.haul.type] -= this.haul.amt; this.haul = null }
     if (this.bpWork) { this.bpWork.workers--; this.bpWork = null }
+    if (this.repairB) { if (this.repairB.repairer === this.id) this.repairB.repairer = 0; if (this.repairPaid) { w.stock.wood += this.repairPaid.w; w.stock.stone += this.repairPaid.s; this.repairB.skipUntil = w.tick + 2400; this.repairPaid = null } this.repairB = null }       // a job that fell through is refunded, and that building is left alone for a while
     if (this.boat) { const b = this.boat, d = w.buildings.get(b.dock); if (b.state === 'out' && d) { this.x = d.x + 0.5; this.y = d.y + 0.5 } b.home(); this.boat = null }
     if (w.voyage && w.voyage.id === this.id) { w.voyage = null; w.voyageCd = Math.max(w.voyageCd, w.day + 5) }
     this.jobKind = null;
@@ -404,6 +405,19 @@ class Villager {
         return true;
       }
     }
-    return false;
+    return this.planRepair();
+  }
+  /* mend the most worn building, if the stores can pay for it */
+  planRepair() {
+    const w = this.w; let best = null, br = 0.75;
+    for (const b of w.buildings.values()) { if (b.maxHp === undefined || b.type === 'campfire') continue; if ((b.skipUntil || 0) > w.tick || (b.repairer && b.repairer !== this.id && w.vills.some(x => x.id === b.repairer && x.alive))) continue; const r = b.hp / b.maxHp; if (r < br) { br = r; best = b } }
+    if (!best) return false;
+    const mw = Math.ceil(best.maxHp * 0.12 / 25), ms = (best.style === 2 || PROJECTS[best.type]) ? Math.ceil(best.maxHp * 0.06 / 25) : 0;
+    if (w.stock.wood < mw + 4 || w.stock.stone < ms) return false;
+    w.stock.wood -= mw; w.stock.stone -= ms; best.repairer = this.id; this.repairB = best; this.repairPaid = { w: mw, s: ms }; this.jobKind = 'build';
+    const near = (x, y) => w.nearRect(x, y, best);
+    this.steps = [go(near, null, 'To the worn building', { maxCost: 120, check: () => best.repairer === this.id && w.buildings.has(best.id) }),
+      work(this.wt(70, 'build'), 'Repairing the ' + (best.type === 'house' ? 'home' : best.type), () => { if (!w.buildings.has(best.id)) return; best.hp = Math.min(best.maxHp, best.hp + best.maxHp * 0.2); best.repairs = (best.repairs || 0) + 1; best.last = `repaired on day ${w.day}`; this.repairPaid = null; this.gain('build') }, { check: () => w.buildings.has(best.id) })];
+    return true;
   }
 }

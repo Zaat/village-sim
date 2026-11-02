@@ -83,3 +83,4 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
 #neighCard{height:230px;overflow-y:auto}
 #neighCard{height:380px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:8px}.stats div{display:flex;flex-direction:column}.stats b{font-weight:600;font-size:12.5px}

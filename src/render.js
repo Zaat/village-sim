@@ -316,7 +316,7 @@ function render(w, sel, now) {
   for (const sc of w.scars) if (w.tick < sc.until && inViewR(sc, x0, x1, y0, y1)) scarArt(g, sc, w);
   const rows = []; for (let y = y0; y <= y1 + 3; y++) rows[y] = [];
   const inView = (bx, by, bw, bh) => bx + bw >= x0 && bx <= x1 && by + bh >= y0 && by <= y1 + 3;
-  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else if (b.type === 'market') marketArt(g, w, b, now); else if (b.type === 'plaza') plazaArt(g, w, b, now, dark); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
+  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else if (b.type === 'market') marketArt(g, w, b, now); else if (b.type === 'plaza') plazaArt(g, w, b, now, dark); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => { drawBuilding(g, w, b, now, dark); wearArt(g, b, now) } }) } }
   for (const bp of w.bps) if (inView(bp.x, bp.y, bp.w, bp.h)) bpArt(g, w, bp, now);
   const vflag = visitorFlag(w);
   if ((w.econ.caravan && w.econ.caravan.sea) || w.visit) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = bt.mx + d.dir[0] * 2.2, sy = bt.my + d.dir[1] * 2.2, ty = Math.floor(sy); if (rows[ty]) rows[ty].push({ y: sy * T - 1, fn: () => shipArt(g, sx * T, sy * T, d.dir[0] >= 0 ? 1 : -1, now, vflag) }) }
@@ -328,7 +328,7 @@ function render(w, sel, now) {
     const r = rows[y]; if (r && r.length) { r.sort((a, b) => a.y - b.y); for (const it of r) it.fn() }
   }
   if (sel instanceof Villager && sel.alive && sel.path.length) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sel.x * T, sel.y * T); for (const p of sel.path) g.lineTo((p % W + .5) * T, ((p / W | 0) + .5) * T); g.stroke() }
-  if (sel && sel.type && sel.w) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T - .5, sel.y * T - .5, sel.w * T + 1, sel.h * T + 1) }
+  if (sel && sel.type && sel.w) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T - .5, sel.y * T - .5, sel.w * T + 1, sel.h * T + 1); if (sel.maxHp) { const pr = Math.max(0, sel.hp / sel.maxHp); rc(g, 'rgba(0,0,0,.7)', sel.x * T, sel.y * T - 6, sel.w * T, 4); rc(g, conditionColor(sel), sel.x * T + 1, sel.y * T - 5, Math.round((sel.w * T - 2) * pr), 2) } }
   if (w.festival) bunting(g, w, now);
   if (w.fog && w.seen) { updateFog(w); g.imageSmoothingEnabled = true; g.drawImage(R.fog, 0, 0, W * T, H * T); g.imageSmoothingEnabled = false }      // unexplored lands and sea stay in the mist, covering everything beneath
   if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighLabel(g, n);
@@ -485,4 +485,11 @@ function neighLabel(g, n) {
 function visitorFlag(w) {
   if (!w.neigh) return null; const c = w.econ.caravan, id = w.visit ? w.visit.n : c && c.from !== undefined ? c.from : null; if (id === null) return null;
   if (w.visit && w.visit.type === 'raid') return '#9a1414'; const n = w.neigh.find(x => x.id === id); return n ? { traders: '#3c6fb4', farmers: '#c4a24a', scholars: '#7a5aa8', raiders: '#8a1c1c' }[n.kind] : null;
+}
+
+/* weathered, damaged buildings show it: cracks, missing planks, and a little dust */
+function wearArt(g, b, now) {
+  if (b.maxHp === undefined) return; const r = b.hp / b.maxHp; if (r >= 0.6) return; const T = CFG.T, X = b.x * T, Y = b.y * T, Wd = b.w * T, Ht = b.h * T, n = r < 0.2 ? 9 : r < 0.4 ? 6 : 3;
+  for (let k = 0; k < n; k++) { const h = hash2(b.x * 7 + k, b.y * 5 + k * 3); rc(g, 'rgba(20,14,10,.45)', X + 3 + (h & 255) % (Wd - 8), Y + Ht * 0.35 + ((h >> 8) & 255) % (Ht * 0.6), 1, 4 + (h & 3)); rc(g, 'rgba(20,14,10,.3)', X + 3 + ((h >> 4) & 255) % (Wd - 10), Y + Ht * 0.3 + ((h >> 10) & 127) % (Ht * 0.6), 4, 1) }
+  if (r < 0.35) { const t = ((now / 1100) + b.x * 0.13) % 1; g.fillStyle = `rgba(150,140,125,${0.35 * (1 - t)})`; g.fillRect(X + Wd * 0.3 + Math.sin(t * 5) * 2, Y + Ht * 0.5 - t * 10, 3, 3) }
 }

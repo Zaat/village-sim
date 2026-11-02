@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),path=require('path');const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','places','neighbours','diplomacy','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.Animal=Animal;globalThis.CFG=CFG;';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.Animal=Animal;globalThis.CFG=CFG;';
 const ctx={console};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let t=0;t<1200*12;t++)w.step();
 console.log('pop before',w.vills.length);

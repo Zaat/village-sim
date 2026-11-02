@@ -1,0 +1,42 @@
+'use strict';
+/* ==========================================================================
+   buildings.js — what a building is made of and how it holds up. Every
+   building has hit points (structural strength), a condition that wears with
+   age and weather, and can be damaged by fire, storms and raiders. Builders
+   repair what is worn; neglect ends in collapse.
+   ========================================================================== */
+const BLD_HP = { house: 100, farm: 45, store: 140, campfire: 30, dock: 80, logcamp: 90, minecamp: 90, lodge: 90, market: 110, plaza: 200, tavern: 130, hall: 320, library: 380, bastion: 520, monument: 450, amphitheatre: 400, granaryhall: 300, lighthouse: 350 };
+const STYLE_HP = [1, 1.3, 2];                       // log, timber-frame, stone
+const BLD_WEAR = { house: [0.0030, 0.0022, 0.0010], store: [0.0028, 0.0020, 0.0009], farm: [0.003], dock: [0.0035], campfire: [0.004], logcamp: [0.0028], minecamp: [0.0026], lodge: [0.0028], market: [0.0026], plaza: [0.0014], tavern: [0.0024], hall: [0.0012], library: [0.0006], bastion: [0.0005], monument: [0.0004], amphitheatre: [0.0006], granaryhall: [0.0012], lighthouse: [0.0008] };
+const BLD_MATERIAL = { house: s => ['Log and thatch', 'Timber frame', 'Cut stone'][s || 0], store: s => ['Log storehouse', 'Timber storehouse', 'Stone granary'][s || 0], farm: () => 'Tilled soil and wooden fences', campfire: () => 'Stone ring and logs', dock: () => 'Timber piers', logcamp: () => 'Timber', minecamp: () => 'Timber and stone', lodge: () => 'Timber and hide', market: () => 'Timber stalls', plaza: w => w.has('masonry') ? 'Cobbles and a stone well' : 'Packed earth and a timber well', tavern: w => w.has('masonry') ? 'Timber and stone' : 'Timber', hall: () => 'Timber hall', library: () => 'Stone and slate', bastion: () => 'Stone', monument: () => 'Carved stone', amphitheatre: () => 'Stone tiers', granaryhall: () => 'Timber and stone', lighthouse: () => 'Stone tower' };
+
+const baseHp = b => BLD_HP[b.type] || 100;
+const hpFactor = b => (b.type === 'house' || b.type === 'store') ? STYLE_HP[b.style || 0] : 1;
+function ensureStats(w, b) {
+  if (b.maxHp !== undefined) return b;
+  b.maxHp = Math.round(baseHp(b) * hpFactor(b)); b.hp = b.maxHp; b.built = w.day; b.era = techEra(w); b.repairs = 0; b.last = null; return b;
+}
+/* a rebuilt (upgraded) building starts again at full strength */
+function restyle(w, b) { const keep = b.built; b.maxHp = Math.round(baseHp(b) * hpFactor(b)); b.hp = b.maxHp; b.built = keep === undefined ? w.day : keep; b.era = techEra(w); b.last = `rebuilt day ${w.day}` }
+const condition = b => { const r = b.hp / b.maxHp; return r >= 0.9 ? 'Sound' : r >= 0.7 ? 'Good' : r >= 0.45 ? 'Worn' : r >= 0.2 ? 'Poor' : 'Failing' };
+const conditionColor = b => { const r = b.hp / b.maxHp; return r >= 0.7 ? '#7ad07a' : r >= 0.45 ? '#d9c26a' : r >= 0.2 ? '#e0985a' : '#e0604a' };
+
+/* damage from any cause; returns true when the building is destroyed */
+function damageBuilding(w, b, amt, cause) {
+  ensureStats(w, b); b.hp -= amt; b.last = `${cause} on day ${w.day}`;
+  if (b.hp <= 0) { w.removeBuilding(b); return true }
+  return false;
+}
+/* once a day: wear, and collapse when nothing is left */
+function buildingDay(w) {
+  const mult = (w.season === 3 ? 1.4 : 1) * (w.harsh ? 1.3 : 1) * (w.drought ? 1 : 1);
+  for (const b of [...w.buildings.values()]) {
+    ensureStats(w, b); if (b.type === 'campfire') continue; const rate = (BLD_WEAR[b.type] || [0.003])[b.style || 0] || (BLD_WEAR[b.type] || [0.003])[0];
+    b.hp -= b.maxHp * rate * mult;
+    if (b.hp <= 0) {
+      const who = b.occ.map(id => (w.vills.find(v => v.id === id) || {}).name).filter(Boolean);
+      w.removeBuilding(b); w.emit('event', `A neglected ${b.type === 'house' ? 'home' : b.type} collapses${who.length ? ', leaving ' + who.slice(0, 3).join(', ') + ' homeless' : ''}.`, { kind: 'collapse' });
+    }
+  }
+}
+function ageText(w, b) { const d = Math.max(0, w.day - (b.built || w.day)), y = d / (CFG.DPS * 4); return d < 32 ? `${d} day${d === 1 ? '' : 's'} old` : `${y.toFixed(1)} years old` }

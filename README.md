@@ -1,4 +1,4 @@
-# Village Sim v0.11
+# Village Sim v0.12
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,12 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Building stats (new in 0.12)
+- Every building now has **hit points**, a **condition** (Sound, Good, Worn, Poor, Failing), an age, the era it was built in, a material, a repair count and a last-event note. Click a building to see them; a small bar shows its condition on the map, and worn buildings show cracks and dust.
+- Strength depends on the build: log cabins are weakest, timber-frame stronger, stone twice as strong as log; great projects are very sturdy. Buildings **wear** with age and weather (log wears fastest, stone slowest; winter and harsh winters are worse).
+- **Builders repair** worn buildings (below about 75%) using wood, and stone for stone structures. Neglect ends in **collapse**.
+- **Fire, storms and raiders now damage rather than simply delete**: log cabins usually burn down, timber and stone often survive scorched, storms batter roofs, and a raid's torch may only singe a house. Upgrades and rebuilding restore full strength.
 
 ## Diplomacy and trade with neighbours (new in 0.11)
 - **First contact:** when sailors find an island the council decides how to greet it (a gift, greetings only, or wait and watch).

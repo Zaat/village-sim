@@ -286,14 +286,21 @@ function updateInspector() {
   } else if (s instanceof Animal && s.alive) {
     el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'} Health ${Math.max(0, Math.round(s.hp))}.</div>`;
   } else if (s && s.type && s.w) {
-    const names = { market: 'Market square', house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+    const names = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', market: 'Market square', house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
     let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
     if (s.type === 'market') extra = 'Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.';
     if (s.type === 'dock') { const bs = w.boats.filter(b => b.dock === s.id); extra = `${bs.length} fishing boat${bs.length === 1 ? '' : 's'} work from here (${bs.filter(b => b.state === 'out').length} at sea). Catches go straight to the stores.` }
     if (s.type === 'logcamp') extra = 'A depot beside the forest. Woodcutters within about 14 tiles work about 15% faster and get a quarter more wood from every tree.';
     if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
     if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
-    el.innerHTML = `<h3>Building</h3><div class="big">${names[s.type] || s.type}</div><div class="hint">${extra}</div>`;
+    ensureStats(w, s);
+    const here = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - (s.x + s.w / 2), v.y - (s.y + s.h / 2)) < Math.max(s.w, s.h) + 2.5).length, pct = Math.max(0, Math.round(100 * s.hp / s.maxHp));
+    const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.' }[s.type] || '';
+    const usage = s.type === 'store' ? `Raises the storage limit by ${100 + (w.has('granary') ? 40 : 0)}.` : s.type === 'farm' ? '' : (s.type === 'plaza' || s.type === 'tavern') ? `${here} villager${here === 1 ? '' : 's'} here right now.` : '';
+    el.innerHTML = `<h3>Building</h3><div class="big">${names[s.type] || s.type}</div><div class="hint">${extra || escapeHtml(proj || purpose)}</div>
+      <div class="polh" style="margin-top:8px"><span>Condition: <b>${condition(s)}</b></span><span class="hint">${Math.round(s.hp)} / ${s.maxHp} hit points</span></div><div class="bar"><i style="background:${conditionColor(s)};width:${pct}%"></i></div>
+      <div class="stats"><div><span class="hint">Material</span><b>${escapeHtml((BLD_MATERIAL[s.type] || (() => '-'))(s.type === 'plaza' || s.type === 'tavern' ? w : s.style))}</b></div><div><span class="hint">Age</span><b>${ageText(w, s)}</b></div><div><span class="hint">Built in</span><b>${ERAS[s.era !== undefined ? s.era : 0]}</b></div><div><span class="hint">Repairs</span><b>${s.repairs || 0}</b></div><div><span class="hint">Size</span><b>${s.w} x ${s.h} tiles</b></div><div><span class="hint">Wear</span><b>${((BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0]) * 100 > 0 ? (((BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0]) * 3200).toFixed(1) + '% a year' : '-'}</b></div></div>
+      ${usage ? `<div class="hint" style="margin-top:6px">${usage}</div>` : ''}${s.last ? `<div class="hint" style="margin-top:4px">Last event: ${escapeHtml(s.last)}</div>` : ''}${s.hp / s.maxHp < 0.75 ? `<div class="hint" style="margin-top:4px">${s.repairer ? 'A builder is on the way to mend it.' : 'Needs repair: builders will mend it when the stores allow.'}</div>` : ''}`;
   } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
 }
 const chart = $('chart'), cc = chart.getContext('2d');
@@ -449,7 +456,7 @@ setInterval(() => {
 addEventListener('error', e => { dbgNote('window', e.error || new Error(e.message)); if (world) dbgPersist(world) });
 addEventListener('unhandledrejection', e => { dbgNote('promise', e.reason); if (world) dbgPersist(world) });
 
-window.__sim = { get world() { return world }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };
+window.__sim = { get world() { return world }, select(o) { selected = o; updateUI() }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };
 dbgLoadPrevious();
 newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
 {

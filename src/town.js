@@ -174,12 +174,14 @@ function fire(w) {
   const hs = w.houses(), st = w.of('store'); if (!hs.length) return;
   const b = w.r() < 0.2 && st.length > 1 ? st[(w.r() * st.length) | 0] : hs[(w.r() * hs.length) | 0], who = b.occ.map(id => (w.vills.find(v => v.id === id) || {}).name).filter(Boolean);
   if (b.type === 'store') for (const k of ['wood', 'stone', 'food']) w.stock[k] = Math.floor(w.stock[k] * 0.7);
-  w.removeBuilding(b);
-  w.emit('event', `Fire! A ${b.type === 'house' ? 'cabin' : 'storehouse'} burned to the ground${who.length ? ', leaving ' + who.slice(0, 3).join(', ') + (who.length > 3 ? ' and others' : '') + ' homeless' : ''}.`, { kind: 'fire' });
+  const gone = damageBuilding(w, b, baseHp(b) * (0.8 + 0.7 * w.r()), 'fire'), what = b.type === 'house' ? 'cabin' : 'storehouse';       // stone and timber stand up to flames better than log and thatch
+  w.emit('event', gone ? `Fire! A ${what} burned to the ground${who.length ? ', leaving ' + who.slice(0, 3).join(', ') + ' homeless' : ''}.` : `Fire! A ${what} is badly scorched but still stands${who.length ? '; ' + who.slice(0, 3).join(', ') + ' put it out' : ''}.`, { kind: 'fire' });
 }
 function storm(w) {
   let n = 0; for (const b of w.of('farm')) if (b.state === 1 && w.r() < 0.6 * (1 - 0.5 * lesson(w, 'storm'))) { b.state = 0; b.g = 0; n++ }
-  if (n) w.emit('event', `A violent storm tears across the island and flattens the young crops in ${n} field${n > 1 ? 's' : ''}.`, { kind: 'storm' });
+  let roofs = 0; for (const b of [...w.buildings.values()]) if (b.type !== 'campfire' && (b.style || 0) < 2 && w.r() < 0.3) { damageBuilding(w, b, baseHp(b) * (0.05 + 0.13 * w.r()), 'storm'); roofs++ }
+  if (n) w.emit('event', `A violent storm tears across the island and flattens the young crops in ${n} field${n > 1 ? 's' : ''}${roofs ? ' and batters ' + roofs + ' roofs' : ''}.`, { kind: 'storm' });
+  else if (roofs) w.emit('event', `A storm batters ${roofs} roofs and fences.`, { kind: 'storm' });
 }
 function townNewDay(w) {
   const pop = w.vills.length, s = w.season, d = w.day, sv = w.settings.survival ? 2 : 1, dis = w.settings.disasters;

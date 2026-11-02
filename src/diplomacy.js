@@ -148,7 +148,7 @@ function raidVisit(w, n) {
     const fighters = w.vills.filter(v => v.isAdult() && !v.isElder()).sort((a, b) => b.trait.brave - a.trait.brave).slice(0, 4 + dead);
     for (let i = 0; i < dead && i < fighters.length; i++) { const v = fighters[(w.r() * fighters.length) | 0]; if (v && !victims.includes(v)) { v.health = 0; v.cause = 'raid'; victims.push(v) } }
     for (const v of w.vills) v.mood = Math.max(0, v.mood - (outcome === 'heavy' ? 14 : 8));
-    let burned = ''; if (outcome === 'heavy' && w.r() < 0.6) { const hs = w.houses(); if (hs.length > 2) { const b = hs[(w.r() * hs.length) | 0]; w.removeBuilding(b); burned = ' A house was set ablaze.' } }
+    let burned = ''; if (outcome === 'heavy' && w.r() < 0.6) { const hs = w.houses(); if (hs.length > 2) { const b = hs[(w.r() * hs.length) | 0]; const gone = damageBuilding(w, b, baseHp(b) * (0.9 + 0.5 * w.r()), 'raiders'); burned = gone ? ' A house was set ablaze and burned down.' : ' A house was set ablaze, but the fire was beaten out.' } }
     n.rel -= 4; n.strength += 2;
     text = `Raiders from ${n.name} ${outcome === 'heavy' ? 'storm ashore and plunder the village' : 'land and carry off loot'}: ${lost.food} food, ${lost.wood} firewood and ${lost.stone} stone taken.${victims.length ? ' ' + victims.map(v => v.name).join(', ') + (victims.length > 1 ? ' fall' : ' falls') + ' defending the village.' : ''}${burned}`;
   }
