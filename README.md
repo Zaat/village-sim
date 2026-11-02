@@ -1,4 +1,4 @@
-# Village Sim v0.19
+# Village Sim v0.20
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,18 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Harbour and trade abroad (new in 0.20)
+The village no longer waits for merchants. It now trades for itself.
+- **Trade trips:** with trade and sea trade (or on foot for land neighbours), the council looks at every neighbour it knows and weighs the best trip with one shared **cost-benefit rule**: what the cargo should earn, against crew time, ship upkeep and the risk of losing it. The council then decides whether to **send** the trip, make it a **standing route** that repeats while it keeps paying, or **wait**. Claude can counsel these decisions as with others.
+- **Cargo:** goods leave the stores, are carried by a ship or wagon, sold at the neighbour's prices (each kind of neighbour pays differently and friendlier ones pay better), and what the village is short of comes home. Trips are skippered by a real villager, can be lost to bad weather, and the skipper may be lost too (with the Disasters setting on).
+- **Ships:** fishing boats can carry a small load (24); **cargo ships** carry 70; **carracks** carry 140 and sail faster.
+- **Harbour tiers:** a **dock** can be improved to a **quay** (stone landing, warehouse, more berths, cargo ships) and then a **port** (cranes, customs sheds, carracks, customs revenue on every trip). The council weighs each improvement against its cost.
+- **Regimes matter:** open, merchant-minded villages trade eagerly; devout or hard-ruled ones seldom; communal ones put all the profit in the treasury.
+- **See it:** the Progress tab has a Harbour & trade abroad card (tier, fleet, current trip, standing routes, ledger, recent trips); the dock panel shows tier and berths; cargo ships and port cranes have their own art.
+- **Council policies** now show a clear two-ended bar with plain words ("favours more leisure", "strongly watchful").
+- **Population line** is a quiet sentence: "This past year: 10 born, 3 arrived, 2 died".
+- **Tools:** `tests/routes.js`, `tests/shot19.js`.
 
 ## Map types (new in 0.19)
 New worlds now come in six map types, chosen in Settings (or **Auto**, picked by the seed):
@@ -153,6 +165,7 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 | `src/buildings.js` | building hit points, wear and repair |
 | `src/places.js` | the square, tavern and where villagers gather |
 | `src/mapgen.js` | map types: shapes, rivers and fords, connected land, neighbours on foot |
+| `src/routes.js` | village-run trade trips, the shared cost-benefit rule, harbour tiers and shipyard, trade ledger |
 | `src/neighbours.js` | other islands, fog of war, first contact by boat |
 | `src/diplomacy.js` | treaties, aid, visits, tribute and raids |
 | `src/character.js` | temperament, faith, ambition and upbringing |

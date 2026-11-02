@@ -191,9 +191,13 @@ function dockArt(g, w, b, now) {
   const plank = (x, y, wd, ht) => { rc(g, '#8a6a42', x, y, wd, ht); if (wd > ht) for (let i = 3; i < wd; i += 4) rc(g, '#6b4f30', x + i, y, 1, ht); else for (let i = 3; i < ht; i += 4) rc(g, '#6b4f30', x, y + i, wd, 1) };
   if (ux !== 0) { const x0 = ux > 0 ? X : X - 2 * T; plank(x0, Y + 5, len, 6); for (const px of [x0 + 2, x0 + len - 4]) { rc(g, '#4a3220', px, Y + 3, 2, 3); rc(g, '#4a3220', px, Y + 11, 2, 3) } }
   else { const y0 = uy > 0 ? Y : Y - 2 * T; plank(X + 5, y0, 6, len); for (const py of [y0 + 2, y0 + len - 4]) { rc(g, '#4a3220', X + 3, py, 3, 2); rc(g, '#4a3220', X + 11, py, 3, 2) } }
+  const tier = b.tier || 1;
+  if (tier >= 2) { const sx = ux !== 0 ? X - ux * 14 : X + 16, sy = ux !== 0 ? Y - 10 : Y - uy * 14 - 4; rc(g, 'rgba(0,0,0,.2)', sx, sy + 17, 22, 3); rc(g, '#9a8a6a', sx, sy + 5, 22, 12); rc(g, '#7a6a4a', sx - 1, sy + 2, 24, 4); rc(g, '#5a3d22', sx + 9, sy + 9, 5, 8); rc(g, '#c8b88a', sx + 2, sy + 8, 4, 4); rc(g, '#c8b88a', sx + 16, sy + 8, 4, 4); if (b.upg) rc(g, '#e8c84a', sx + 8, sy - 2, 6, 3) }
+  if (tier >= 3) { const cx = ux !== 0 ? X + ux * 26 : X - 14, cy = ux !== 0 ? Y - 14 : Y + uy * 20; rc(g, '#4a4a52', cx, cy - 8, 3, 18); rc(g, '#4a4a52', cx - 8, cy - 8, 14, 3); rc(g, '#8a5a2a', cx - 8, cy - 5, 2, 7); rc(g, '#9a6a36', cx + 4, cy + 8, 6, 5); rc(g, '#b88444', cx + 10, cy + 10, 5, 4) }
   if (w.season === 3) { if (ux !== 0) rc(g, 'rgba(255,255,255,.8)', ux > 0 ? X : X - 2 * T, Y + 5, len, 1); else rc(g, 'rgba(255,255,255,.8)', X + 5, uy > 0 ? Y : Y - 2 * T, 1, len) }
 }
 function drawBoat(g, bt, w, now) {
+  if (bt.kind === 'cargo' || bt.kind === 'carrack') { shipArt(g, bt.x * CFG.T, bt.y * CFG.T, bt.dir, now, bt.kind === 'carrack' ? '#2f7a4a' : '#4a8a6a'); if (bt.hold && Object.values(bt.hold).some(v => v > 0)) { const x = Math.round(bt.x * CFG.T), y = Math.round(bt.y * CFG.T); rc(g, '#9a6a36', x - 7 * bt.dir, y - 6, 5, 4); rc(g, '#b88444', x - 1 * bt.dir, y - 6, 5, 4); rc(g, '#7a5a30', x - 4 * bt.dir, y - 9, 5, 3) } return }
   const T = CFG.T, x = Math.round(bt.x * T), y = Math.round(bt.y * T), nav = w.has('navigation'), bob = Math.round(Math.sin(now / 420 + bt.id) * 1);
   rc(g, 'rgba(255,255,255,.35)', x - 11, y + 3 + bob, 22, 1); if (bt.state === 'out') { rc(g, 'rgba(255,255,255,.3)', x - 13 * bt.dir, y + 1 + bob, 6, 1); rc(g, 'rgba(255,255,255,.2)', x - 16 * bt.dir, y + 3 + bob, 5, 1) }
   g.save(); g.translate(x, y + bob); g.scale(bt.dir, 1);
@@ -358,7 +362,7 @@ function render(w, sel, now) {
   const tint = [null, 'rgba(255,225,120,.04)', 'rgba(255,140,40,.05)', 'rgba(180,210,255,.05)'][w.season]; if (tint) { g.fillStyle = tint; g.fillRect(0, 0, R.vw, R.vh) }
   if (dark > 0) { g.fillStyle = `rgba(8,14,46,${0.55 * dark})`; g.fillRect(0, 0, R.vw, R.vh) }
   if (dark > 0.05) {
-    g.save(); g.globalCompositeOperation = 'lighter'; const gl = (wx, wy, r, a) => { const sx = (wx - tlx) * z, sy = (wy - tly) * z, rr = r * z, gr = g.createRadialGradient(sx, sy, 2, sx, sy, rr); gr.addColorStop(0, `rgba(255,170,70,${a * dark})`); gr.addColorStop(1, 'rgba(255,120,30,0)'); g.fillStyle = gr; g.fillRect(sx - rr, sy - rr, rr * 2, rr * 2) };
+    g.save(); g.globalCompositeOperation = 'lighter'; const gl = (wx, wy, r, a) => { const sx = (wx - tlx) * z, sy = (wy - tly) * z, rr = r * z; if (!(Number.isFinite(sx) && Number.isFinite(sy) && Number.isFinite(rr) && rr > 2)) return; const gr = g.createRadialGradient(sx, sy, 2, sx, sy, rr); gr.addColorStop(0, `rgba(255,170,70,${a * dark})`); gr.addColorStop(1, 'rgba(255,120,30,0)'); g.fillStyle = gr; g.fillRect(sx - rr, sy - rr, rr * 2, rr * 2) };
     for (const b of w.buildings.values()) { if (b.type === 'campfire') gl((b.x + .5) * T, (b.y + .5) * T, 90, 0.5 + 0.06 * Math.sin(now / 90)); else if (b.type === 'house' && b.occ.length && inView(b.x, b.y, b.w, b.h)) gl((b.x + 1) * T, (b.y + 1.2) * T, 26, 0.22) }
     g.restore();
   }

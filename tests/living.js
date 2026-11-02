@@ -1,6 +1,6 @@
 // Checks the living-world rules: node tests/living.js
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,FEAT,TERR,serializeWorld,deserializeWorld,popularity,recordOutput,placeBuilding,soilDay,adultsOf});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{recordVisit,World,CFG,FEAT,TERR,serializeWorld,deserializeWorld,popularity,recordOutput,placeBuilding,soilDay,adultsOf});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let d=1;d<=110;d++){for(let t=0;t<1200;t++)w.step()}
 let ok=0,bad=0;const check=(n,c,x)=>{console.log((c?'PASS ':'FAIL ')+n+(x?'  '+x:''));c?ok++:bad++};
@@ -21,6 +21,8 @@ let ok=0,bad=0;const check=(n,c,x)=>{console.log((c?'PASS ':'FAIL ')+n+(x?'  '+x
 {for(const a of w.animals)if(a.kind==='wolf')a.alive=false;const d0=w.animals.filter(a=>a.alive&&a.kind==='deer').length;
  let packs=0;const so=w.rng;for(let d=0;d<400;d++){const before=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;for(let t=0;t<1200;t++)w.step();const after=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;if(after>before&&before===0)packs++}
  const wolves=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;check('wolves come back over time',packs>=1,'new packs '+packs+', now '+wolves+', deer '+d0)}
+// looking at a building before anyone has visited it must not break later visits (found by a player report)
+{const pl=w.of('plaza')[0]||w.of('campfire')[0];delete pl.vh;delete pl.reg;delete pl.vtot;ctx.popularity(w,pl);let threw=null;try{ctx.recordVisit(w,pl,w.vills[0])}catch(e){threw=e}check('visits can be recorded after the building was inspected first',!threw&&pl.reg&&pl.vtot===1,String(threw))}
 // save keeps all of it
 {const L=ctx.deserializeWorld(JSON.parse(JSON.stringify(ctx.serializeWorld(w))));const f=w.of('farm')[0],g=L.buildings.get(f.id);check('save keeps output and soil',g.otot===f.otot&&g.fert===f.fert&&JSON.stringify(g.oh)===JSON.stringify(f.oh));const live=x=>new Set(x.young.filter(i=>(x.feat[i]===ctx.FEAT.OAK||x.feat[i]===ctx.FEAT.PINE)&&x.res[i]>0&&x.res[i]<4));check('young trees are rebuilt on load',live(L).size===live(w).size,live(L).size+' vs '+live(w).size);for(let t=0;t<1200*3;t++)L.step();check('loaded world runs',L.dbg.total===0)}
 console.log('errors',w.dbg.total,JSON.stringify([...w.dbg.errors.values()].map(e=>e.where+': '+e.msg)));

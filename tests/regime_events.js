@@ -1,6 +1,6 @@
 // Forces each regime event and checks it behaves: node tests/regime_events.js
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,regimeEvents,tryCoup,uprising,managedElection,holdElection,onChiefDeath,chiefOf,adultsOf,regimeDay,crisisIndex});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,regimeEvents,tryCoup,uprising,managedElection,holdElection,onChiefDeath,chiefOf,adultsOf,regimeDay,crisisIndex});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let d=1;d<=90;d++){for(let t=0;t<1200;t++)w.step()}
 const log=[];w.listeners.push((t,txt)=>{if(t==='regime'||t==='election')log.push(`[${t}] ${txt}`)});

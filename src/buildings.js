@@ -55,7 +55,7 @@ function noteFlow(w, kind, n = 1) {
   F[kind][0] += n; if (F.tot[kind] !== undefined) F.tot[kind] += n;
 }
 const flowYear = (w, kind) => { const F = w.flow; return F ? F[kind].reduce((a, b) => a + b, 0) : 0 };
-function rollVisits(w, b) { if (!b.vh) { b.vtot = 0; b.reg = {} } return rollBins(w, b, 'vh', 'vser') }
+function rollVisits(w, b) { if (!b.reg) b.reg = {}; if (b.vtot === undefined) b.vtot = 0; return rollBins(w, b, 'vh', 'vser') }
 function recordVisit(w, b, v) {
   if (!b || !v) return; v.fav = v.fav || {}; v.fav[b.type] = (v.fav[b.type] || 0) + 1; rollVisits(w, b); b.vh[0]++; b.vtot++; const r = b.reg; r[v.id] = (r[v.id] || 0) + 1;
   const ks = Object.keys(r); if (ks.length > 40) { let mk = ks[0]; for (const k of ks) if (r[k] < r[mk]) mk = k; delete r[mk] }
@@ -63,7 +63,7 @@ function recordVisit(w, b, v) {
 function recordOutput(w, b, amt) { if (!b || !(amt > 0)) return; rollBins(w, b, 'oh', 'oser'); b.oh[0] += amt; b.otot = (b.otot || 0) + amt }
 /* trend: the last two seasons (this one scaled to a full season) against the two before */
 function popularity(w, b, key = 'vh') {
-  rollBins(w, b, key, key === 'vh' ? 'vser' : 'oser'); const vh = b[key], year = vh[0] + vh[1] + vh[2] + vh[3], age = w.day - (b.built ?? w.day), el = (w.day % CFG.DPS) + 1;
+  if (key === 'vh') rollVisits(w, b); else rollBins(w, b, key, 'oser'); const vh = b[key], year = vh[0] + vh[1] + vh[2] + vh[3], age = w.day - (b.built ?? w.day), el = (w.day % CFG.DPS) + 1;
   const cur = el >= 3 ? vh[0] * CFG.DPS / el : vh[1], recent = (cur + vh[1]) / 2, older = (vh[2] + vh[3]) / 2, out = key !== 'vh';
   let trend = 'steady', arrow = '→';
   if (age < CFG.DPS * 2) { trend = 'too new to tell'; arrow = '·' }

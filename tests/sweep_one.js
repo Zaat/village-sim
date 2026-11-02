@@ -1,6 +1,6 @@
 // One seed of the sweep; prints a single JSON line. node tests/sweep_one.js SEED DAYS [forced]
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,TECHS,CFG,PROJECTS});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,TECHS,CFG,PROJECTS});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+process.argv[2],days=+process.argv[3],forced=process.argv[4]==='forced';
 let minCo=1,minAx=0;const w=new ctx.World(seed,{map:process.env.MAP||'island'});let minPop=1e9,peak=0,t0=Date.now();const series=[];
@@ -9,7 +9,7 @@ for(let d=1;d<=days;d++){for(let t=0;t<1200;t++)w.step();if(forced&&d===24)for(c
 const ad=w.vills.filter(v=>v.isAdult()),coins=ad.map(v=>v.coins||0).sort((a,b)=>a-b),tot=coins.reduce((a,b)=>a+b,0);let g=0;if(tot>0){let c=0;coins.forEach((x,i)=>{c+=(2*(i+1)-coins.length-1)*x});g=c/(coins.length*tot)}
 const gov=w.gov,R=gov.ruling,lessons=Object.fromEntries(Object.entries(w.chron.lessons).filter(e=>e[1]>0.2).map(e=>[e[0],+e[1].toFixed(2)]));
 const bs=[...w.buildings.values()],RG=w.regime,ch=w.vills.find(v=>w.gov.council.some(c=>c.id===v.id&&c.title==='Chief'));
-console.log(JSON.stringify({seed,map:process.env.MAP||'island',days,found:undefined,landFound:w.neigh?w.neigh.filter(n=>n.found&&n.reach==='land').length:0,landTotal:w.neigh?w.neigh.filter(n=>n.reach==='land').length:0,pop:w.vills.length,peak,minPop:minPop===1e9?null:minPop,series,houses:w.houses().length,buildings:bs.length,cond:+(bs.reduce((s,b)=>s+(b.maxHp?b.hp/b.maxHp:1),0)/Math.max(1,bs.length)).toFixed(2),
+console.log(JSON.stringify({seed,map:process.env.MAP||'island',days,found:undefined,trade:w.trade2?{trips:w.trade2.ledger.trips,profit:w.trade2.ledger.profit,lost:w.trade2.ledger.lost,ships:w.boats.map(b=>b.kind).join('/'),tier:Math.max(0,...w.of('dock').map(d=>d.tier||1)),std:Object.keys(w.trade2.routes).length}:null,landFound:w.neigh?w.neigh.filter(n=>n.found&&n.reach==='land').length:0,landTotal:w.neigh?w.neigh.filter(n=>n.reach==='land').length:0,pop:w.vills.length,peak,minPop:minPop===1e9?null:minPop,series,houses:w.houses().length,buildings:bs.length,cond:+(bs.reduce((s,b)=>s+(b.maxHp?b.hp/b.maxHp:1),0)/Math.max(1,bs.length)).toFixed(2),
   techs:Object.keys(w.tech.known).length,projects:Object.keys(w.proj.done).length,groups:w.groups.length,elections:gov.elections,ruling:R?R.name:null,policy:gov.policy,approval:Math.round(gov.approval),
   mood:Math.round(ad.reduce((s,v)=>s+v.mood,0)/Math.max(1,ad.length)),treasury:Math.round(w.econ.treasury),gini:+g.toFixed(2),
   found:w.neigh?w.neigh.filter(n=>n.found).length:0,pacts:w.neigh?w.neigh.filter(n=>n.pact>0).length:0,raids:w.neigh?w.neigh.reduce((s,n)=>s+(n.raids||0),0):0,

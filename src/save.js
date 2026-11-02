@@ -38,10 +38,10 @@ function serializeWorld(w) {
     causes: w.causes, regrow: w.regrow, scars: w.scars, banished: w.banished, crimes: w.crimes, crimeLog: w.crimeLog, connected: [...w.connected],
     log: w.log.slice(0, 120), hist: w.hist.slice(-600), rel: [...w.rel].map(([k, r]) => [k, Math.round(r * 10) / 10]),
     gov: w.gov, groups: w.groups,
-    buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj, hp: b.hp, maxHp: b.maxHp, built: b.built, era: b.era, builtEra: b.builtEra, upgraded: b.upgraded, vh: b.vh, vser: b.vser, vtot: b.vtot, reg: b.reg, catch: b.catch, oh: b.oh, oser: b.oser, otot: b.otot, fert: b.fert, repairs: b.repairs, last: b.last })),
+    buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj, hp: b.hp, maxHp: b.maxHp, tier: b.tier, upg: b.upg, built: b.built, era: b.era, builtEra: b.builtEra, upgraded: b.upgraded, vh: b.vh, vser: b.vser, vtot: b.vtot, reg: b.reg, catch: b.catch, oh: b.oh, oser: b.oser, otot: b.otot, fert: b.fert, repairs: b.repairs, last: b.last })),
     bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir })),
     regime: w.regime, strife: w.strife, wet: w.wet, flow: w.flow, neigh: w.neigh, voyageCd: w.voyageCd, dip: { fortifyUntil: w.fortifyUntil, dipDay: w.dipDay }, seen: w.seen ? packArr(w.seen) : null,
-    tech: w.tech, econ: w.econ, proj: w.proj, chron: w.chron, boats: w.boats.map(b => ({ id: b.id, dock: b.dock })),
+    tech: w.tech, econ: w.econ, proj: w.proj, chron: w.chron, boats: w.boats.map(b => ({ id: b.id, dock: b.dock, kind: b.kind, hold: b.hold })), trade2: w.trade2 ? { ...w.trade2, active: null } : null,
     vills: w.vills.map(v => pickKeys(v, VILL_KEYS)), animals: w.animals.filter(a => a.alive).map(a => pickKeys(a, ANIMAL_KEYS)),
   };
 }
@@ -61,10 +61,10 @@ function deserializeWorld(d) {
   }
   for (const b of w.buildings.values()) if (CFG.SOLID[b.type]) w.markAdj(b, w.adjFor(b.type));
   for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.dir ? { dir: s.dir } : undefined); if (s.proj) { bp.proj = true; bp.maxWorkers = 6 } bp.id = s.id; bp.have = s.have; bp.prog = s.prog }
-  if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (d.chron) w.chron = d.chron; if (d.regime) { w.regime = d.regime; if (!w.regime.ax) w.regime.ax = defaultAxes() } w.wet = d.wet || 0; w.flow = d.flow || null; w.young = []; for (let i = 0; i < w.feat.length; i++) if ((w.feat[i] === FEAT.OAK || w.feat[i] === FEAT.PINE) && w.res[i] > 0 && w.res[i] < 4) w.young.push(i);
+  if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (d.chron) w.chron = d.chron; if (d.regime) { w.regime = d.regime; if (!w.regime.ax) w.regime.ax = defaultAxes() } w.wet = d.wet || 0; if (d.trade2) w.trade2 = d.trade2; else initTrade2(w); w.flow = d.flow || null; w.young = []; for (let i = 0; i < w.feat.length; i++) if ((w.feat[i] === FEAT.OAK || w.feat[i] === FEAT.PINE) && w.res[i] > 0 && w.res[i] < 4) w.young.push(i);
   w.rx = rxBuildings(w, rxFrom(w.regime.ax)); if (d.strife) w.strife = d.strife; else initStrife(w);
   if (d.neigh && w.neigh) { w.neigh = d.neigh; w.voyageCd = d.voyageCd || 0; if (d.dip) { w.fortifyUntil = d.dip.fortifyUntil || 0; w.dipDay = d.dip.dipDay || 0 } if (d.seen) { w.seen.set(unpackArr(d.seen, N)); w.seenVer++ } } else if (!d.neigh) { w.neigh = null; w.fog = false; w.seen = null } if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
-  if (d.tech) w.tech = d.tech; w.boats = []; for (const s of d.boats || []) { const dk = w.buildings.get(s.dock); if (dk && dk.dir) { const bt = new Boat(w, dk); bt.id = s.id; w.boats.push(bt) } }
+  if (d.tech) w.tech = d.tech; w.boats = []; for (const s of d.boats || []) { const dk = w.buildings.get(s.dock); if (dk && dk.dir) { const bt = new Boat(w, dk, s.kind || 'fishing'); bt.id = s.id; w.boats.push(bt); if (s.hold) for (const k of TRADE_KEYS) if (s.hold[k]) w.stock[k] = Math.min(w.cap(), w.stock[k] + s.hold[k]) } }
   w.bpnext = d.counters.bpnext;
   for (const s of d.vills) {
     const v = Object.create(Villager.prototype); Object.assign(v, s);

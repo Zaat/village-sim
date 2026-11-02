@@ -22,8 +22,8 @@ function updatePrices(w) {
 }
 
 /* what a given way of dealing with the visiting merchants would do right now */
-function dealPreview(w, mode) {
-  const E = w.econ, c = E.caravan, { tgt } = resourceTargets(w), coin = money(w), pr = coin ? E.prices : BASE_PRICE;
+function dealPreview(w, mode, cc) {
+  const E = w.econ, c = cc || E.caravan, { tgt } = resourceTargets(w), coin = money(w), pr = coin ? E.prices : BASE_PRICE;
   const out = { mode, sell: {}, buy: {}, luxury: 0, revenue: 0, cost: 0, net: 0 };
   if (!c || mode === 'refuse') return out;
   for (const k of TRADE_KEYS) { const surplus = w.stock[k] - tgt[k] * 1.1; if (surplus >= 12) out.sell[k] = Math.min(Math.floor(surplus * 0.8), c.cap) }

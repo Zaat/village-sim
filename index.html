@@ -54,7 +54,7 @@
       <div style="display:flex;gap:6px;align-items:center"><select id="ttSel"><option value="8">One season</option><option value="32" selected>One year</option><option value="64">Two years</option><option value="160">Five years</option><option value="320">Ten years (slow)</option></select><button id="ttGo">Fast-forward</button><button id="ttCancel" disabled>Stop</button></div>
       <div class="bar" style="margin-top:8px"><i id="ttBar" style="background:var(--acc);width:0"></i></div><div class="hint" id="ttInfo">Ready.</div><div id="ttResult" class="hint"></div></div>
     <div class="card"><h3>World</h3>
-      <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="restart">New world</button></div></div>
+      <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="dice" title="Pick a random seed" aria-label="Random seed">🎲</button><button id="restart">New world</button></div></div>
     </div>
     <canvas id="mini" title="Click to move the camera"></canvas>
     <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
@@ -76,6 +76,7 @@
     <section class="tab" id="tab_progress">
     <div class="card"><h3>Knowledge &amp; discoveries</h3><div id="techCard"></div></div>
     <div class="card"><h3>Trade &amp; treasury</h3><div id="econCard"></div></div>
+    <div class="card" id="harbourBox"><h3>Harbour &amp; trade abroad</h3><div id="harbourCard"></div></div>
     <div class="card"><h3>Great projects</h3><div id="projCard"></div></div>
     </section>
     <section class="tab" id="tab_world">
@@ -105,6 +106,7 @@
 <script src="src/neighbours.js"></script>
 <script src="src/mapgen.js"></script>
 <script src="src/diplomacy.js"></script>
+<script src="src/routes.js"></script>
 <script src="src/save.js"></script>
 <script src="src/world.js"></script>
 <script src="src/render.js"></script>

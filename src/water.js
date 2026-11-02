@@ -4,8 +4,10 @@
    (see Villager.planBoatFish): they walk to the dock, board, sail straight out
    from the dock, fish, sail home and carry the catch to the stores.
    ========================================================================== */
+/* ship kinds: a fishing boat can carry a little cargo; cargo ships and carracks are built at a quay or port */
+const SHIPS = { fishing: { name: 'Fishing boat', cap: 24, speed: 0.07, upkeep: 1 }, cargo: { name: 'Cargo ship', cap: 70, speed: 0.085, upkeep: 3 }, carrack: { name: 'Carrack', cap: 140, speed: 0.1, upkeep: 5 } };
 class Boat {
-  constructor(w, dock) { this.w = w; this.id = w.nextId++; this.dock = dock.id; this.crew = null; this.state = 'moored'; this.setMoor(dock); this.x = this.mx; this.y = this.my; this.dir = dock.dir[0] >= 0 ? 1 : -1 }
+  constructor(w, dock, kind = 'fishing') { this.w = w; this.id = w.nextId++; this.dock = dock.id; this.kind = kind; this.hold = null; this.crew = null; this.state = 'moored'; this.setMoor(dock); this.x = this.mx; this.y = this.my; this.dir = dock.dir[0] >= 0 ? 1 : -1 }
   setMoor(dock) { const [ux, uy] = dock.dir; this.mx = dock.x + 0.5 + ux; this.my = dock.y + 0.5 + uy }
   /* number of open-water tiles in a straight line out from the mooring (the mooring tile is the first) */
   range() {
@@ -15,4 +17,5 @@ class Boat {
   }
   home() { this.state = 'moored'; this.crew = null; this.x = this.mx; this.y = this.my }
 }
-function addBoat(w, dock) { const b = new Boat(w, dock); w.boats.push(b); return b }
+function addBoat(w, dock, kind) { const b = new Boat(w, dock, kind); w.boats.push(b); return b }
+const shipOf = b => SHIPS[b.kind || 'fishing']

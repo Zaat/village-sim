@@ -165,6 +165,7 @@ class Villager {
     if (this.haul) { if (!this.haul.done && this.haul.bp.alive) this.haul.bp.inc[this.haul.type] -= this.haul.amt; this.haul = null }
     if (this.bpWork) { this.bpWork.workers--; this.bpWork = null }
     if (this.repairB) { if (this.repairB.repairer === this.id) this.repairB.repairer = 0; if (this.repairPaid) { w.stock.wood += this.repairPaid.w; w.stock.stone += this.repairPaid.s; this.repairB.skipUntil = w.tick + 2400; this.repairPaid = null } this.repairB = null }       // a job that fell through is refunded, and that building is left alone for a while
+    if (w.trade2 && w.trade2.active && w.trade2.active.skipper === this.id && this.jobKind === 'trade') { this.cart = false; tripEnd(w, 'abort') }
     if (this.boat) { const b = this.boat, d = w.buildings.get(b.dock); if (b.state === 'out' && d) { this.x = d.x + 0.5; this.y = d.y + 0.5 } b.home(); this.boat = null }
     if (w.voyage && w.voyage.id === this.id) { w.voyage = null; w.voyageCd = Math.max(w.voyageCd, w.day + 5) }
     this.jobKind = null;
@@ -278,6 +279,7 @@ class Villager {
     const foodAny = () => this.planFarm() || (this.role === 'fisher' ? this.planBoatFish() || this.planFish() || this.planHunt() : this.planHunt() || this.planBoatFish() || this.planFish()) || this.planGather('food');
     if (w.stock.food < pop * 1.5) T('crisis', foodAny);
     if (w.neigh && !w.voyage && w.stock.food >= pop * 3 && (this.role === 'fisher' || this.trait.cur > 0.6) && this.isAdult()) T('voyage', () => this.planVoyage());
+    if (w.trade2 && w.trade2.active && w.trade2.active.state === 'pending' && this.isAdult() && !winter && (this.role === 'fisher' || this.trait.soc > 0.5 || this.trait.cur > 0.5)) T('trade', () => this.planTradeTrip());
     if (w.neigh && !w.voyage && w.stock.food >= pop * 2.2 && (this.role === 'hunter' || this.trait.cur > 0.55 || this.trait.brave > 0.6) && this.isAdult()) T('explore', () => this.planExplore());
     switch (this.role) {
       case 'builder': T('build', () => this.planBuild()); break;
@@ -384,6 +386,35 @@ class Villager {
     this.steps = [go(null, path, 'To the shore'), work(this.wt(100, 'fish'), 'Fishing', () => { if (w.fish[wt] > 0) { w.fish[wt]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }), ...this.deliverSteps()];
     return true;
   }
+  /* a trading trip the council has agreed: take the helm (or the wagon) */
+  planTradeTrip() {
+    const w = this.w, t = w.trade2, a = t && t.active; if (!a || a.state !== 'pending' || this.age > 55 || this.energy < 45 || w.season === 3) return false;
+    const p = a.plan, n = w.neigh.find(x => x.id === p.nid); if (!n) { tripEnd(w, 'cancel'); return false }
+    const run = { plan: p, skipperName: this.name, ship: null, hold: {}, sold: {}, back: {} };
+    this.hunger = Math.max(this.hunger, 85); this.energy = Math.max(this.energy, 80);
+    const storm = () => { if (w.settings.disasters && w.r() < p.risk) { const pr = this.health; w.emit('event', `${this.name}'s ${p.label} to ${n.name} was caught in bad weather and the cargo was lost${w.r() < 0.12 ? ', and ' + this.name + ' with it' : ''}.`, { kind: 'voyage' }); if (w.r() < 0.12) { this.health = 0; this.cause = 'sea' } tripEnd(w, 'lost'); this.abort(0); void pr } };
+    if (p.mode === 'sea') {
+      const boat = w.boats.find(b => b.id === p.shipId); if (!boat || boat.crew != null || boat.state !== 'moored') { tripEnd(w, 'cancel'); return false }
+      const path = seaTripPath(w, boat, n), dock = w.buildings.get(boat.dock); if (!path || !dock) { tripEnd(w, 'cancel'); return false }
+      const { W } = CFG, len = path.length, S = shipOf(boat), trip = Math.ceil(len / S.speed), at = q => { const c = path[Math.min(len - 1, Math.floor(q * len))]; if (this.hunger < 45) this.hunger = 45; if (this.energy < 40) this.energy = 40; boat.x = (c % W) + 0.5; boat.y = ((c / W) | 0) + 0.5; this.x = boat.x; this.y = boat.y; const nx = path[Math.min(len - 1, Math.floor(q * len) + 1)]; if (nx !== undefined && nx % W !== c % W) { this.dir = nx % W > c % W ? 1 : -1; boat.dir = this.dir } };
+      boat.crew = this.id; this.boat = boat; this.jobKind = 'trade'; run.ship = boat; a.state = 'running'; a.skipper = this.id; a.run = run;
+      this.steps = [go((x, y) => x === dock.x && y === dock.y, null, 'To the dock', { maxCost: 120, check: () => boat.crew === this.id }),
+        work(40, 'Loading the cargo', () => { tripLoad(w, run); boat.state = 'out'; this.x = boat.x; this.y = boat.y }),
+        work(Math.ceil(trip / 2), `Sailing to ${n.name} with goods to trade`, null, { onTick: q => at(q / 2) }),
+        work(1, 'Weathering the passage', storm),
+        work(Math.ceil(trip / 2), `Sailing to ${n.name} with goods to trade`, null, { onTick: q => at(0.5 + q / 2) }),
+        work(70, `Trading in ${n.name}`, () => tripSettle(w, run)),
+        work(trip, 'Sailing home with the cargo', null, { onTick: q => at(1 - q) }),
+        work(30, 'Unloading at the dock', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; tripHome(w, run); this.gain('fish') })];
+      return true;
+    }
+    const path = landTripPath(w, n); if (!path) { tripEnd(w, 'cancel'); return false }
+    this.jobKind = 'trade'; a.state = 'running'; a.skipper = this.id; a.run = run; this.cart = true;
+    this.steps = [go((x, y, i) => w.nearStock(x, y, i), null, 'To the stores', { maxCost: 90 }), work(40, 'Loading the wagon', () => tripLoad(w, run)),
+      go(null, path.slice(), `Driving the wagon to ${n.name}`), work(1, 'On the road', storm), work(70, `Trading in ${n.name}`, () => { this.hunger = Math.max(this.hunger, 80); this.energy = Math.max(this.energy, 70); tripSettle(w, run) }),
+      go((x, y) => Math.abs(x - w.cx) + Math.abs(y - w.cy) <= 3, null, 'Driving home with the goods', { maxCost: 700 }), work(30, 'Unloading the wagon', () => { this.cart = false; tripHome(w, run) })];
+    return true;
+  }
   /* an expedition on foot to the nearest settlement nobody here has seen yet */
   planExplore() {
     const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.vills.length < 16 || w.day < 24 || this.age > 55 || this.energy < 50) return false;
@@ -417,7 +448,7 @@ class Villager {
   }
   planBoatFish() {
     const w = this.w; if (!w.has('boats')) return false;
-    const boat = w.boats.find(b => b.crew == null && b.state === 'moored'); if (!boat) return false;
+    const boat = w.boats.find(b => b.crew == null && b.state === 'moored' && (b.kind || 'fishing') === 'fishing'); if (!boat) return false;
     const dock = w.buildings.get(boat.dock); if (!dock) return false; const n = boat.range(); if (n < 3) return false;
     const [ux, uy] = dock.dir; let best = null;
     for (let k = 1; k < n; k++) { const x = Math.floor(boat.mx) + ux * k, y = Math.floor(boat.my) + uy * k, idx = y * CFG.W + x; if (w.fish[idx] > 0 && (!best || w.fish[idx] >= best.f)) best = { k, idx, f: w.fish[idx] } }

@@ -14,7 +14,9 @@ class Animal {
     const dx = tx - this.x, dy = ty - this.y, d = Math.hypot(dx, dy); if (d < 0.05) { this.moving = false; return true }
     const s = Math.min(speed, d), nx = this.x + dx / d * s, ny = this.y + dy / d * s; this.moving = true;
     if (Math.abs(dx) > 0.02) this.dir = dx > 0 ? 1 : -1;
-    if (this.canStep(nx, ny)) { this.x = nx; this.y = ny } else if (this.canStep(nx, this.y)) this.x = nx; else if (this.canStep(this.x, ny)) this.y = ny; else { this.moving = false; return true }
+    const ox = this.x, oy = this.y;
+    if (this.canStep(nx, ny)) { this.x = nx; this.y = ny } else if (this.canStep(nx, this.y)) this.x = nx; else if (this.canStep(this.x, ny)) this.y = ny; else { this.moving = false; this.stuck = 0; return true }
+    if (Math.hypot(this.x - ox, this.y - oy) < 0.3 * s) { if ((this.stuck = (this.stuck || 0) + 1) > 5) { this.stuck = 0; this.moving = false; return true } } else this.stuck = 0;       // sliding along an obstacle without getting anywhere: give up and choose a new target
     return false;
   }
   wander(speed, r) {

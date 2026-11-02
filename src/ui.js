@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'neighCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -181,13 +181,13 @@ function updateUI() {
   const roles = {}; for (const v of w.vills) if (v.age >= CFG.CHILD_DAYS && !v.isElder()) roles[v.role || 'forager'] = (roles[v.role || 'forager'] || 0) + 1;
   const ad = w.vills.filter(v => v.isAdult()), mood = ad.length ? ad.reduce((a, v) => a + v.mood, 0) / ad.length : 0;
   $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.vills.length}</div><div class="hint">mood ${moodWord(mood)}</div></div>
-    ${w.flow ? `<div class="hint" title="Over the past year">Past year: +${flowYear(w, 'born')} born · +${flowYear(w, 'arrived')} arrived · −${flowYear(w, 'died')} died${flowYear(w, 'left') ? ' · −' + flowYear(w, 'left') + ' left' : ''}</div>` : ''}
+    ${flowLine(w)}
     <div class="hint" style="margin-bottom:4px">${stg.infant || 0} infants · ${stg.child || 0} children · ${stg.youth || 0} youths · ${stg.adult || 0} adults · ${stg.elder || 0} elders</div>
     ${resRow('Food', w.stock.food, cap, '#e0a458')}${resRow('Wood', w.stock.wood, cap, '#a8743c')}${resRow('Stone', w.stock.stone, cap, '#9aa3ab')}
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderProjects() } else if (curTab === 'world') { renderChron(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -200,6 +200,24 @@ function renderTech() {
     <div class="techchips">${known.map(id => `<span class="chip" title="${escapeHtml(TECHS[id].desc)}"><i style="background:#9cc4ff"></i>${TECHS[id].name}</span>`).join('')}</div>
     ${t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('')}
     ${locked.length ? `<div class="hint" style="margin-top:6px">Still ahead: ${locked.map(id => TECHS[id].name).join(', ')}</div>` : ''}`;
+}
+/* the harbour, the fleet and the trade the village runs for itself */
+function renderHarbour() {
+  const w = world, el = $('harbourCard'), box = $('harbourBox'), t = w.trade2; const show = !!(t && w.neigh && w.has('trade') && (w.of('dock').length || w.neigh.some(n => n.reach === 'land' && n.found))); box.style.display = show ? '' : 'none'; if (!show) return;
+  const docks = w.of('dock'), tier = docks.length ? Math.max(...docks.map(dockTier)) : 0, app = tradeAppetite(w), L = t.ledger, coin = w.has('coinage');
+  const kinds = {}; for (const b of w.boats) { const k = b.kind || 'fishing'; kinds[k] = (kinds[k] || 0) + 1 }
+  const fleet = Object.entries(kinds).map(([k, n]) => `${n} ${SHIPS[k].name.toLowerCase()}${n > 1 ? 's' : ''}`).join(' · ') || 'no ships';
+  let h = docks.length ? `<div class="polh"><span><b>${TIERS[tier].name}</b> <span class="hint">${docks.length} landing${docks.length > 1 ? 's' : ''}</span></span><span class="hint">${fleet}</span></div>` : '';
+  const up = docks.find(d => d.upg), yard = t.yard[0];
+  if (up) h += `<div class="hint">Building a ${TIERS[up.upg.tier].name.toLowerCase()}, ready in ${Math.max(0, up.upg.at - w.day)} days.</div>`;
+  if (yard) h += `<div class="hint">A ${SHIPS[yard.kind].name.toLowerCase()} is on the slip, ready in ${Math.max(0, yard.at - w.day)} days.</div>`;
+  const a = t.active, an = a && w.neigh.find(n => n.id === a.plan.nid);
+  if (a && an) { const sk = a.skipper != null ? w.vills.find(v => v.id === a.skipper) : null; h += `<div style="margin:6px 0 2px">${a.state === 'pending' ? 'A trading trip to' : `${sk ? escapeHtml(sk.name) + ' is on the way to' : 'On the way to'}`} <b>${escapeHtml(an.name)}</b> by ${a.plan.label}${a.state === 'pending' ? ', waiting for someone to take the helm' : ''}.</div>` }
+  else h += `<div class="hint" style="margin:6px 0 2px">${app > 1.4 ? 'The village is eager to trade abroad.' : app < 0.6 ? 'The village is wary of foreign trade.' : 'The village trades abroad when it pays.'}${t.lastPlan ? ` Best prospect: ${escapeHtml(t.lastPlan.n)}.` : ''}</div>`;
+  const rs = Object.entries(t.routes).filter(([, r]) => r.standing).map(([id, r]) => { const n = w.neigh.find(x => x.id === +id); return n ? `<div class="hint">Standing route to <b style="color:var(--ink)">${escapeHtml(n.name)}</b>: ${r.trips} trip${r.trips === 1 ? '' : 's'}${coin ? ', ' + (r.profit >= 0 ? '+' : '') + r.profit + ' coins' : ''}</div>` : '' }).join(''); h += rs;
+  if (L.trips || L.lost) h += `<div class="stats" style="margin-top:6px"><div><span class="hint">Trips made</span><b>${L.trips}</b></div><div><span class="hint">${coin ? 'Profit' : 'Goods gained'}</span><b>${coin ? (L.profit >= 0 ? '+' : '') + L.profit + ' coins' : L.imports + ' loads'}</b></div>${coin ? `<div><span class="hint">Sold abroad</span><b>${L.exports}</b></div><div><span class="hint">Bought abroad</span><b>${L.imports}</b></div>` : ''}${L.lost ? `<div><span class="hint">Lost at sea or road</span><b>${L.lost}</b></div>` : ''}</div>`;
+  if (t.trips.length) h += `<div class="story" style="margin-top:6px"><div class="hint">Recent trips</div>${t.trips.slice(0, 3).map(x => `<div><b>D${x.day}</b>${escapeHtml(x.text)}</div>`).join('')}</div>`;
+  el.innerHTML = h || '<div class="hint">No trade abroad yet.</div>';
 }
 function renderNeigh() {
   const w = world, el = $('neighCard'), box = el.parentElement; box.style.display = w.neigh ? '' : 'none'; if (!w.neigh) return;
@@ -273,9 +291,17 @@ function renderRegime() {
   }
   el.innerHTML = h;
 }
+/* one quiet sentence about where the population came from this past year */
+function flowLine(w) {
+  if (!w.flow) return '';
+  const parts = [[flowYear(w, 'born'), 'born'], [flowYear(w, 'arrived'), 'arrived'], [flowYear(w, 'died'), 'died'], [flowYear(w, 'left'), 'left']].filter(p => p[0] > 0).map(p => `${p[0]} ${p[1]}`);
+  return parts.length ? `<div class="hint" style="margin:-2px 0 4px">This past year: ${parts.join(', ')}</div>` : '';
+}
 function renderCouncil() {
   const w = world, g = w.gov, el = $('councilCard');
-  const meters = ISSUES.map(k => { const p = g.policy[k], t = ISSUE_TXT[k]; return `<div class="pol"><div class="polh"><span>${t.name}</span><span class="hint">${p === 0 ? 'balanced' : (p > 0 ? 'leans: ' : 'leans: ') + (p > 0 ? t.hi : t.lo)}</span></div><div class="polb"><i class="mid"></i><i class="dot" style="left:${(p + 1) / 2 * 100}%"></i></div></div>` }).join('');
+  const ENDS = { growth: ['Small and close', 'Growing'], labor: ['Work first', 'More leisure'], law: ['Lenient', 'Strict'], defense: ['Trusting', 'Watchful'], tax: ['Light taxes', 'Heavy taxes'] }, STRENGTH = p => { const a = Math.abs(p); return a < 0.15 ? '' : a < 0.45 ? 'leans' : a < 0.8 ? 'favours' : 'strongly' };
+  const meters = ISSUES.map(k => { const p = g.policy[k], e = ENDS[k], a = Math.abs(p), word = STRENGTH(p), side = p > 0 ? e[1] : e[0], col = p > 0 ? '#8fc4e8' : '#e0b070';
+    return `<div class="pol"><div class="polh"><span>${ISSUE_TXT[k].name}</span><span class="hint">${word ? word + ' <b style="color:' + col + '">' + side.toLowerCase() + '</b>' : 'balanced'}</span></div><div class="polb"><i class="fill" style="left:${p >= 0 ? 50 : 50 + p * 50}%;width:${a * 50}%;background:${col}"></i><i class="mid"></i><i class="dot" style="left:${(p + 1) / 2 * 100}%"></i></div><div class="polends"><span>${e[0]}</span><span>${e[1]}</span></div></div>` }).join('');
   const mem = councilMembers(w).map(m => { const gr = w.groups.find(x => x.id === m.v.group); return `<span class="chip" title="${escapeHtml(m.v.traitWords().join(', '))}"><i style="background:${gr ? gr.color : '#555'}"></i>${m.title}: ${escapeHtml(m.v.name)}</span>` }).join('');
   const dec = g.decisions.slice(0, 4).map(d => `<div><b>D${d.day}</b>${escapeHtml(d.text)}${d.source === 'claude' ? ' <span class="cl">Claude</span>' : ''}</div>`).join('');
   el.innerHTML = g.council.length ? `<div class="chips" style="margin:0 0 6px">${mem}</div><div class="hint" style="margin-bottom:4px">${(() => { const R = rulingGroup(w); return R ? `Led by <b>${escapeHtml(R.name)}</b>, pledged to ${escapeHtml(platformText(R))}. ` : 'No circle leads; a coalition of independents. ' })()}Approval ${Math.round(g.approval)}% · term ends day ${g.termEnd} · ${g.elections} election${g.elections === 1 ? '' : 's'} held${g.welfare ? ' · food relief' : ''}${g.mediation ? ' · mediation' : ''}</div>${meters}<div class="declog">${dec || '<span class="hint">No decisions yet.</span>'}</div>`
@@ -321,7 +347,8 @@ function buildingPanel(w, s, extra) {
     people = sec('Stores', `<div class="hint">The village holds ${Math.round(w.stock.food)} food, ${Math.round(w.stock.wood)} firewood and ${Math.round(w.stock.stone)} stone of ${w.cap()} it can keep. Stores raise the limit by ${100 + (w.has('granary') ? 40 : 0)}.</div>`);
   } else if (s.type === 'dock') {
     const bs = w.boats.filter(b => b.dock === s.id);
-    people = sec('Boats', `<div class="hint">${bs.length} boat${bs.length === 1 ? '' : 's'} (${bs.filter(b => b.state === 'out').length} at sea). ${s.catch ? 'Landed ' + Math.round(s.catch) + ' food in all.' : 'No catch landed yet.'}</div>`);
+    const tr = dockTier(s), kinds = {}; for (const b of bs) { const k = b.kind || 'fishing'; kinds[k] = (kinds[k] || 0) + 1 }
+    people = sec('Harbour', `<div class="hint"><b style="color:var(--ink)">${TIERS[tr].name}</b>${s.upg ? ' (building a ' + TIERS[s.upg.tier].name.toLowerCase() + ')' : ''}: ${Object.entries(kinds).map(([k, n]) => n + ' ' + SHIPS[k].name.toLowerCase() + (n > 1 ? 's' : '')).join(', ') || 'no ships'} of ${berths(w, s)} berths (${bs.filter(b => b.state === 'out').length} at sea). ${s.catch ? 'Landed ' + Math.round(s.catch) + ' food in all.' : 'No catch landed yet.'}${tr < 3 ? ' ' + (tr === 1 ? 'A quay adds berths and cargo ships.' : 'A port adds carracks and customs revenue.') : ''}</div>`);
   } else if (s.type === 'logcamp' || s.type === 'minecamp' || s.type === 'lodge') {
     const role = { logcamp: 'woodcutter', minecamp: 'miner', lodge: 'hunter' }[s.type], rad = s.type === 'lodge' ? 22 : 14, ws = w.vills.filter(v => v.role === role && Math.hypot(v.x - cx, v.y - cy) < rad + 6);
     people = sec('Workers', `<div class="hint">${ws.length} ${role}${ws.length === 1 ? '' : 's'} work within reach (${rad} tiles).</div>` + ws.slice(0, 5).map(v => `<div>${vlink(v, v.label)}</div>`).join(''));
@@ -442,6 +469,7 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
 addEventListener('resize', () => { resizeRender(); clampCam() });
 $('restart').onclick = () => { const v = $('seed').value.trim(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v) };
+$('dice').onclick = () => { $('seed').value = (Math.random() * 1e9) | 0; $('seed').focus(); $('seed').select() };
 $('seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('restart').click() });
 
 /* ---------- diagnostics panel ---------- */
@@ -523,7 +551,8 @@ function frame(now) {
     }
     const pan = 520 * dt / 1000 / R.cam.z, c = R.cam;
     if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }
-    if (follow && selected && selected.x !== undefined && selected.alive !== false) { const tx = selected.type ? (selected.x + selected.w / 2) * CFG.T : selected.x * CFG.T, ty = selected.type ? (selected.y + selected.h / 2) * CFG.T : selected.y * CFG.T; c.x += (tx - c.x) * 0.12; c.y += (ty - c.y) * 0.12 }
+    if (follow && selected && Number.isFinite(selected.x) && Number.isFinite(selected.y) && selected.alive !== false) { const tx = selected.type ? (selected.x + selected.w / 2) * CFG.T : selected.x * CFG.T, ty = selected.type ? (selected.y + selected.h / 2) * CFG.T : selected.y * CFG.T; c.x += (tx - c.x) * 0.12; c.y += (ty - c.y) * 0.12 }
+    if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || !Number.isFinite(c.z) || c.z <= 0) { c.x = (world.cx + 1) * CFG.T; c.y = (world.cy + 1) * CFG.T; c.z = Number.isFinite(c.z) && c.z > 0 ? c.z : 2; follow = false }       // a bad number in the camera would otherwise break every frame
     const r0 = performance.now(); try { clampCam(); render(world, selected, now) } catch (e) { dbgNote('render', e); dbgPersist(world) } DBG.renderMs = DBG.renderMs * 0.9 + (performance.now() - r0) * 0.1;
     uiAcc += dt; if (uiAcc > 300) { uiAcc = 0; try { updateUI() } catch (e) { dbgNote('ui', e); dbgPersist(world) } }
     miniAcc += dt; if (miniAcc > 120) { miniAcc = 0; try { drawMinimap(world, selected) } catch (e) { dbgNote('minimap', e) } }
