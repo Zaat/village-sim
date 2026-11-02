@@ -182,10 +182,10 @@ function drawAnimal(g, a, w, now, sel) {
 const SHIRTS_M = ['#6a8fd0', '#5a7fb0', '#7a9a6a', '#a07850', '#8a6aa8'], SHIRTS_F = ['#d77a8f', '#c46a9a', '#e0a050', '#7aa8a0', '#b06a6a'], SKIN = ['#f0cfa8', '#e0b48a', '#c8935f', '#a8714a', '#7a4f33'], HAIR = ['#3d2b1f', '#6b3a2a', '#c9a24a', '#a8a8a8', '#1d1d1d', '#9a4a1f'];
 const HATS = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', builder: '#e8a03a', hunter: '#3f7d4a', fisher: '#4aa3d8' };
 function drawVillager(g, v, w, now, sel) {
-  const x = Math.round(v.x * CFG.T), y = Math.round(v.y * CFG.T), k = v.isChild() ? 0.72 : 1, s = w.season;
+  const x = Math.round(v.x * CFG.T), y = Math.round(v.y * CFG.T), st = v.stage(), k = { infant: 0.5, child: 0.7, youth: 0.88, adult: 1, elder: 0.96 }[st], s = w.season;
   rc(g, 'rgba(0,0,0,.22)', x - 4 * k, y - 1, 8 * k, 2);
   if (sel === v) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.ellipse(x, y, 7, 3.5, 0, 0, 7); g.stroke() }
-  const shirt = (v.sex === 'f' ? SHIRTS_F : SHIRTS_M)[v.look % 5], skin = SKIN[(v.look >> 3) % 5], hair = HAIR[(v.look >> 5) % 6];
+  const shirt = (v.sex === 'f' ? SHIRTS_F : SHIRTS_M)[v.look % 5], skin = SKIN[(v.look >> 3) % 5], hair = st === 'elder' ? '#b9bdc2' : HAIR[(v.look >> 5) % 6], gcol = R.gcol && R.gcol.get(v.group);
   g.save(); g.translate(x, y); g.scale(v.dir * k, k);
   if (v.sleeping) {
     rc(g, '#8a6a4a', -6, -3, 12, 3); rc(g, shirt, -5, -6, 7, 4); rc(g, skin, 3, -6, 4, 4); rc(g, hair, 3, -7, 4, 2); g.restore();
@@ -196,9 +196,12 @@ function drawVillager(g, v, w, now, sel) {
   rc(g, shirt, -3, -9, 6, 6); rc(g, 'rgba(0,0,0,.15)', -3, -4, 6, 1); if (s === 3) rc(g, '#e8edf0', -3, -9, 6, 1);
   rc(g, skin, -4, -8 + (ph ? 1 : 0), 1, 3); rc(g, skin, 3, -8 - (work ? sw * 2 : (ph ? 0 : 1)), 1, 3);
   rc(g, skin, -2, -13, 5, 5); rc(g, hair, -2, -14, 5, 2); rc(g, hair, -3, -13, 1, 3); rc(g, '#222', 1, -11, 1, 1);
-  const hc = HATS[v.role]; if (hc && !v.isChild()) { if (v.role === 'farmer' || v.role === 'fisher') { rc(g, hc, -4, -14, 9, 1); rc(g, hc, -2, -16, 5, 2) } else if (v.role === 'hunter') { rc(g, hc, -3, -15, 6, 3); rc(g, hc, -3, -12, 1, 3) } else { rc(g, hc, -3, -15, 6, 2); if (v.role === 'miner') rc(g, '#ffe27a', 1, -16, 2, 1) } }
+  if (gcol) { rc(g, gcol, -4, -9, 2, 2); rc(g, 'rgba(0,0,0,.25)', -4, -7, 2, 1) }
+  const hc = HATS[v.role]; if (hc && v.age >= CFG.CHILD_DAYS) { if (v.role === 'farmer' || v.role === 'fisher') { rc(g, hc, -4, -14, 9, 1); rc(g, hc, -2, -16, 5, 2) } else if (v.role === 'hunter') { rc(g, hc, -3, -15, 6, 3); rc(g, hc, -3, -12, 1, 3) } else { rc(g, hc, -3, -15, 6, 2); if (v.role === 'miner') rc(g, '#ffe27a', 1, -16, 2, 1) } }
   if (v.carry) { const c = v.carry.kind === 'wood' ? '#8a5a2b' : v.carry.kind === 'stone' ? '#aab2b8' : '#e0623a'; rc(g, c, -6, -10, 4, 3); rc(g, 'rgba(0,0,0,.25)', -6, -8, 4, 1) }
   if (v.preg > 0) rc(g, shirt, -4, -6, 8, 2);
+  if (R.crown && R.crown.has(v.id)) { rc(g, '#ffd24a', -2, -18, 5, 1); rc(g, '#ffd24a', -2, -19, 1, 1); rc(g, '#ffd24a', 0, -20, 1, 2); rc(g, '#ffd24a', 2, -19, 1, 1) }
+  if (st === 'elder') rc(g, '#8a6a4a', 4, -8, 1, 8);
   g.restore();
   let em = v.emote; if (v.fighting) em = '!'; else if (/Chat|Talk|Feast/.test(v.label)) em = '…'; else if (w.cold && s === 3) em = '*'; else if (v.hunger < 20) em = '?';
   if (em) { const hy = y - 18 * k - 2; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x - 4, hy - 6, 8, 8); g.fillStyle = em === '!' ? '#d33' : em === '*' ? '#4a90d9' : '#333'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText(em, x, hy + 1); g.textAlign = 'left' }
@@ -219,9 +222,11 @@ function render(w, sel, now) {
     const i = y * W + x; if (w.terr[i] <= TERR.SHALLOW) { if ((hash2(x, y) + tick) % 13 === 0) rc(g, w.season === 3 ? '#fff' : 'rgba(255,255,255,.35)', x * T + (hash2(y, x) & 7), y * T + ((hash2(y, x) >> 3) & 7) + 3, 4, 1) }
     else if (w.road[i]) roadTile(g, w, x, y);
   }
+  R.gcol = new Map(w.groups.map(gr => [gr.id, gr.color])); R.crown = new Set(w.gov.council.map(c => c.id));
+  for (const sc of w.scars) if (w.tick < sc.until && inViewR(sc, x0, x1, y0, y1)) scarArt(g, sc, w);
   const rows = []; for (let y = y0; y <= y1 + 3; y++) rows[y] = [];
   const inView = (bx, by, bw, bh) => bx + bw >= x0 && bx <= x1 && by + bh >= y0 && by <= y1 + 3;
-  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else rows[b.y + b.h - 1].push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) }
+  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
   for (const bp of w.bps) if (inView(bp.x, bp.y, bp.w, bp.h)) bpArt(g, w, bp, now);
   for (const a of w.animals) { if (!a.alive) continue; const ty = Math.floor(a.y); if (rows[ty] && a.x / 1 >= x0 - 1 && a.x <= x1 + 1) rows[ty].push({ y: a.y * T, fn: () => drawAnimal(g, a, w, now, sel) }) }
   for (const v of w.vills) { const ty = Math.floor(v.y); if (rows[ty] && v.x >= x0 - 1 && v.x <= x1 + 1) rows[ty].push({ y: v.y * T, fn: () => drawVillager(g, v, w, now, sel) }) }
@@ -231,6 +236,7 @@ function render(w, sel, now) {
   }
   if (sel instanceof Villager && sel.alive && sel.path.length) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sel.x * T, sel.y * T); for (const p of sel.path) g.lineTo((p % W + .5) * T, ((p / W | 0) + .5) * T); g.stroke() }
   if (sel && sel.type && sel.w) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T - .5, sel.y * T - .5, sel.w * T + 1, sel.h * T + 1) }
+  if (w.festival) bunting(g, w, now);
   // light & atmosphere (screen space)
   g.setTransform(d, 0, 0, d, 0, 0);
   const tint = [null, 'rgba(255,225,120,.04)', 'rgba(255,140,40,.05)', 'rgba(180,210,255,.05)'][w.season]; if (tint) { g.fillStyle = tint; g.fillRect(0, 0, R.vw, R.vh) }
@@ -243,6 +249,19 @@ function render(w, sel, now) {
   if (w.season === 3) {
     g.fillStyle = 'rgba(255,255,255,.85)';
     for (const p of R.snow) { p.y += p.s * 0.004 * (R.vh / 600 + 0.5); p.x += Math.sin(now / 1500 + p.d) * 0.0004 + 0.0003; if (p.y > 1) { p.y = -0.02; p.x = Math.random() } if (p.x > 1) p.x = 0; g.fillRect(p.x * R.vw, p.y * R.vh, 1.5 + p.s, 1.5 + p.s) }
+  }
+}
+function inViewR(b, x0, x1, y0, y1) { return b.x + b.w >= x0 && b.x <= x1 && b.y + b.h >= y0 && b.y <= y1 }
+function scarArt(g, sc, w) {
+  const T = CFG.T, X = sc.x * T, Y = sc.y * T, Wd = sc.w * T, Ht = sc.h * T, f = Math.min(1, (sc.until - w.tick) / (CFG.TPD * 3));
+  g.globalAlpha = 0.5 + 0.5 * f; rc(g, '#2b2624', X, Y, Wd, Ht); rc(g, '#403733', X + 3, Y + 4, Wd - 8, 4); g.globalAlpha = 1;
+  if (f > 0.4) for (let k = 0; k < 4; k++) rc(g, '#ff7a2a', X + ((hash2(sc.x + k, sc.y) >> 3) % (Wd - 2)), Y + ((hash2(sc.y + k, sc.x) >> 3) % (Ht - 2)), 2, 2);
+}
+function bunting(g, w, now) {
+  const T = CFG.T, cols = ['#e06c75', '#e5c07b', '#61afef', '#98c379', '#c678dd'];
+  for (const [y, x0, x1] of [[w.cy - 2, w.cx - 4, w.cx + 5], [w.cy + 4, w.cx - 4, w.cx + 5]]) {
+    rc(g, '#5a3d22', x0 * T, y * T - 8, 2, 12); rc(g, '#5a3d22', x1 * T, y * T - 8, 2, 12);
+    for (let i = 0, px = x0 * T + 2; px < x1 * T; px += 6, i++) { const sag = Math.sin((px - x0 * T) / ((x1 - x0) * T) * Math.PI) * 4 + Math.sin(now / 400 + i) * 0.4; rc(g, cols[i % 5], px, y * T - 8 + sag, 4, 5); rc(g, 'rgba(0,0,0,.2)', px + 1, y * T - 3 + sag, 2, 1) }
   }
 }
 function drawMinimap(w, sel) {

@@ -7,7 +7,7 @@ const CFG = {
   W: 160, H: 112, T: 16,            // map size (tiles), tile size (world px)
   TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
   DPS: 8,                           // days per season (year = 4 seasons)
-  CHILD_DAYS: 6, FERTILE_MAX: 60, OLD_DAYS: 90,
+  INFANT_DAYS: 3, CHILD_DAYS: 8, ADULT_DAYS: 14, ELDER_DAYS: 80, FERTILE_MAX: 85, OLD_DAYS: 120,   // life stages (in days)
   START_VILLAGERS: 8,
   START_STOCK: { wood: 24, stone: 6, food: 40 },
   COST: { house: { wood: 8, stone: 3 }, farm: { wood: 3, stone: 0 }, store: { wood: 10, stone: 4 }, road: { wood: 0, stone: 1 } },
@@ -15,7 +15,7 @@ const CFG = {
   SIZE: { house: [2, 2], farm: [3, 2], store: [2, 2], campfire: [1, 1] },
   SOLID: { house: true, store: true, campfire: true, farm: false },
   HOUSE_CAP: 4, FARM_YIELD: 6, FARM_GROW: 2400, FISH_MAX: 5, CARRY: 4, EAT_RESTORE: 55,
-  BIRTH_CHANCE: 0.12, PREGNANCY: 960, BIRTH_COOLDOWN: 4800,
+  BIRTH_CHANCE: 0.35, PREGNANCY: 960, BIRTH_COOLDOWN: 2400,
   LATTICE: 3,                        // buildings snap to a 3-tile grid so lanes stay open
 };
 const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5 };

@@ -3,8 +3,9 @@
    world.js — terrain generation, buildings, pathfinding, seasons, main step.
    ========================================================================== */
 class World {
-  constructor(seed) {
+  constructor(seed, settings = {}) {
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
+    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -14,7 +15,7 @@ class World {
     this.buildings = new Map(); this.bnext = 1; this.bps = []; this.bpAt = new Map(); this.bpnext = 1;
     this.regrow = []; this.log = []; this.hist = []; this.listeners = []; this.connected = new Set();
     this.vills = []; this.animals = []; this.nextId = 1; this.tick = 0; this.rel = new Map();
-    this.stock = { ...CFG.START_STOCK }; this.inbound = { wood: 0, stone: 0, food: 0 };
+    this.stock = { ...CFG.START_STOCK }; if (this.settings.survival) for (const k in this.stock) this.stock[k] = Math.floor(this.stock[k] * 0.6); this.inbound = { wood: 0, stone: 0, food: 0 };
     this.nameUse = 0; this.births = 0; this.deaths = 0; this.causes = {};
     this.harsh = false; this.drought = false; this.cold = false; this.festival = false; this.fishOK = false;
     this.gen(); this.spawn();
@@ -78,6 +79,7 @@ class World {
     const count = f => { let n = 0; for (let i = 0; i < W * H; i++) if (this.feat[i] === f) n++; return n };
     const cluster = (f, res, min, rmin, rmax, rad) => { let g = 0; while (count(f) < min && g++ < 30) { const a = rng() * 6.28, d = rmin + rng() * (rmax - rmin); this.put(f, Math.round(this.cx + Math.cos(a) * d), Math.round(this.cy + Math.sin(a) * d), rad, res) } };
     cluster(FEAT.OAK, 4, 500, 9, 22, 3); cluster(FEAT.STONE, 8, 90, 11, 24, 2);
+    this.trees = 0; for (let i = 0; i < W * H; i++) if (this.feat[i] === FEAT.OAK || this.feat[i] === FEAT.PINE) this.trees++; this.trees0 = this.trees;
     // can villagers fish? (shallow water with walkable shore near camp)
     for (let y = 0; y < H && !this.fishOK; y++) for (let x = 0; x < W; x++) {
       if (this.terr[y * W + x] !== TERR.SHALLOW || Math.hypot(x - this.cx, y - this.cy) > 32) continue;
@@ -102,7 +104,7 @@ class World {
     while (k < CFG.START_VILLAGERS && guard++ < 200) {
       const x = this.cx - 5 + ((this.r() * 11) | 0), y = this.cy + 2 + ((this.r() * 5) | 0);
       if (!this.walkable(y * CFG.W + x)) continue;
-      this.vills.push(new Villager(this, k % 2 ? 'f' : 'm', 10 + this.r() * 20, x, y)); k++;
+      this.vills.push(new Villager(this, k % 2 ? 'f' : 'm', 14 + this.r() * 26, x, y)); k++;
     }
   }
 
@@ -125,6 +127,8 @@ class World {
   houses() { const a = []; for (const b of this.buildings.values()) if (b.type === 'house') a.push(b); return a }
   of(type) { const a = []; for (const b of this.buildings.values()) if (b.type === type) a.push(b); return a }
   cap() { return 60 + 100 * this.of('store').length }
+  passable(i) { const t = this.terr[i], f = this.feat[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.blk[i] === 0 && (f === FEAT.OAK || f === FEAT.PINE || f === FEAT.BUSH) }
+  clearTile(i) { const f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) this.trees--; this.feat[i] = 0; this.res[i] = 0 }
   walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.feat[i] === 0 && this.blk[i] === 0 }
   nearStock(x, y, i) { return this.storeAdj[i] === 1 }
   nearRect(x, y, b) { const dx = x < b.x ? b.x - x : x >= b.x + b.w ? x - (b.x + b.w - 1) : 0, dy = y < b.y ? b.y - y : y >= b.y + b.h ? y - (b.y + b.h - 1) : 0; return dx + dy <= 1 }
@@ -146,7 +150,7 @@ class World {
   }
 
   /* ----- pathfinding: Dijkstra, roads cheap, sand/rock slightly dear ----- */
-  search(sx, sy, goal, maxCost = 1e9) {
+  search(sx, sy, goal, maxCost = 1e9, through = false) {
     const { W, H } = CFG, dist = this._d, prev = this._p, seen = this._seen, ds = this._ds, st = ++this._st;
     const s = sy * W + sx; dist[s] = 0; seen[s] = st; prev[s] = -1; const h = new Heap(); h.push(0, s);
     while (h.size) {
@@ -155,8 +159,9 @@ class World {
       if (dist[u] > maxCost) continue;
       for (let k = 0; k < 4; k++) {
         const nx = ux + NB[k][0], ny = uy + NB[k][1]; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
-        const v = ny * W + nx; if (ds[v] === st || !this.walkable(v)) continue;
-        const t = this.terr[v], nd = dist[u] + (this.road[v] ? 0.55 : t === TERR.GRASS ? 1 : t === TERR.SAND ? 1.15 : 1.4);
+        const v = ny * W + nx; if (ds[v] === st) continue; let extra = 0;
+        if (!this.walkable(v)) { if (!through || !this.passable(v)) continue; extra = 6 }
+        const t = this.terr[v], nd = dist[u] + extra + (this.road[v] ? 0.55 : t === TERR.GRASS ? 1 : t === TERR.SAND ? 1.15 : 1.4);
         if (seen[v] !== st || nd < dist[v]) { dist[v] = nd; seen[v] = st; prev[v] = u; h.push(nd, v) }
       }
     }
@@ -166,7 +171,8 @@ class World {
   /* ----- social ----- */
   relKey(a, b) { return a.id < b.id ? a.id + '_' + b.id : b.id + '_' + a.id }
   getRel(a, b) { return this.rel.get(this.relKey(a, b)) || 0 }
-  interact(a, b) {
+  interact(a, b) { socialInteract(this, a, b) }
+  interactOld(a, b) {
     const prev = this.getRel(a, b); let sim = 0; for (const t of TRAITS) sim += 1 - Math.abs(a.trait[t] - b.trait[t]); sim /= TRAITS.length;
     const kind = (a.trait.kind + b.trait.kind) / 2, r = clamp(prev + (4 + this.r() * 6 + kind * 3) * (0.55 + 0.9 * sim), 0, 100); this.rel.set(this.relKey(a, b), r);
     a.social = Math.min(100, a.social + 45); b.social = Math.min(100, b.social + 30);
@@ -178,21 +184,34 @@ class World {
     }
   }
   tryConceive(f, m) {
+    if (!f.isAdult() || !m.isAdult() || f.partner !== m.id) return;
     if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX) return;
     if (this.vills.length + 1 > this.houses().length * CFG.HOUSE_CAP) return;
-    if (this.stock.food < this.vills.length * 3.5) return;
-    if (this.r() < CFG.BIRTH_CHANCE) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`) }
+    const gp = this.gov.policy.growth; if (this.stock.food < this.vills.length * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
+    if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
   }
   birth(f) {
     const dad = this.vills.find(v => v.id === f.father), c = new Villager(this, this.r() < 0.5 ? 'f' : 'm', 0, f.tx, f.ty, null, [f, dad]);
-    c.home = f.home; if (f.home != null) { const h = this.buildings.get(f.home); if (h) h.occ.push(c.id) }
+    c.home = f.home; c.parentIds = [f.id, dad ? dad.id : null]; if (f.home != null) { const h = this.buildings.get(f.home); if (h) h.occ.push(c.id) }
+    f.kids.push(c.id); if (dad) dad.kids.push(c.id); c.story(`Born to ${f.name}${dad ? ' and ' + dad.name : ''} of House ${c.family}.`); f.story(`Gave birth to ${c.name}.`); if (dad) dad.story(`Became a father to ${c.name}.`);
     this.vills.push(c); f.lastBirth = this.tick; this.births++;
-    this.emit('birth', `${c.name} was born to ${f.name}${dad ? ' and ' + dad.name : ''}.`, { c, f });
+    this.emit('birth', `${c.name} ${c.family} was born to ${f.name}${dad ? ' and ' + dad.name : ''}.`, { c, f });
   }
   kill(v, why) {
     v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; this.causes[why] = (this.causes[why] || 0) + 1;
     for (const h of this.houses()) { const k = h.occ.indexOf(v.id); if (k >= 0) h.occ.splice(k, 1) }
-    this.emit('death', `${v.name} ${why}.`, { v, why });
+    const grieve = (id, d, days, txt) => { const o = this.vills.find(x => x.id === id); if (o) { o.mournUntil = this.tick + CFG.TPD * days; o.mood = Math.max(0, o.mood - d); o.story(txt) } };
+    if (v.partner != null) { const p = this.vills.find(x => x.id === v.partner); if (p) p.partner = null; grieve(v.partner, 25, 6, `Lost ${v.name}, their partner.`) }
+    for (const id of v.kids) grieve(id, 15, 4, `Lost their parent ${v.name}.`);
+    for (const id of v.parentIds) if (id != null) grieve(id, 20, 5, `Lost their child ${v.name}.`);
+    this.emit('death', `${v.name} ${v.family} ${why}.`, { v, why });
+  }
+  removeBuilding(b) {
+    this.buildings.delete(b.id); const { W } = CFG;
+    for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * W + b.x + dx; this.bmap[i] = 0; this.blk[i] = 0 }
+    this.storeAdj.fill(0); this.bldAdj.fill(0); for (const x of this.buildings.values()) if (CFG.SOLID[x.type]) this.markAdj(x, x.type === 'store' ? this.storeAdj : null);
+    for (const id of b.occ) { const v = this.vills.find(x => x.id === id); if (v) { v.home = null; v.mood = Math.max(0, v.mood - 20); v.story('Lost their home.') } }
+    this.connected.delete(b.id); this.scars.push({ x: b.x, y: b.y, w: b.w, h: b.h, until: this.tick + CFG.TPD * 3 });
   }
 
   /* ----- calendar hooks ----- */
@@ -205,38 +224,44 @@ class World {
       if (s === 3) this.say('Winter settles in. The fields are frozen.');
       this.emit('season', null, { season: s });
     }
-    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015)));
+    const stc = this.gov.council.find(c => c.title === 'Steward'), std = stc ? this.vills.find(v => v.id === stc.id) : null;
+    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1)));
     if (s === 3) {
-      const need = Math.ceil((this.vills.length * 0.5 + this.houses().length * 1 + 1) * (this.harsh ? 1.8 : 1));
+      const need = Math.ceil((this.vills.length * 0.5 + this.houses().length * 1 + 1) * (this.harsh ? 1.8 : 1) * (this.settings.survival ? 1.4 : 1));
       if (this.stock.wood >= need) { this.stock.wood -= need; if (this.cold) this.say('Warm hearths again; the cold has eased.'); this.cold = false }
       else { this.stock.wood = 0; if (!this.cold) this.emit('cold', 'The firewood has run out. The village is freezing!'); this.cold = true }
     } else this.cold = false;
     for (const k of ['wood', 'stone', 'food']) this.stock[k] = Math.min(this.stock[k], this.cap());
     animalsNewDay(this);
     townNewDay(this);
+    societyNewDay(this);
   }
 
   /* ----- main step ----- */
   step() {
     this.tick++;
     if (this.tick % CFG.TPD === 0) this.onNewDay();
-    const g = GROW[this.season] * (this.drought ? 0.5 : 1);
+    const g = GROW[this.season] * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1);
     for (const b of this.buildings.values()) if (b.type === 'farm' && b.state === 1) { b.g += g / CFG.FARM_GROW; if (b.g >= 1) { b.state = 2; b.g = 1 } }
     if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) if (this.regrow[k].at <= this.tick && this.season < 3) { this.res[this.regrow[k].idx] = 4; this.regrow.splice(k, 1) }
-    if (this.tick % 200 === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if (this.fish[i] < CFG.FISH_MAX && this.terr[i] === TERR.SHALLOW) this.fish[i]++;
-    if (this.tick % 100 === 0 && this.season < 2) {      // saplings spread from existing woods
-      for (let a = 0; a < 20; a++) {
+    if (this.tick % (this.settings.survival ? 400 : 200) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if (this.fish[i] < CFG.FISH_MAX && this.terr[i] === TERR.SHALLOW) this.fish[i]++;
+    if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * 1.08) {      // saplings spread from existing woods (capped, and never beside roads or buildings)
+      for (let a = 0; a < 8; a++) {
         const x = 1 + ((this.r() * (CFG.W - 2)) | 0), y = 1 + ((this.r() * (CFG.H - 2)) | 0), i = y * CFG.W + x;
         if (this.terr[i] !== TERR.GRASS || this.feat[i] || this.bmap[i] || this.road[i] || this.bpAt.has(i) || this.claim[i] >= 0) continue;
         if (Math.hypot(x - this.cx, y - this.cy) < 8) continue;
+        let busy = false; for (let dy = -2; dy <= 2 && !busy; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * CFG.W + x + dx; if (this.road[j] || this.bmap[j]) { busy = true; break } } if (busy) continue;
         let near = false; for (const [dx, dy] of NB) { const f = this.feat[(y + dy) * CFG.W + x + dx]; if (f === FEAT.OAK || f === FEAT.PINE) { near = true; break } }
-        if (near && this.r() < 0.5) { this.feat[i] = this.E[i] > 0.58 ? FEAT.PINE : FEAT.OAK; this.res[i] = 4 }
+        if (near && this.r() < 0.35) { this.feat[i] = this.E[i] > 0.58 ? FEAT.PINE : FEAT.OAK; this.res[i] = 4; this.trees++ }
       }
     }
     for (const a of this.animals) if (a.alive) a.update();
     if (this.tick % 20 === 0) this.animals = this.animals.filter(a => a.alive);
     for (const v of this.vills.slice()) if (v.alive) v.update();
     if (this.tick % 60 === 0) planTown(this);
+    if (this.tick % 400 === 0) updateGroups(this);
+    if (!this.holidayDone && this.tod > 0.68) resolveHoliday(this);
+    if (!this.meetingDone && this.tod > 0.62) { this.meetingDone = true; holdMeeting(this) }
     if (this.tick % 240 === 0) assignRoles(this);
     if (this.tick % 100 === 0) {
       this.hist.push({ pop: this.vills.length, food: this.stock.food, wood: this.stock.wood, stone: this.stock.stone, season: this.season });

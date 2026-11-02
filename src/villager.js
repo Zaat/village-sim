@@ -26,19 +26,69 @@ class Villager {
     this.home = null; this.sleeping = false; this.preg = 0; this.father = null; this.lastBirth = -1e9; this.wait = 0;
     this.claim = -1; this.claimB = null; this.inb = null; this.haul = null; this.bpWork = null; this.jobKind = null; this.failUntil = {};
     this.dir = 1; this.fighting = false; this.cause = 'hunger'; this.emote = null;
+    // society: identity, opinions, desires, story
+    this.family = parents && (parents[1] || parents[0]) ? (parents[1] || parents[0]).family : SURNAMES[(w.r() * SURNAMES.length) | 0];
+    this.partner = null; this.kids = []; this.parentIds = []; this.mood = 70; this.debates = 0; this.desire = null; this.nextDesire = w.day + 2; this.bio = []; this.reputation = 50; this.record = 0;
+    this.duty = 0; this.stocksUntil = 0; this.group = null; this.friends = 0; this.enemies = 0; this.won = 0; this.mournUntil = 0;
+    const t = this.trait, o = b => clamp((b - 0.5) * 1.8 + (g() - 0.5) * 0.8, -1, 1);
+    this.op = { growth: o(0.4 * t.kind + 0.3 * t.soc + 0.3 * t.cur), labor: o(0.6 * (1 - t.ind) + 0.4 * t.soc), law: o(0.5 * (1 - t.kind) + 0.3 * t.brave + 0.2 * (1 - t.cur)), defense: o(0.6 * (1 - t.brave) + 0.2 * (1 - t.kind) + 0.2) };
+    if (parents && parents[0]) for (const k of ISSUES) { const a = parents[0].op[k], b = parents[1] ? parents[1].op[k] : a; this.op[k] = clamp(0.6 * (a + b) / 2 + 0.4 * this.op[k], -1, 1) }
+    this._st = this.stage();
+  }
+  isAdult() { return this.age >= CFG.ADULT_DAYS }
+  isElder() { return this.age >= CFG.ELDER_DAYS }
+  stage() { const a = this.age; return a < CFG.INFANT_DAYS ? 'infant' : a < CFG.CHILD_DAYS ? 'child' : a < CFG.ADULT_DAYS ? 'youth' : a < CFG.ELDER_DAYS ? 'adult' : 'elder' }
+  story(text) { this.bio.push({ day: this.w.day, text }); if (this.bio.length > 16) this.bio.shift() }
+  charisma() { const t = this.trait; return clamp(0.4 * t.soc + 0.25 * t.cur + 0.2 * t.kind + 0.15 * t.ind + (this.isElder() ? 0.12 : 0) + 0.1 * (this.reputation - 50) / 50, 0, 1) }
+  onStage(st) {
+    const w = this.w;
+    if (st === 'child') this.story('Took first steps and began exploring the village.');
+    else if (st === 'youth') this.story('Began learning a trade as an apprentice.');
+    else if (st === 'adult') { this.story('Came of age and joined the grown folk of the village.'); w.say(`${this.name} has come of age.`); this.nextDesire = w.day }
+    else if (st === 'elder') { this.story('Became an elder of the village.'); w.say(`${this.name} is now counted among the village elders.`) }
+  }
+  updateMood() {
+    const w = this.w; let t = 50 + (this.hunger - 50) * 0.25 + (this.energy - 50) * 0.08 + (this.social - 50) * 0.12 + (this.health - 70) * 0.1;
+    if (w.cold) t -= 15; t += Math.min(10, this.friends * 2.5) - Math.min(15, this.enemies * 4);
+    let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4;
+    if (this.partner != null) t += 6; if (this.home == null && this.isAdult()) t -= 6; if (this.mournUntil > w.tick) t -= 18; if (this.desire && w.day - this.desire.since > 40) t -= 4;
+    this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
+  }
+  chooseDesire() {
+    const t = this.trait, w = this.w, o = [];
+    if (this.partner == null) o.push(['family', 1.1]);
+    o.push(['master', 0.5 + t.ind]); if (t.soc > 0.45) o.push(['belong', 0.6 + t.soc]); if (t.cur > 0.4) o.push(['know', 0.3 + t.cur * 1.5]); o.push(['lead', 0.1 + this.charisma() * 1.5]); o.push(['fame', 0.2 + t.brave]);
+    let tot = 0; for (const x of o) tot += x[1]; let r = w.r() * tot, pick = o[0][0]; for (const x of o) { r -= x[1]; if (r <= 0) { pick = x[0]; break } }
+    this.desire = { kind: pick, key: pick === 'master' ? Object.entries(this.skill).sort((a, b) => b[1] - a[1])[0][0] : null, since: w.day };
+    this.story(`Set their heart on a goal: ${this.desireText()}.`);
+  }
+  desireText() {
+    const d = this.desire; if (!d) return '';
+    return ({ family: 'to have a family of their own', master: 'to become a master ' + ({ wood: 'woodcutter', stone: 'stonecutter', farm: 'farmer', build: 'builder', hunt: 'hunter', fish: 'fisher' }[d.key]), belong: 'to belong to a close circle of friends', know: 'to understand the world and debate its great questions', lead: 'to lead the village', fame: 'to win glory at the games' })[d.kind];
+  }
+  checkDesire() {
+    const w = this.w, d = this.desire; if (!this.isAdult()) return;
+    if (!d) { if (w.day >= this.nextDesire) this.chooseDesire(); return }
+    let ok = false;
+    switch (d.kind) { case 'family': ok = this.partner != null && this.kids.length >= 1; break; case 'master': ok = this.skill[d.key] >= 0.8; break; case 'belong': ok = this.group != null && this.friends >= 3; break; case 'know': ok = this.debates >= 6; break; case 'lead': ok = w.gov.council.some(c => c.id === this.id); break; case 'fame': ok = this.won > 0; break }
+    if (ok) { this.story(`Fulfilled a long-held dream: ${this.desireText()}.`); w.say(`${this.name} has fulfilled a dream: ${this.desireText()}.`); this.mood = Math.min(100, this.mood + 18); this.desire = null; this.nextDesire = w.day + 5 }
   }
   get tx() { return Math.floor(this.x) } get ty() { return Math.floor(this.y) }
   isChild() { return this.age < CFG.CHILD_DAYS }
-  wt(base, key) { return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)))) }
-  gain(key) { this.skill[key] = Math.min(1, this.skill[key] + 0.012) }
+  wt(base, key) {
+    const w = this.w, st = this.isElder() ? 1.3 : this.stage() === 'youth' ? 1.35 : 1;
+    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor)));
+  }
+  gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)) }
   traitWords() { const o = []; for (const t of TRAITS) { if (this.trait[t] > 0.66) o.push(TRAIT_WORDS[t][1]); else if (this.trait[t] < 0.34) o.push(TRAIT_WORDS[t][0]) } return o }
 
   update() {
     const w = this.w, child = this.isChild();
-    this.hunger = Math.max(0, this.hunger - (this.sleeping ? 0.02 : 0.04) * (child ? 0.6 : 1));
+    this.hunger = Math.max(0, this.hunger - (this.sleeping ? 0.02 : 0.04) * (child ? 0.6 : 1) * (w.settings.survival ? 1.25 : 1));
     this.energy = this.sleeping ? Math.min(100, this.energy + 0.15) : Math.max(0, this.energy - 0.025);
     this.social = Math.max(0, this.social - 0.012 - 0.025 * this.trait.soc);
     this.age += 1 / CFG.TPD;
+    const stg = this.stage(); if (stg !== this._st) { this._st = stg; this.onStage(stg) }
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02);
     if (w.cold) { this.health -= 0.012; this.cause = 'cold' }
@@ -70,23 +120,30 @@ class Villager {
     if (st.label) this.label = st.label;
     if (st.type === 'go') {
       this.path = st.path || w.search(this.tx, this.ty, st.goal, st.maxCost); st.path = null;
-      if (!this.path) { this.path = []; this.abort(); return false }
+      if (!this.path && !st.maxCost) this.path = w.search(this.tx, this.ty, st.goal, undefined, true);     // boxed in: hack through brush
+      if (!this.path) { this.path = []; if (this.hunger < 30) { this.stuck = (this.stuck || 0) + 1; if (this.stuck >= 2) this.rescue() } this.abort(); return false }
     } else { st.t = st.ticks; this.sleeping = !!st.sleep; this.fighting = !!st.fight }
     return true;
   }
   move() {
     const w = this.w; let nxt = this.path[0]; if (nxt === undefined) return;
+    if (w.passable(nxt)) w.clearTile(nxt);      // cutting through thick brush
     if (!w.walkable(nxt)) {
       const st = this.cur; if (!st.goal) { this.abort(); return }
       const p = w.search(this.tx, this.ty, st.goal, st.maxCost); if (!p) { this.abort(); return }
       this.path = p; if (!p.length) return; nxt = p[0];
     }
     const here = this.ty * CFG.W + this.tx, t = w.terr[here];
-    let speed = (w.road[here] ? 0.16 : t === TERR.ROCK ? 0.07 : 0.09) * (this.isChild() ? 0.85 : 1) * (this.jobKind === 'flee' ? 1.5 : 1);
+    let speed = (w.road[here] ? 0.16 : t === TERR.ROCK ? 0.07 : 0.09) * (this.age < CFG.INFANT_DAYS ? 0.6 : this.isChild() || this.isElder() ? 0.85 : 1) * (this.jobKind === 'flee' ? 1.5 : 1);
     if (w.season === 3 && !w.road[here]) speed *= 0.85;
     const nx = (nxt % CFG.W) + 0.5, ny = ((nxt / CFG.W) | 0) + 0.5, dx = nx - this.x, dy = ny - this.y, d = Math.hypot(dx, dy);
     if (Math.abs(dx) > 0.01) this.dir = dx > 0 ? 1 : -1;
     if (d <= speed) { this.x = nx; this.y = ny; this.path.shift() } else { this.x += dx / d * speed; this.y += dy / d * speed }
+  }
+  rescue() {       // stranded and starving: they wade, climb and stumble their way back to camp
+    const w = this.w; this.stuck = 0;
+    for (let k = 0; k < 20; k++) { const x = Math.round(w.cx - 1 + (w.r() * 2 - 1) * 3), y = Math.round(w.cy + 1 + (w.r() * 2 - 1) * 3); if (w.walkable(y * CFG.W + x)) { this.x = x + 0.5; this.y = y + 0.5; this.path = []; this.story('Was stranded far from the village and struggled home half-starved.'); w.say(`${this.name} staggers back to the village, half-starved.`); return }
+    }
   }
   abort(wait = 30) { this.steps = []; this.cur = null; this.path = []; this.sleeping = false; this.fighting = false; this.carry = null; this.endJob(); this.wait = wait }
   endJob() {
@@ -103,8 +160,8 @@ class Villager {
   checkDanger() {
     const w = this.w; let wolf = null, wd = 99;
     for (const a of w.animals) if (a.kind === 'wolf' && a.alive) { const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < wd) { wd = d; wolf = a } }
-    if (!wolf || wd > 9) return false;
-    const fighter = !this.isChild() && (this.role === 'hunter' || this.trait.brave > 0.62 || (this.trait.brave > 0.4 && w.vills.filter(v => v.fighting).length >= 1));
+    const watch = Math.max(0, w.gov.policy.defense); if (!wolf || wd > 9 + 3 * watch) return false;
+    const fighter = !this.isChild() && (this.role === 'hunter' || this.trait.brave > 0.62 - 0.12 * watch || (this.trait.brave > 0.4 && w.vills.filter(v => v.fighting).length >= 1));
     if (fighter) { if (this.jobKind !== 'fight') { this.abort(0); this.planFight(wolf) } return true }
     if (this.jobKind !== 'flee') { this.abort(0); this.planFlee() }
     return true;
@@ -122,14 +179,22 @@ class Villager {
   decide() {
     const w = this.w;
     if (this.checkDanger()) return;
-    if (this.hunger < 40 && w.stock.food > 0) return this.planEat();
+    if (this.hunger < (w.gov.welfare ? 55 : 40) && w.stock.food > 0) return this.planEat();
     if (w.isNight() || this.energy < 18) return this.planSleep();
+    if (this.stocksUntil > w.tick) return this.planStocks();
+    if (this.age < CFG.INFANT_DAYS) return this.planWander(3, true);
     if (this.isChild()) return this.planWander(7, true);
-    if (w.tod > 0.52 && w.tod < 0.72 && (w.festival || (this.social < 95 && w.r() < 0.35 + 0.55 * this.trait.soc))) return this.planFire();
+    const inCouncil = w.gov.council.some(c => c.id === this.id);
+    if (w.tod > 0.52 && w.tod < 0.72 && (w.festival || (inCouncil && w.meetingDay === w.day && !w.meetingDone) || (this.social < 95 && w.r() < 0.35 + 0.55 * this.trait.soc))) return this.planFire();
+    if (this.duty > w.tick && (this.planBuild() || this.planGather('wood'))) return;
     if (this.social < 40 + 30 * this.trait.soc && this.planSocial()) return;
     if (this.planWork()) return;
     if (this.social < 90 && this.planSocial()) return;
     this.planWander(6, false);
+  }
+  planStocks() {
+    const w = this.w; this.jobKind = 'stocks';
+    this.steps = [go((x, y) => Math.abs(x - w.cx) + Math.abs(y - w.cy) <= 2, null, 'Taken to the stocks', { maxCost: 90 }), work(Math.max(10, Math.ceil(this.stocksUntil - w.tick)), 'In the stocks', null)];
   }
   planEat() {
     const w = this.w; this.jobKind = 'eat';
@@ -150,14 +215,14 @@ class Villager {
     }
   }
   planFire() {
-    const w = this.w;
+    const w = this.w, meet = w.meetingDay === w.day && !w.meetingDone && w.gov.council.some(c => c.id === this.id);
     for (let k = 0; k < 10; k++) {
       const gx = Math.round(w.cx + (w.r() * 2 - 1) * 3), gy = Math.round(w.cy + (w.r() * 2 - 1) * 3);
       if (!w.walkable(gy * CFG.W + gx)) continue;
       this.jobKind = 'fire'; const fest = w.festival;
-      this.steps = [go((x, y) => x === gx && y === gy, null, fest ? 'Off to the festival' : 'To the campfire', { maxCost: 90 }),
-      work(fest ? 200 : 140, fest ? 'Feasting by the fire' : 'Talking by the fire', () => {
-        let n = 0; for (const o of w.vills) { if (o === this || o.isChild() || o.sleeping || Math.hypot(o.x - this.x, o.y - this.y) > 4.5) continue; if (n >= 3) break; if (fest || w.r() < 0.55) { w.interact(this, o); n++ } }
+      this.steps = [go((x, y) => x === gx && y === gy, null, meet ? 'To the council fire' : fest ? 'Off to the ' + w.holiday : 'To the campfire', { maxCost: 90 }),
+      work(meet ? 220 : fest ? 200 : 140, meet ? 'In council session' : fest ? w.holiday : 'Talking by the fire', () => {
+        let n = 0; for (const o of w.vills) { if (o === this || o.isChild() || o.sleeping || Math.hypot(o.x - this.x, o.y - this.y) > 4.5) continue; if (n >= 2) break; if (fest || w.r() < 0.55) { w.interact(this, o); n++ } }
         if (fest) this.social = Math.min(100, this.social + 40);
       })];
       return;
@@ -167,7 +232,7 @@ class Villager {
     const w = this.w; let best = null, bd = 1e9;
     for (const o of w.vills) {
       if (o === this || o.sleeping || o.isChild()) continue;
-      const d = Math.abs(o.x - this.x) + Math.abs(o.y - this.y) + (w.getRel(this, o) > 30 ? -6 : 0) - (o.sex !== this.sex ? 3 : 0) + w.r() * 4;
+      const rel = w.getRel(this, o), d = Math.abs(o.x - this.x) + Math.abs(o.y - this.y) + (rel > 30 ? -6 : 0) + (rel < -30 ? 18 : 0) - (o.id === this.partner ? 8 : 0) - (this.desire && this.desire.kind === 'family' && this.partner == null && o.sex !== this.sex && o.isAdult() && o.partner == null ? 6 : 0) - (o.group && o.group === this.group ? 4 : 0) + w.r() * 4;
       if (d < bd) { bd = d; best = o }
     }
     if (!best) return false;
@@ -179,13 +244,7 @@ class Villager {
 
   /* ----- work: role first, then whatever the village lacks ----- */
   planWork() {
-    const w = this.w, pop = w.vills.length, pend = w.pending(), s = w.season, autumn = s === 2, winter = s === 3, cap = w.cap();
-    const tgt = {
-      wood: 16 + 3 * pop + pend.wood + (autumn ? pop * 3 + w.houses().length * 6 : 0) + (winter ? pop * 2 : 0), stone: 6 + 2 * pop + pend.stone,
-      food: 10 + 4 * pop + (autumn ? pop * 8 : 0) + (s === 1 ? pop * 3 : 0)
-    };
-    for (const k in tgt) tgt[k] = Math.min(tgt[k], cap * 0.95);
-    const eff = { wood: w.stock.wood + w.inbound.wood, stone: w.stock.stone + w.inbound.stone, food: w.stock.food + w.inbound.food };
+    const w = this.w, pop = w.vills.length, s = w.season, autumn = s === 2, winter = s === 3, { tgt, eff } = resourceTargets(w);
     const def = {}; for (const k in tgt) def[k] = (tgt[k] - eff[k]) / tgt[k];
     const tries = [], T = (name, fn) => tries.push([name, fn]);
     const foodAny = () => this.planFarm() || (this.role === 'fisher' ? this.planFish() || this.planHunt() : this.planHunt() || this.planFish()) || this.planGather('food');
@@ -229,7 +288,7 @@ class Villager {
     const key = kind === 'wood' ? 'wood' : kind === 'stone' ? 'stone' : null, time = this.wt(kind === 'wood' ? 60 : kind === 'stone' ? 80 : 35, key);
     this.steps = [go(null, path, 'Heading out'), work(time, kind === 'wood' ? 'Chopping wood' : kind === 'stone' ? 'Quarrying stone' : 'Picking berries', () => {
       const take = Math.min(CFG.CARRY, w.res[tgt]); w.res[tgt] -= take;
-      if (w.res[tgt] === 0) { if (w.feat[tgt] === FEAT.BUSH) w.regrow.push({ idx: tgt, at: w.tick + 2400 }); else w.feat[tgt] = FEAT.NONE }
+      if (w.res[tgt] === 0) { if (w.feat[tgt] === FEAT.BUSH) w.regrow.push({ idx: tgt, at: w.tick + 2400 }); else w.clearTile(tgt) }
       this.carry = { kind, amt: take }; if (key) this.gain(key);
     }), ...this.deliverSteps()];
     return true;
@@ -242,7 +301,7 @@ class Villager {
     }, 90);
     if (!path || !fb) return false;
     const b = fb, harvest = b.state === 2; b.claim = this.id; this.claimB = b; this.jobKind = 'farm';
-    const amt = Math.round(CFG.FARM_YIELD * (0.8 + 0.5 * this.skill.farm));
+    const amt = Math.round(CFG.FARM_YIELD * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1));
     this.steps = [go(null, path, 'To the field'), work(this.wt(harvest ? 55 : 40, 'farm'), harvest ? 'Harvesting' : 'Sowing seeds', () => {
       if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
     })];

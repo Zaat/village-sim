@@ -24,13 +24,22 @@
     <div class="card"><h3>History</h3><canvas id="chart" width="300" height="84"></canvas>
       <div class="leg"><span><i style="background:#8fd18b"></i>population</span><span><i style="background:#e0a458"></i>food stock</span></div></div>
     <div class="card" id="sel"><h3>Inspector</h3><div class="hint">Click something on the map.</div></div>
-    <div class="card" id="narCard">
-      <h3>Claude narrator</h3>
-      <label class="tog"><input type="checkbox" id="narToggle"><span class="sw"></span><span id="narLabel">Off — uses your Claude usage when on</span></label>
-      <div class="hint" id="narStatus"></div>
-      <div id="chron"></div>
+    <div class="card"><h3>Village council</h3><div id="councilCard"></div></div>
+    <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
+    <div class="card" id="mindCard">
+      <h3>Claude counsel <span class="beta">optional</span></h3>
+      <div class="hint" style="margin-bottom:6px">Lets Claude make the council's and courts' decisions from options the simulation offers, based on each member's personality and opinions. If it is off or unavailable, the village's own rules decide.</div>
+      <label class="tog"><input type="checkbox" id="mindToggle"><span class="sw"></span><span id="mindLabel">Off — uses your Claude usage when on</span></label>
+      <div class="hint" id="mindStatus"></div>
+      <button id="mindRetry" style="display:none;margin-top:6px">Request permission again</button>
+      <div id="mindLog"></div>
     </div>
     <div class="card"><h3>Events</h3><div id="log"></div></div>
+    <div class="card"><h3>Settings</h3>
+      <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
+    </div>
     <div class="card"><h3>World</h3>
       <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="restart">New world</button></div></div>
   </aside>
@@ -39,6 +48,7 @@
 <script src="src/animals.js"></script>
 <script src="src/villager.js"></script>
 <script src="src/town.js"></script>
+<script src="src/society.js"></script>
 <script src="src/world.js"></script>
 <script src="src/render.js"></script>
 <script src="src/ui.js"></script>
