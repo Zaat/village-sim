@@ -72,7 +72,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #drawer .card{background:var(--panel2)}#mindLog{min-height:0;max-height:200px}#diagBody{min-height:150px}
 @media (max-width:820px){#drawer{max-height:50vh}}
 #saveInfo{min-height:3.4em}
-#side>.card{flex:none}#drawer>.card,#drawer>details{flex:none}
+#drawer>.card,#drawer>details{flex:none}
 #projCard{height:215px;overflow-y:auto}
 /* narrow windows: the control bar drops below the date HUD instead of covering it */
 #stage{container-type:inline-size}
@@ -81,6 +81,11 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 @container (max-width:420px){#drawer{width:calc(100% - 24px)}}
 #chronCard{height:470px;overflow-y:auto}
 #ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
-#neighCard{height:230px;overflow-y:auto}
-#neighCard{height:380px}
+#neighCard{min-height:380px;max-height:560px;overflow-y:auto}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:8px}.stats div{display:flex;flex-direction:column}.stats b{font-weight:600;font-size:12.5px}
+
+/* tabbed side panel */
+#side>.tabbar{position:sticky;top:-10px;z-index:3;display:flex;gap:4px;background:var(--bg);padding:10px 0 8px;margin:-10px 0 0;border-bottom:1px solid var(--line)}
+#side>.tabbar button{flex:1;padding:5px 2px;font-size:12px;border-radius:7px}#side>.tabbar button.on{background:var(--acc);color:#0d1a0d;border-color:var(--acc)}
+.tab{display:none;flex-direction:column;gap:10px}.tab.on{display:flex}.tab>.card{flex:none}
+#log{height:calc(100vh - 150px);min-height:300px}

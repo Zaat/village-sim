@@ -183,8 +183,8 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  renderTech(); renderEcon(); renderProjects(); renderChron(); renderNeigh(); renderCouncil(); renderGroups();
-  $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderProjects() } else if (curTab === 'world') { renderChron(); renderNeigh() } else if (curTab === 'society') { renderCouncil(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
 function renderTech() {
@@ -303,6 +303,14 @@ function updateInspector() {
       ${usage ? `<div class="hint" style="margin-top:6px">${usage}</div>` : ''}${s.last ? `<div class="hint" style="margin-top:4px">Last event: ${escapeHtml(s.last)}</div>` : ''}${s.hp / s.maxHp < 0.75 ? `<div class="hint" style="margin-top:4px">${s.repairer ? 'A builder is on the way to mend it.' : 'Needs repair: builders will mend it when the stores allow.'}</div>` : ''}`;
   } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
 }
+/* ---- side panel tabs ---- */
+let curTab = 'village'; try { curTab = localStorage.getItem('villagesim.tab') || 'village' } catch (e) { }
+function showTab(t) {
+  if (!$('tab_' + t)) t = 'village'; curTab = t; try { localStorage.setItem('villagesim.tab', t) } catch (e) { }
+  document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab_' + t));
+  if (world) updateUI();
+}
+$('tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab) }); showTab(curTab);
 const chart = $('chart'), cc = chart.getContext('2d');
 function drawChart() {
   const h = world.hist, cw = chart.width, ch = chart.height; cc.clearRect(0, 0, cw, ch); if (h.length < 2) return;
@@ -324,7 +332,7 @@ function pick(sx, sy) {
   for (const v of world.vills) { const d = Math.hypot(v.x * T - p.x, v.y * T - 6 - p.y); if (d < bd) { bd = d; best = v } }
   for (const a of world.animals) if (a.alive) { const d = Math.hypot(a.x * T - p.x, a.y * T - 5 - p.y); if (d < bd) { bd = d; best = a } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
-  selected = best; if (!best) follow = false; updateUI();
+  selected = best; if (!best) follow = false; else showTab('village'); updateUI();
 }
 const mini = $('mini');
 function miniGo(e) { const r = mini.getBoundingClientRect(); R.cam.x = (e.clientX - r.left) / r.width * CFG.W * CFG.T; R.cam.y = (e.clientY - r.top) / r.height * CFG.H * CFG.T; follow = false; clampCam() }

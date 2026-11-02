@@ -290,13 +290,15 @@ class Villager {
     const w = this.w;
     if (kind === 'food' && w.season >= 3) return false;
     let tgt = -1;
-    const path = w.search(this.tx, this.ty, (x, y) => {
+    const goal = (x, y) => {
       for (const [dx, dy] of NB) {
         const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= CFG.W || ny >= CFG.H) continue; const n = ny * CFG.W + nx, f = w.feat[n];
         const ok = kind === 'wood' ? (f === FEAT.OAK || f === FEAT.PINE) : kind === 'stone' ? f === FEAT.STONE : f === FEAT.BUSH && w.res[n] > 0;
         if (ok && w.claim[n] < 0) { tgt = n; return true }
       } return false;
-    }, kind === 'wood' ? 110 : 75);
+    };
+    let path = w.search(this.tx, this.ty, goal, kind === 'wood' ? 110 : 75);
+    if (!path && kind === 'stone' && w.stock.stone < 8 && w.beds() < w.vills.length + 4) path = w.search(this.tx, this.ty, goal, 140, true);       // the only rock may lie behind thick woods: cut a way through
     if (!path || tgt < 0) return false;
     w.claim[tgt] = this.id; this.claim = tgt; this.jobKind = 'gather';
     const camp = w.campNear(kind, tgt % CFG.W, (tgt / CFG.W) | 0), load = CFG.CARRY + (camp && kind === 'stone' ? 2 : 0), bonus = camp ? 1.25 : 1;       // a camp nearby: bigger loads, better yield, shorter trips
