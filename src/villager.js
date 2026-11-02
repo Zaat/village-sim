@@ -194,6 +194,7 @@ class Villager {
     const pa = w.proj && w.proj.active;                       // backers of a great project lend their hands
     if (pa && this.energy > 35 && w.r() < (pa.backers.includes(this.group) ? 0.6 : 0.08) && this.planBuild()) return;
     if (this.social < 40 + 30 * this.trait.soc && this.planSocial()) return;
+    if (this.social < 80 && w.r() < 0.3 && this.planMarket()) return;
     if (this.planWork()) return;
     if (this.social < 90 && this.planSocial()) return;
     this.planWander(6, false);
@@ -220,19 +221,24 @@ class Villager {
       this.jobKind = 'wander'; this.steps = [go((x, y) => x === gx && y === gy, null, 'Wandering', { maxCost: 40 }), work(40 + (w.r() * 80 | 0), 'Idling', null)]; return;
     }
   }
-  planFire() {
-    const w = this.w, meet = w.meetingDay === w.day && !w.meetingDone && w.gov.council.some(c => c.id === this.id);
-    for (let k = 0; k < 10; k++) {
-      const gx = Math.round(w.cx + (w.r() * 2 - 1) * 3), gy = Math.round(w.cy + (w.r() * 2 - 1) * 3);
-      if (!w.walkable(gy * CFG.W + gx)) continue;
-      this.jobKind = 'fire'; const fest = w.festival;
-      this.steps = [go((x, y) => x === gx && y === gy, null, meet ? 'To the council fire' : fest ? 'Off to the ' + w.holiday : 'To the campfire', { maxCost: 90 }),
-      work(meet ? 220 : fest ? 200 : 140, meet ? 'In council session' : fest ? w.holiday : 'Talking by the fire', () => {
-        let n = 0; for (const o of w.vills) { if (o === this || o.isChild() || o.sleeping || Math.hypot(o.x - this.x, o.y - this.y) > 4.5) continue; if (n >= 2) break; if (fest || w.r() < 0.55) { w.interact(this, o); n++ } }
-        if (fest) this.social = Math.min(100, this.social + 40);
-      })];
-      return;
-    }
+  planFire() {         // an evening, council session or holiday at the best venue the village has
+    const w = this.w, meet = w.meetingDay === w.day && !w.meetingDone && w.gov.council.some(c => c.id === this.id), fest = w.festival, P = gatherPlan(w, this, meet, fest);
+    if (!P) return;
+    this.jobKind = 'fire';
+    this.steps = [go((x, y) => x === P.x && y === P.y, null, P.go, { maxCost: 90 }),
+    work(P.ticks, P.stay, () => {
+      let n = 0; const lim = P.kind === 'tavern' ? 3 : 2, rad = P.kind === 'plaza' ? 6 : 4.5;
+      for (const o of w.vills) { if (o === this || o.isChild() || o.sleeping || Math.hypot(o.x - this.x, o.y - this.y) > rad) continue; if (n >= lim) break; if (fest || w.r() < 0.55) { w.interact(this, o); n++ } }
+      if (fest) this.social = Math.min(100, this.social + 40);
+      else if (P.kind === 'tavern') { this.social = Math.min(100, this.social + 18); this.mood = Math.min(100, this.mood + 1.5) }
+      else if (P.kind === 'plaza') { this.social = Math.min(100, this.social + 8); this.mood = Math.min(100, this.mood + 0.4) }
+    })];
+  }
+  planMarket() {       // browse the stalls while merchants are in town
+    const w = this.w, s = marketSpot(w); if (!s) return false; this.jobKind = 'fire';
+    this.steps = [go((x, y) => x === s.x && y === s.y, null, 'To the market', { maxCost: 80 }),
+    work(110, 'Browsing the market stalls', () => { const o = w.vills.find(o => o !== this && !o.isChild() && !o.sleeping && Math.hypot(o.x - this.x, o.y - this.y) < 5); if (o && w.r() < 0.6) w.interact(this, o); else this.social = Math.min(100, this.social + 8) })];
+    return true;
   }
   planSocial() {
     const w = this.w; let best = null, bd = 1e9;

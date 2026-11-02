@@ -225,6 +225,7 @@ function shipArt(g, x, y, dir, now) {
 }
 function campfireArt(g, w, b, now, dark) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, f = ((now / 110) | 0) % 3;
+  if (!R.hasPlaza) { rc(g, '#6a4a2a', X - 11, Y + 5, 3, 9); rc(g, '#7a5a34', X - 10, Y + 5, 1, 9); rc(g, '#6a4a2a', X + 24, Y + 5, 3, 9); rc(g, '#7a5a34', X + 25, Y + 5, 1, 9); rc(g, '#6a4a2a', X + 2, Y + 20, 12, 3); rc(g, '#7a5a34', X + 2, Y + 20, 12, 1) }   // log benches round the fire
   rc(g, '#7d858c', X + 2, Y + 11, 3, 3); rc(g, '#7d858c', X + 11, Y + 11, 3, 3); rc(g, '#7d858c', X + 5, Y + 13, 6, 2);
   rc(g, '#5a3a22', X + 3, Y + 10, 10, 2); rc(g, '#6b4a2a', X + 5, Y + 8, 6, 2);
   const fl = [['#e8672a', '#f7b733', '#fff1a8'], ['#e8582a', '#f9a825', '#ffe58a'], ['#ef7a30', '#f7c040', '#fff4b8']][f];
@@ -241,7 +242,7 @@ function bpArt(g, w, bp, now) {
   if (bp.prog > 0 && bp.type !== 'upgrade') { const hgt = Math.round(Ht * 0.6 * bp.prog / bp.time); rc(g, 'rgba(150,110,70,.75)', X + 3, Y + Ht - 6 - hgt, Wd - 6, hgt) }
 }
 function drawBuilding(g, w, b, now, dark) {
-  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark);
+  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark); else if (b.type === 'tavern') tavernArt(g, w, b, now, dark);
 }
 
 /* ---------- animals & villagers ---------- */
@@ -297,6 +298,7 @@ function drawVillager(g, v, w, now, sel) {
 function render(w, sel, now) {
   const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.season;
   if (R.terrKey !== key) { buildTerrain(w); R.terrKey = key }
+  R.hasPlaza = w.of('plaza').length > 0;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d1114'; g.fillRect(0, 0, R.cv.width, R.cv.height);
   const tlx = c.x - R.vw / (2 * z), tly = c.y - R.vh / (2 * z);
   g.setTransform(z * d, 0, 0, z * d, -tlx * z * d, -tly * z * d); g.imageSmoothingEnabled = false;
@@ -312,7 +314,7 @@ function render(w, sel, now) {
   for (const sc of w.scars) if (w.tick < sc.until && inViewR(sc, x0, x1, y0, y1)) scarArt(g, sc, w);
   const rows = []; for (let y = y0; y <= y1 + 3; y++) rows[y] = [];
   const inView = (bx, by, bw, bh) => bx + bw >= x0 && bx <= x1 && by + bh >= y0 && by <= y1 + 3;
-  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else if (b.type === 'market') marketArt(g, w, b, now); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
+  for (const b of w.buildings.values()) { if (!inView(b.x, b.y, b.w, b.h)) continue; if (b.type === 'farm') farmArt(g, w, b); else if (b.type === 'dock') dockArt(g, w, b, now); else if (b.type === 'market') marketArt(g, w, b, now); else if (b.type === 'plaza') plazaArt(g, w, b, now, dark); else { const rr = rows[Math.max(y0, Math.min(y1 + 3, b.y + b.h - 1))]; if (rr) rr.push({ y: (b.y + b.h) * T, fn: () => drawBuilding(g, w, b, now, dark) }) } }
   for (const bp of w.bps) if (inView(bp.x, bp.y, bp.w, bp.h)) bpArt(g, w, bp, now);
   if (w.econ.caravan && w.econ.caravan.sea) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = bt.mx + d.dir[0] * 2.2, sy = bt.my + d.dir[1] * 2.2, ty = Math.floor(sy); if (rows[ty]) rows[ty].push({ y: sy * T - 1, fn: () => shipArt(g, sx * T, sy * T, d.dir[0] >= 0 ? 1 : -1, now) }) }
   for (const bt of w.boats) { const ty = Math.floor(bt.y); if (rows[ty]) rows[ty].push({ y: bt.y * T - 2, fn: () => drawBoat(g, bt, w, now) }) }
@@ -355,7 +357,7 @@ function bunting(g, w, now) {
 function drawMinimap(w, sel) {
   const m = R.mini; if (!m || !R.miniBase) return; const g = m.getContext('2d');
   g.drawImage(R.miniBase, 0, 0);
-  for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : b.type === 'market' ? '#ffd24a' : PROJECTS[b.type] ? '#ffffff' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
+  for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : b.type === 'market' ? '#ffd24a' : b.type === 'plaza' ? '#e6dcb8' : b.type === 'tavern' ? '#e8805a' : PROJECTS[b.type] ? '#ffffff' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
   g.fillStyle = '#b99d6c'; for (let i = 0; i < w.road.length; i++) if (w.road[i]) g.fillRect(i % CFG.W, (i / CFG.W) | 0, 1, 1);
   for (const a of w.animals) if (a.alive && a.kind === 'wolf') { g.fillStyle = '#ff3b3b'; g.fillRect(a.x - 1, a.y - 1, 2, 2) }
   for (const v of w.vills) { g.fillStyle = v === sel ? '#fff' : '#ffe24a'; g.fillRect(v.x - 0.5, v.y - 0.5, 1.5, 1.5) }
@@ -413,4 +415,31 @@ function projectArt(g, w, b, now, dark) {
     for (const bx of [X + 5, X + 40]) { rc(g, '#5a5a56', bx, Y + 30, 4, 5); rc(g, '#ff9a3a', bx + 1, Y + 27 + Math.round(Math.sin(now / 130 + bx) * 0.6), 2, 3); rc(g, '#ffd24a', bx + 1, Y + 28, 2, 1) }
     rc(g, '#4a8a3c', X + 9, Y + 42, 4, 3); rc(g, '#4a8a3c', X + 35, Y + 42, 4, 3); if (snow) rc(g, '#f4f6fa', X + 20, Y, 8, 1);
   }
+}
+
+/* ---- gathering places ---- */
+function plazaArt(g, w, b, now, dark) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T, S = b.w * CFG.T, stone = w.has('masonry'), snow = w.season === 3;
+  rc(g, stone ? '#a9a395' : '#b79d6c', X, Y, S, S);
+  for (let i = 0; i < 26; i++) { const h = hash2(b.x + i, b.y * 3 + i * 7); rc(g, stone ? (i % 2 ? '#bdb7a8' : '#97917f') : (i % 2 ? '#c4aa78' : '#a58c5e'), X + 3 + (h & 63) % (S - 8), Y + 3 + ((h >> 6) & 63) % (S - 8), stone ? 5 : 3, stone ? 3 : 2) }
+  if (stone) { for (let k = 0; k < S; k += 8) { rc(g, 'rgba(0,0,0,.12)', X + k, Y, 1, S); rc(g, 'rgba(0,0,0,.12)', X, Y + k, S, 1) } rc(g, '#8f897a', X, Y, S, 2); rc(g, '#8f897a', X, Y + S - 2, S, 2); rc(g, '#8f897a', X, Y, 2, S); rc(g, '#8f897a', X + S - 2, Y, 2, S) }
+  else { rc(g, '#7a5a34', X, Y, S, 2); rc(g, '#7a5a34', X, Y + S - 2, S, 2); rc(g, '#7a5a34', X, Y, 2, S); rc(g, '#7a5a34', X + S - 2, Y, 2, S) }
+  const cx = X + S / 2 - 8, cy = Y + S / 2 - 8;                           // the well
+  rc(g, 'rgba(0,0,0,.2)', cx, cy + 14, 18, 3); rc(g, '#8a8678', cx, cy + 5, 16, 11); rc(g, '#a29d8e', cx + 1, cy + 5, 14, 3); rc(g, snow ? '#cfe4ee' : '#3f78a8', cx + 3, cy + 7, 10, 4); rc(g, '#6f6a5e', cx, cy + 13, 16, 3);
+  rc(g, '#5a3d22', cx + 1, cy - 4, 2, 10); rc(g, '#5a3d22', cx + 13, cy - 4, 2, 10); rc(g, '#7a5232', cx, cy - 5, 16, 2); rc(g, '#8a3c30', cx - 1, cy - 8, 18, 3); rc(g, '#6e2c22', cx + 2, cy - 10, 12, 2); rc(g, '#d9d0b0', cx + 7, cy - 3, 1, 5);
+  for (const [bx, by, h] of [[X + 6, Y + S - 12, 1], [X + S - 22, Y + S - 12, 1], [X + 6, Y + 8, 0], [X + S - 22, Y + 8, 0]]) { rc(g, '#6a4a2a', bx, by, 16, 3); rc(g, '#8a6a42', bx, by, 16, 1); rc(g, '#4a331c', bx + 1, by + 3, 2, 2); rc(g, '#4a331c', bx + 13, by + 3, 2, 2); void h }
+  for (const [px, py] of [[X + 4, Y + 4], [X + S - 11, Y + 4]]) { rc(g, '#5a3d22', px + 3, py + 4, 3, 4); rc(g, snow ? '#e8eef0' : '#3f8a3c', px, py, 9, 6); rc(g, snow ? '#fff' : '#4fa04a', px + 2, py - 2, 5, 3) }
+  if (w.festival) for (let k = 0; k < 8; k++) rc(g, ['#c8443c', '#f0d878', '#3c6fb4', '#4a9a4a'][k % 4], X + 4 + k * 9, Y + 12 + (k % 2) * 2, 4, 5);
+  if (dark > 0.3) for (const [lx, ly] of [[X + 3, Y + S / 2], [X + S - 5, Y + S / 2]]) { rc(g, '#4a331c', lx, ly, 2, 8); rc(g, '#ffe58a', lx - 1, ly - 3, 4, 4); g.fillStyle = 'rgba(255,220,130,.16)'; g.beginPath(); g.arc(lx + 1, ly - 1, 22, 0, 6.3); g.fill() }
+}
+function tavernArt(g, w, b, now, dark) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T, Wd = b.w * CFG.T, snow = w.season === 3, lit = dark > 0.25 || w.tod > 0.55, stone = w.has('masonry');
+  rc(g, 'rgba(0,0,0,.22)', X + 1, Y + 44, Wd, 4);
+  rc(g, stone ? '#8f8a80' : '#7a5a34', X + 3, Y + 28, Wd - 6, 18); rc(g, '#a07a4a', X + 3, Y + 18, Wd - 6, 12); for (let k = 0; k < Wd - 6; k += 6) rc(g, '#6f5436', X + 3 + k, Y + 18, 1, 12);
+  for (let r = 0; r < 15; r++) { const l = Math.round(r * 1.2); rc(g, r % 2 ? '#5a4030' : '#6a4c38', X + l, Y + 3 + r, Wd - 2 * l, 1) } rc(g, '#3e2a1c', X, Y + 18, Wd, 1); if (snow) rc(g, '#f4f6fa', X + 8, Y + 3, Wd - 16, 2);
+  rc(g, '#3e2a18', X + 19, Y + 30, 10, 16); rc(g, lit ? '#ffcf6a' : '#5a3d22', X + 20, Y + 31, 8, 15); rc(g, '#3e2a18', X + 23, Y + 31, 1, 15);
+  for (const wx of [X + 7, X + 34]) { rc(g, '#3e2a18', wx, Y + 32, 8, 7); rc(g, lit ? '#ffd98a' : '#9fc4d8', wx + 1, Y + 33, 6, 5); if (lit) { g.fillStyle = 'rgba(255,200,110,.14)'; g.beginPath(); g.arc(wx + 4, Y + 36, 14, 0, 6.3); g.fill() } }
+  rc(g, '#5a3d22', X + Wd - 6, Y + 20, 1, 10); rc(g, '#5a3d22', X + Wd - 6, Y + 20, 6, 1); rc(g, '#c9a22a', X + Wd - 4, Y + 22, 4, 5); rc(g, '#e8c84a', X + Wd - 3, Y + 23, 2, 3);
+  rc(g, '#6a4a2a', X + 1, Y + 38, 5, 7); rc(g, '#8a6a3a', X + 1, Y + 40, 5, 1); rc(g, '#6a4a2a', X + 7, Y + 41, 4, 5);
+  rc(g, '#6a6a66', X + 6, Y + 1, 5, 9); if (w.season !== 1 || lit) for (let k = 0; k < 2; k++) { const t = ((now / 850) + k / 2) % 1; g.fillStyle = `rgba(200,200,205,${0.5 * (1 - t)})`; g.fillRect(X + 7 + Math.sin(t * 4 + k) * 2, Y - 1 - t * 10, 3, 3) }
 }

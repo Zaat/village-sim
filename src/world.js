@@ -156,6 +156,8 @@ class World {
     if (PROJECTS[bp.type]) { projectDone(this, b, bp); return }
     if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.say('A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
     if (bp.type === 'market') this.say('A market square is opened. Merchants will know where to find us.');
+    if (bp.type === 'plaza') this.say(this.has('masonry') ? 'A cobbled village square is finished, with a well at its heart.' : 'A village square is laid out around a new well. The village has a place to meet.');
+    if (bp.type === 'tavern') this.say('A tavern opens its doors. Evenings will be livelier.');
     if (bp.type === 'logcamp') this.say('A logging camp is raised beside the forest.');
     if (bp.type === 'minecamp') this.say('A mining camp opens at the rockface.');
     if (bp.type === 'lodge') this.say('A hunting lodge is built near the game trails.');
