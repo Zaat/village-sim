@@ -98,7 +98,7 @@ class Villager {
     if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
     if ((w.tick + this.id) % 10 === 0 && !this.sleeping && this.checkDanger()) return;
-    if (this.hunger < 18 && w.stock.food > 0 && this.jobKind !== 'eat' && this.jobKind !== 'flee' && !this.carry && !this.sleeping) { this.abort(0); this.planEat() }
+    if (this.hunger < 18 && w.stock.food > 0 && w.tick >= (this.noEat || 0) && this.jobKind !== 'eat' && this.jobKind !== 'flee' && !this.carry && !this.sleeping) { this.abort(0); this.planEat() }
 
     if (!this.cur) {
       if (this.steps.length) { this.cur = this.steps.shift(); if (!this.begin()) return }
@@ -126,7 +126,8 @@ class Villager {
       if (!this.path && !st.maxCost) this.path = w.search(this.tx, this.ty, st.goal, undefined, true);     // boxed in: hack through brush
       if (this.path && this.path.length > 2) this.path = w.smoothPath(this.tx, this.ty, this.path);
       if (!this.path && st.onFail) st.onFail();
-      if (!this.path) { this.path = []; if (this.hunger < 30) { this.stuck = (this.stuck || 0) + 1; if (this.stuck >= 2) this.rescue() } this.abort(); return false }
+      if (!this.path) { this.path = []; if (this.jobKind === 'eat') this.noEat = w.tick + 200;       // stores unreachable: do not re-flood the whole map every tick
+      if (this.hunger < 30) { this.stuck = (this.stuck || 0) + 1; if (this.stuck >= 2) this.rescue() } this.abort(); return false }
     } else { st.t = st.ticks; this.sleeping = !!st.sleep; this.fighting = !!st.fight }
     return true;
   }

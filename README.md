@@ -1,4 +1,4 @@
-# Village Sim v0.20
+# Village Sim v0.20.1
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
