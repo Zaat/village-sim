@@ -1,6 +1,6 @@
 // Resource balance probe: node tests/balance.js SEED DAYS
 const fs=require('fs'),vm=require('vm'),path=require('path');const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','character','regime','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;globalThis.resourceTargets=typeof resourceTargets!=="undefined"?resourceTargets:null;';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;globalThis.resourceTargets=typeof resourceTargets!=="undefined"?resourceTargets:null;';
 const ctx={console};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+(process.argv[2]||12345),days=+(process.argv[3]||96);
 const w=new ctx.World(seed,{survival:process.env.SURV==='1',disasters:process.env.DIS!=='0',crime:process.env.CRIME!=='0'});const rows=[];let blocked=0,coldDays=0,lowFood=0,fullWood=0,fullFood=0,n=0;const yr={};

@@ -1,4 +1,4 @@
-# Village Sim v0.14
+# Village Sim v0.15
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,16 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## When a village divides (new in 0.15)
+Unity is no longer just a number. A circle that feels unheard, is unhappy, or sits far from the way things are run can now act, and the council has to answer (or Claude can counsel it, if you have that switched on).
+- **Rival councils:** an aggrieved circle sets up its own council under its most charismatic member. The council can **seat** them (and shift policy toward their grievance), **ignore** them, or **seize** the leader. A divided council stalls its meetings.
+- **Strikes:** a circle can put down its tools over one policy. The council can **concede**, **hold out**, or **break** the strike. Strikers really stop working and gather at the square.
+- **Civil strife:** a long standoff, low unity and the violence setting can lead to street fighting with wounded and dead (it follows the *Crime* setting). It ends in one side holding the village, the rebels taking power, or a stalemate.
+- **Secession:** when fighting or a standoff cannot be mended, the council can **let a circle go** or forbid it. The circle sails off with its families and founds a **new settlement on a neighbouring island**. It appears on the Neighbours tab with the story of how it left (warm after a peaceful parting, cold after a bitter one), shares what the village knew, and trades, asks for aid or raids like any other neighbour.
+- **Sects:** a devout, charismatic villager can found a movement with its own doctrine: **Zealots** (press one way on all), **Ascetics** (simple shared living) or **Reformers** (open, questioning). The council may **tolerate**, **embrace** or **suppress** it, and each choice pulls the village differently.
+- **Regime buildings:** three new great works appear for villages that lean that way: the **Temple** (faith, fewer crimes, reconciles sects), the **Foundry** (faster work and learning) and the **Citadel** (deters raiders, makes coups and uprisings far harder). Each has its own art and building stats.
+- **Tuning:** coups, uprisings and purges now happen in natural play, openness no longer saturates, and Fractured Towns can emerge. The sweep tool reports strife per world.
 
 ## Villages that turn out differently (new in 0.14)
 Every village now finds its own path. Nothing is rolled or scripted: it emerges from who the people are, how they were raised, who comes to lead them and what they live through.
@@ -100,6 +110,16 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 | `src/society.js` | opinions and debates, bonds and rivalries, emergent social circles, elected council and policies, crime and justice, holidays and games |
 | `src/tech.js` | knowledge, research, the discovery tree, eras, house styles, upgrades |
 | `src/water.js` | docks and fishing boats |
+| `src/trade.js` | money, prices, taxes, merchant caravans |
+| `src/projects.js` | great projects (hall, library, bastion, monument, amphitheatre, granary, lighthouse, temple, foundry, citadel) |
+| `src/history.js` | the chronicle and the lessons a village remembers |
+| `src/buildings.js` | building hit points, wear and repair |
+| `src/places.js` | the square, tavern and where villagers gather |
+| `src/neighbours.js` | other islands, fog of war, first contact by boat |
+| `src/diplomacy.js` | treaties, aid, visits, tribute and raids |
+| `src/character.js` | temperament, faith, ambition and upbringing |
+| `src/regime.js` | how the village is ruled: six axes, regime labels, coups, prophets, uprisings, heirs |
+| `src/strife.js` | rival councils, strikes, civil strife, secession to new settlements, sects |
 | `src/debug.js` | diagnostics: error history, performance numbers, downloadable reports |
 | `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
 | `src/render.js` | camera, seasonal terrain cache, pixel art drawn in code, lighting, minimap |

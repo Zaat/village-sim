@@ -42,6 +42,24 @@ const PROJECTS = {
     fit: v => 0.4 * (1 - v.trait.brave) + 0.3 * (1 - v.trait.ind) + 0.3 * v.trait.kind,
     focus: 'safety', need: w => clamp(0.8 * lesson(w, 'famine') + (w.stock.food < w.vills.length * 5 ? 0.3 : 0), 0, 1)
   },
+  temple: {
+    name: 'Temple', tech: 'masonry', size: [4, 3], cost: { wood: 40, stone: 70 }, time: 1000, minPop: 28, req: w => !!(w.rx && (w.rx.P > 0.1 || (w.regime && w.regime.prophet) || (w.strife && w.strife.sect))),
+    pitch: 'a temple where the faithful can gather', gives: 'The faithful are lifted every day, thefts fall, and rival creeds find a shared roof.',
+    fit: v => 0.6 * v.char.piety + 0.2 * v.trait.soc + 0.2 * (1 - v.trait.cur),
+    focus: 'community', need: w => clamp(0.6 * (w.rx ? w.rx.P : 0) + (w.regime && w.regime.prophet ? 0.3 : 0) + (w.strife && w.strife.sect ? 0.3 : 0) + 0.2 * lesson(w, 'famine'), 0, 1)
+  },
+  foundry: {
+    name: 'Foundry', tech: 'ironwork', size: [3, 3], cost: { wood: 50, stone: 70 }, time: 1000, minPop: 30, req: w => !!(w.rx && w.rx.I > 0.1),
+    pitch: 'a stone foundry and workshop', gives: 'Every trade works about 8% faster, and new ideas come a little sooner.',
+    fit: v => 0.35 * v.trait.cur + 0.3 * v.trait.ind + 0.35 * v.char.amb,
+    focus: 'enterprise', need: w => clamp(0.9 * (w.rx ? w.rx.I : 0) + (w.stock.stone < 30 ? 0.1 : 0), 0, 1)
+  },
+  citadel: {
+    name: 'Citadel', tech: 'ironwork', size: [4, 3], cost: { wood: 40, stone: 120 }, time: 1300, minPop: 38, req: w => projBuilt(w, 'bastion') && !!(w.rx && w.rx.A > 0.15),
+    pitch: 'a garrisoned citadel above the village', gives: 'A standing garrison deters raiders, cows crime, and makes uprisings and coups far harder.',
+    fit: v => 0.4 * v.trait.brave + 0.3 * (v.op.defense + 1) / 2 + 0.3 * (v.op.law + 1) / 2,
+    focus: 'safety', need: w => clamp(0.9 * (w.rx ? w.rx.A : 0) + 0.3 * lesson(w, 'raids') + (w.strife && (w.strife.shadow || w.strife.civil) ? 0.3 : 0), 0, 1)
+  },
   lighthouse: {
     name: 'Lighthouse', tech: 'navigation', size: [2, 3], cost: { wood: 40, stone: 60 }, time: 900, minPop: 30, req: w => w.of('dock').length > 0, place: placeLighthouse,
     pitch: 'a lighthouse above the docks to guide the boats home', gives: 'The deep fisheries recover faster, and trading ships come more often.',
@@ -126,5 +144,6 @@ function projectDay(w) {
   if (P.cooldown > 0) P.cooldown--;
   if (P.active && !w.bps.some(b => b.type === P.active.type)) P.active = null;       // site lost: forget it
   if (projBuilt(w, 'monument')) for (const v of adultsOf(w)) v.mood = clamp(v.mood + 0.6, 0, 100);
+  if (projBuilt(w, 'temple')) for (const v of adultsOf(w)) if (v.char && v.char.piety > 0.55) v.mood = clamp(v.mood + 0.5, 0, 100);
   if (projBuilt(w, 'hall') && w.festival) for (const v of adultsOf(w)) v.mood = clamp(v.mood + 0.8, 0, 100);
 }

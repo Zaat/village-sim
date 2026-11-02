@@ -397,6 +397,27 @@ function projectArt(g, w, b, now, dark) {
     if (snow) for (let k = 0; k < 5; k++) rc(g, '#f4f6fa', X + 3 + k * 9, Y + 3, 6, 1);
     rc(g, '#2a2c30', X + 19, Y + 30, 10, 14); rc(g, '#4a3420', X + 20, Y + 31, 8, 13); rc(g, '#2a2c30', X + 9, Y + 20, 2, 7); rc(g, '#2a2c30', X + 37, Y + 20, 2, 7);
     rc(g, '#5a3d22', X + 23, Y - 8, 2, 12); rc(g, '#3c6fb4', X + 25, Y - 8, 9, 5); rc(g, '#f0e6d0', X + 28, Y - 7, 3, 3);
+  } else if (b.type === 'temple') {
+    rc(g, '#a8a498', X + 2, Y + 40, Wd - 4, 6); rc(g, '#bab6aa', X + 5, Y + 36, Wd - 10, 5);
+    rc(g, '#e6e0d0', X + 8, Y + 16, Wd - 16, 21); for (let k = 0; k < 5; k++) { rc(g, '#f6f2e6', X + 10 + k * 10, Y + 16, 4, 21); rc(g, '#cfc8b6', X + 13 + k * 10, Y + 16, 1, 21) }
+    rc(g, '#d9d2c0', X + 6, Y + 12, Wd - 12, 5); for (let r = 0; r < 10; r++) { const l = Math.round((9 - r) * 2.6); rc(g, r % 2 ? '#c9b472' : '#d9c88a', X + 6 + l, Y + 2 + r, Wd - 12 - 2 * l, 1) }
+    rc(g, '#e8c84a', X + Wd / 2 - 3, Y + 6, 6, 6); rc(g, '#fff2a8', X + Wd / 2 - 1, Y + 8, 2, 2); if (snow) rc(g, '#f4f6fa', X + 12, Y + 2, Wd - 24, 2);
+    rc(g, '#3e2c1c', X + Wd / 2 - 4, Y + 26, 8, 11); rc(g, '#5a4028', X + Wd / 2 - 3, Y + 27, 6, 10); rc(g, lit ? '#ffd98a' : '#b9d4e8', X + 17, Y + 22, 3, 6); rc(g, lit ? '#ffd98a' : '#b9d4e8', X + Wd - 20, Y + 22, 3, 6);
+    if (lit) { g.fillStyle = 'rgba(255,230,150,.25)'; g.fillRect(X + Wd / 2 - 8, Y + 38, 16, 8) }
+  } else if (b.type === 'foundry') {
+    rc(g, '#55555c', X + 2, Y + 42, Wd - 4, 4); rc(g, '#6a6a70', X + 4, Y + 20, Wd - 8, 23); for (let r = 0; r < 5; r++) for (let k = 0; k < 6; k++) rc(g, (r + k) % 2 ? '#7a7a80' : '#62626a', X + 4 + k * 7 + (r % 2) * 3, Y + 22 + r * 4, 6, 1);
+    for (let r = 0; r < 8; r++) rc(g, r % 2 ? '#3c3c44' : '#44444c', X + 2 + r, Y + 11 + r, Wd - 4 - 2 * r, 1); rc(g, '#2c2c32', X + 2, Y + 19, Wd - 4, 1);
+    rc(g, '#4a4a52', X + Wd - 16, Y - 2, 8, 22); rc(g, '#33333a', X + Wd - 17, Y - 4, 10, 3);
+    for (let k = 0; k < 3; k++) { const t = ((now / 800) + k / 3) % 1; g.fillStyle = `rgba(60,60,66,${0.55 * (1 - t)})`; g.fillRect(X + Wd - 14 + Math.sin(t * 5 + k) * 3, Y - 8 - t * 20, 4, 4) }
+    rc(g, '#1c1c20', X + 10, Y + 30, 12, 13); const fl = 0.7 + 0.3 * Math.sin(now / 90); g.fillStyle = `rgba(255,${Math.round(110 + 60 * fl)},40,${0.7 + 0.3 * fl})`; g.fillRect(X + 12, Y + 33, 8, 8); rc(g, '#ffd24a', X + 14, Y + 36, 4, 4);
+    rc(g, '#2c2c30', X + 30, Y + 36, 8, 3); rc(g, '#2c2c30', X + 32, Y + 39, 4, 4); if (snow) rc(g, '#f4f6fa', X + 4, Y + 11, Wd - 8, 1);
+  } else if (b.type === 'citadel') {
+    rc(g, '#6e7278', X + 6, Y + 14, Wd - 12, Ht - 17); for (let r = 0; r < 6; r++) for (let k = 0; k < 8; k++) rc(g, (r + k) % 2 ? '#80858c' : '#666a70', X + 6 + k * 7 + (r % 2) * 3, Y + 18 + r * 5, 6, 1);
+    for (const tx of [X + 1, X + Wd - 15]) { rc(g, '#5f6368', tx, Y + 2, 14, Ht - 5); for (let k = 0; k < 3; k++) rc(g, '#80858c', tx + k * 5, Y - 2, 4, 5); rc(g, '#2a2c30', tx + 6, Y + 14, 2, 8); rc(g, '#4a4e54', tx, Y + 12, 14, 1) }
+    rc(g, '#5f6368', X + 14, Y + 8, Wd - 28, 7); for (let k = 0; k < 5; k++) rc(g, '#80858c', X + 15 + k * 7, Y + 4, 5, 5);
+    rc(g, '#2a2c30', X + Wd / 2 - 6, Y + 28, 12, 17); rc(g, '#4a3420', X + Wd / 2 - 5, Y + 29, 10, 16); rc(g, '#2a2c30', X + Wd / 2 - 6, Y + 28, 12, 2);
+    rc(g, '#5a3d22', X + Wd / 2 - 1, Y - 12, 2, 18); rc(g, '#7a1c1c', X + Wd / 2 + 1, Y - 12, 11, 6); rc(g, '#e8d8a0', X + Wd / 2 + 4, Y - 11, 3, 3);
+    if (snow) for (let k = 0; k < 5; k++) rc(g, '#f4f6fa', X + 15 + k * 7, Y + 4, 5, 1);
   } else if (b.type === 'amphitheatre') {
     rc(g, '#9a9588', X + 1, Y + 14, Wd - 2, 32); rc(g, '#b8b3a4', X + 3, Y + 16, Wd - 6, 28);
     for (let k = 0; k < 4; k++) { rc(g, k % 2 ? '#cfcabb' : '#d9d4c5', X + 5 + k * 3, Y + 18 + k * 4, Wd - 10 - k * 6, 3); rc(g, '#8f8a7c', X + 5 + k * 3, Y + 21 + k * 4, Wd - 10 - k * 6, 1) }

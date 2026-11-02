@@ -88,7 +88,7 @@ function regimeDay(w) {
   let gap = 0, gn = 0; for (const g of w.groups) for (const h of w.groups) if (g.id < h.id && g.op && h.op) { gap += ISSUES.reduce((s, k) => s + Math.abs(g.op[k] - h.op[k]), 0) / ISSUES.length; gn++ }
   const pm = ad.reduce((s, v) => s + v.char.piety, 0) / ad.length, psplit = clamp(Math.sqrt(ad.reduce((s, v) => s + (v.char.piety - pm) * (v.char.piety - pm), 0) / ad.length) / 0.3, 0, 1);
   const opp = w.groups.filter(g => g.satisfied < -0.4).reduce((s, g) => s + g.members.length, 0) / Math.max(1, ad.length);
-  const div = 0.22 * (pairs ? riv / pairs : 0) + 0.2 * clamp(polarization(ad) / 0.5, 0, 1) + 0.18 * disc + 0.12 * psplit + 0.14 * clamp((gn ? gap / gn : 0) / 0.5, 0, 1) + 0.14 * clamp(opp / 0.4, 0, 1) + 0.22 * clamp((alien0 - 0.1) / 0.2, 0, 1) + 0.15 * (w.has('coinage') ? giniOf(ad) : 0) + (w.day - R.lastCoup < 60 ? 0.1 : 0) + (w.day - (R.lastPurge || -999) < 60 ? 0.08 : 0); R.div = div; R.alien = alien0;
+  const div = 0.22 * (pairs ? riv / pairs : 0) + 0.2 * clamp(polarization(ad) / 0.5, 0, 1) + 0.18 * disc + 0.12 * psplit + 0.14 * clamp((gn ? gap / gn : 0) / 0.5, 0, 1) + 0.14 * clamp(opp / 0.4, 0, 1) + 0.22 * clamp((alien0 - 0.1) / 0.2, 0, 1) + 0.15 * (w.has('coinage') ? giniOf(ad) : 0) + (w.day - R.lastCoup < 60 ? 0.1 : 0) + (w.day - (R.lastPurge || -999) < 60 ? 0.08 : 0) + strifeDiv(w); R.div = div; R.psplit = psplit; R.alien = alien0;
   const wealth = w.has('coinage') ? giniOf(ad) : 0, techs = id => (w.has(id) ? 1 : 0);
   const T = {}, P = Object.fromEntries(AXES.map(k => [k, 0]));
   for (const v of ad) { const st = styleOf(v); for (const k of AXES) P[k] += st[k] / ad.length }
@@ -99,13 +99,13 @@ function regimeDay(w) {
   T.comm += 0.3 * wealth + 0.12 * (w.stock.food < ad.length * 2 ? 1 : 0) - 0.1 * (w.econ && w.econ.trades.length > 4 ? 1 : 0);
   T.pious += 0.25 * (lesson(w, 'famine') + lesson(w, 'fever') + lesson(w, 'cold')) / 3 + (R.prophet ? 0.18 : 0);
   T.indus += 0.5 * (roles - 0.45) + 0.02 * (techs('mining') + techs('ironwork') + techs('forestry') + techs('tools'));
-  T.open += 0.1 * w.gov.policy.growth + (w.neigh ? 0.04 * w.neigh.filter(n => n.pact > 0).length : 0) - 0.3 * lesson(w, 'raids');
-  T.cohes = 0.4 * T.cohes + 0.6 * clamp(1.0 - 3.0 * div, 0, 1);
+  T.open += 0.1 * w.gov.policy.growth + (w.neigh ? 0.04 * w.neigh.filter(n => n.pact > 0).length : 0) - 0.3 * lesson(w, 'raids') - 0.05 - 0.2 * Math.max(0, a.auth - 0.4) - 0.15 * Math.max(0, a.pious - 0.45) - 0.1 * crisis;
+  T.cohes = 0.4 * T.cohes + 0.6 * clamp(1.0 - 3.1 * div, 0, 1);
   for (const k of AXES) { T[k] += 0.25 * (a[k] - 0.5); T[k] = clamp(T[k], 0, 1); a[k] = clamp(a[k] + (T[k] - a[k]) * 0.02, 0, 1) }       // a way of life reinforces itself
   // the label changes only when the change lasts
   const cand = regimeLabel(a, L && L.c);
-  if (cand !== R.label) { if (cand === R.cand) R.candDays++; else { R.cand = cand; R.candDays = 1 } if (R.candDays >= 8) { const old = R.label; R.label = cand; R.since = w.day; R.candDays = 0; R.history.unshift({ day: w.day, year: w.year, from: old, to: cand }); if (R.history.length > 8) R.history.pop(); if (w.day > 20) w.emit('regime', `The village has become a ${cand}. ${REGIME_TXT[cand] || ''}`, { label: cand }) } } else { R.cand = null; R.candDays = 0 }
-  w.rx = rxFrom(a);
+  if (cand !== R.label) { if (cand === R.cand) R.candDays++; else { R.cand = cand; R.candDays = 1 } if (R.candDays >= 8) { const old = R.label; R.label = cand; R.since = w.day; R.candDays = 0; R.history.unshift({ day: w.day, year: w.year, from: old, to: cand }); if (R.history.length > 8) R.history.pop(); if (w.day > 20) w.emit('regime', `The village has become ${/^[AEIOU]/.test(cand) ? 'an' : 'a'} ${cand}. ${REGIME_TXT[cand] || ''}`, { label: cand }) } } else { R.cand = null; R.candDays = 0 }
+  w.rx = rxBuildings(w, rxFrom(a));
   R.leaderText = leaderText(w);
   updateHeir(w);
   if (w.day % 2 === 0) regimeEvents(w, crisis, approval, ad);
@@ -155,11 +155,11 @@ function regimeEvents(w, crisis, approval, ad) {
   const R = w.regime, g = w.gov, chief = chiefOf(w), pop = ad.length;
   if (R.prophet && !w.vills.some(v => v.id === R.prophet.id)) { R.prophet = null }
   // unrest builds where a hard regime is hated
-  if (R.ax.auth > 0.6 && approval < 53) R.unrest += 2; else if (R.ax.auth > 0.7 && approval < 66) R.unrest += 1; else R.unrest = Math.max(0, R.unrest - 2);
+  if (R.ax.auth > 0.6 && approval < 53) R.unrest += 2; else if (R.ax.auth > 0.7 && approval < 66) R.unrest += 1; else if (R.ax.auth > 0.5 && approval < 45) R.unrest += 1; else if (R.ax.auth > 0.6 && (R.alien || 0) > 0.2 && ad.filter(v => v.mood < 50).length >= 0.25 * pop) R.unrest += 1; else R.unrest = Math.max(0, R.unrest - 2);
   // 1. uprising
-  if (R.unrest >= 30 && pop >= 14 && ad.filter(v => v.mood < 45).length >= 0.2 * pop && w.r() < 0.08) return uprising(w, ad, chief);
+  if (R.unrest >= 24 && pop >= 14 && ad.filter(v => v.mood < 48).length >= 0.18 * pop && w.r() < 0.1 * (projBuilt(w, 'citadel') ? 0.5 : 1)) return uprising(w, ad, chief);
   // 2. a strongman seizes power
-  if (R.ax.auth < 0.7 && pop >= 14 && w.day - R.lastCoup > 90 && w.day > 60) { const p = 0.05 * (0.3 + 1.4 * crisis + (approval < 55 ? 0.5 : 0)) * (1 + 2.5 * Math.max(0, 0.6 - R.ax.cohes)); if (w.r() < p && tryCoup(w, ad, chief, crisis)) return }
+  if (R.ax.auth < 0.75 && pop >= 14 && w.day - R.lastCoup > 80 && w.day > 60) { const p = 0.055 * (projBuilt(w, 'citadel') ? 0.5 : 1) * (0.3 + 1.4 * crisis + (approval < 55 ? 0.5 : 0)) * (1 + 2.5 * Math.max(0, 0.6 - R.ax.cohes)); if (w.r() < p && tryCoup(w, ad, chief, crisis)) return }
   // 3. a prophet rises
   if (!R.prophet && pop >= 12 && w.day - R.lastProphet > 120) {
     const cand = ad.filter(v => v.char.piety > 0.7 && v.charisma() > 0.5 && v.age < 75).sort((a, b) => b.char.piety * b.charisma() - a.char.piety * a.charisma())[0];
@@ -171,7 +171,7 @@ function regimeEvents(w, crisis, approval, ad) {
     }
   }
   // 4. a hard ruler purges critics
-  if (R.ax.auth > 0.75 && chief && chief.char.ruth > 0.6 && w.day - (R.lastPurge || -999) > 25 && w.r() < 0.06) {
+  if (R.ax.auth > 0.7 && chief && chief.char.ruth > 0.55 && w.day - (R.lastPurge || -999) > 25 && w.r() < 0.09) {
     const targets = ad.filter(v => v !== chief && !g.council.some(c => c.id === v.id)).sort((a, b) => (relOf(w, chief, a) - 20 * a.trait.ind - 10 * a.op.law) - (relOf(w, chief, b) - 20 * b.trait.ind - 10 * b.op.law)).slice(0, 1 + (w.r() < 0.4 ? 1 : 0));
     if (targets.length) { R.lastPurge = w.day; R.purges++; for (const t of targets) { t.stocksUntil = w.tick + CFG.TPD * 3; t.mood = Math.max(0, t.mood - 15); w.rel.set(w.relKey(chief, t), -60); t.story(`Was seized on ${chief.name}'s orders for speaking out.`) } for (const v of ad) v.mood = Math.max(0, v.mood - 1.5); w.emit('regime', `${chief.name} has ${targets.map(t => t.name).join(' and ')} seized and locked in the stocks as critics. The village goes quiet.`, { purge: true }) }
   }
@@ -185,11 +185,11 @@ function regimeEvents(w, crisis, approval, ad) {
 }
 function tryCoup(w, ad, chief, crisis) {
   const R = w.regime, g = w.gov;
-  const cand = ad.filter(v => v !== chief && v.age < 70 && v.char.amb > 0.6 && v.char.ruth > 0.45 && v.charisma() > 0.5).sort((a, b) => b.char.amb * b.charisma() - a.char.amb * a.charisma())[0]; if (!cand) return false;
+  const cand = ad.filter(v => v !== chief && v.age < 70 && v.char.amb > 0.58 && v.char.ruth > 0.42 && v.charisma() > 0.48).sort((a, b) => b.char.amb * b.charisma() - a.char.amb * a.charisma())[0]; if (!cand) return false;
   const followers = ad.filter(o => o !== cand && (o.group && o.group === cand.group || relOf(w, cand, o) > 25) && o.char.ruth > 0.35); if (followers.length < Math.max(3, Math.round(0.06 * ad.length))) return false;
   const size = councilSize(ad.length), crew = followers.sort((a, b) => b.char.amb - a.char.amb).slice(0, size - 1), titles = ['Warden', 'Steward', 'Speaker'], old = g.council.map(c => memberOf(w, c.id)).filter(Boolean);
   g.council = [{ id: cand.id, title: 'Chief' }, ...crew.map((v, i) => ({ id: v.id, title: titles[i] || 'Councillor' }))]; g.termEnd = w.day + CFG.DPS * 8; g.elections++;
-  R.ax.auth = Math.min(1, R.ax.auth + 0.25); R.ax.cohes = Math.max(0, R.ax.cohes - 0.08); R.lastCoup = w.day; R.coups++; R.noManage = 0; experience(cand, 'power', 3); cand.story('Seized the leadership of the village.');
+  R.ax.auth = Math.min(1, R.ax.auth + 0.15); R.ax.cohes = Math.max(0, R.ax.cohes - 0.08); R.lastCoup = w.day; R.coups++; R.noManage = 0; experience(cand, 'power', 3); cand.story('Seized the leadership of the village.');
   for (const o of old) if (!g.council.some(c => c.id === o.id)) { o.mood = Math.max(0, o.mood - 10); if (o === chief) { o.stocksUntil = w.tick + CFG.TPD * 2; o.story('Was thrown from power and locked in the stocks.') } }
   for (const v of ad) if (v.trait.ind > 0.6 && v.char.ruth < 0.45) v.mood = Math.max(0, v.mood - 6);
   w.emit('regime', `${cand.name}, ${ruthWord(cand.char)} and ${ambWord(cand.char)}, seizes power with ${crew.length} supporters${crisis > 0.35 ? ' in a time of crisis' : ''}. The old council is dismissed${chief ? ' and ' + chief.name + ' is locked in the stocks' : ''}.`, { coup: cand }); return true;
@@ -213,6 +213,6 @@ function regimeNeed(w, id) {
 /* what a great work means to this kind of village */
 function regimeProjectBias(w, id) {
   const rx = w.rx; if (!rx) return 0;
-  const tbl = { bastion: 0.5 * rx.A + 0.3 * rx.I, monument: 0.6 * rx.A + 0.5 * rx.P, library: 0.5 * rx.O - 0.4 * rx.P - 0.3 * rx.A, hall: 0.4 * rx.C + 0.2 * rx.O, amphitheatre: 0.4 * rx.C + 0.3 * rx.P, granaryhall: 0.4 * rx.C + 0.2 * rx.P, lighthouse: 0.5 * rx.O + 0.2 * rx.I };
+  const tbl = { bastion: 0.5 * rx.A + 0.3 * rx.I, monument: 0.6 * rx.A + 0.5 * rx.P, library: 0.5 * rx.O - 0.4 * rx.P - 0.3 * rx.A, hall: 0.4 * rx.C + 0.2 * rx.O, amphitheatre: 0.4 * rx.C + 0.3 * rx.P, granaryhall: 0.4 * rx.C + 0.2 * rx.P, lighthouse: 0.5 * rx.O + 0.2 * rx.I, temple: 0.6 * rx.P + 0.2 * rx.C, foundry: 0.7 * rx.I + 0.2 * rx.A, citadel: 0.6 * rx.A + 0.2 * rx.I };
   return 0.2 * (tbl[id] || 0);
 }

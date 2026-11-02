@@ -254,6 +254,7 @@ function councilBase(w) {
 }
 function holdMeeting(w) {
   const g = w.gov, ms = councilMembers(w); if (ms.length < 2) return;
+  if (w.strife && w.strife.shadow && w.r() < 0.2) { w.say('The council meets, but the rival council across the square has nothing to do with it, and nothing is decided.'); g.nextMeeting = w.day + 3; return }
   if (w.regime && w.regime.ax.cohes < 0.3 && w.r() < 0.5) { w.say('The council meeting dissolves into bickering and nothing is decided.'); g.nextMeeting = w.day + 3; return }
   const pop = w.vills.length, ad = adultsOf(w);
   const rate = crimeRate(w, 8), crisis = w.settings.crime && rate >= Math.max(2, Math.round(pop * 0.05)) && !g.trial;

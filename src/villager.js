@@ -29,7 +29,7 @@ class Villager {
     // society: identity, opinions, desires, story
     this.family = parents && (parents[1] || parents[0]) ? (parents[1] || parents[0]).family : SURNAMES[(w.r() * SURNAMES.length) | 0];
     this.partner = null; this.kids = []; this.parentIds = []; this.mood = 70; this.debates = 0; this.desire = null; this.nextDesire = w.day + 2; this.bio = []; this.reputation = 50; this.record = 0;
-    this.coins = 0; this.output = 0; this.earned = 0; this.duty = 0; this.stocksUntil = 0; this.group = null; this.friends = 0; this.enemies = 0; this.won = 0; this.mournUntil = 0;
+    this.coins = 0; this.output = 0; this.earned = 0; this.duty = 0; this.stocksUntil = 0; this.strikeUntil = 0; this.group = null; this.friends = 0; this.enemies = 0; this.won = 0; this.mournUntil = 0;
     const t = this.trait, o = b => clamp((b - 0.5) * 1.8 + (g() - 0.5) * 0.8, -1, 1);
     this.op = { growth: o(0.4 * t.kind + 0.3 * t.soc + 0.3 * t.cur), labor: o(0.6 * (1 - t.ind) + 0.4 * t.soc), law: o(0.5 * (1 - t.kind) + 0.3 * t.brave + 0.2 * (1 - t.cur)), defense: o(0.6 * (1 - t.brave) + 0.2 * (1 - t.kind) + 0.2), tax: o(0.55 * (1 - t.ind) + 0.45 * t.kind) };
     if (parents && parents[0]) for (const k of ISSUES) { const a = parents[0].op[k], b = parents[1] ? parents[1].op[k] : a; this.op[k] = clamp(0.6 * (a + b) / 2 + 0.4 * this.op[k], -1, 1) }
@@ -189,6 +189,7 @@ class Villager {
     if (this.hunger < (w.gov.welfare ? 55 : 40) && w.stock.food > 0) return this.planEat();
     if (w.isNight() || this.energy < 18) return this.planSleep();
     if (this.stocksUntil > w.tick) return this.planStocks();
+    if (this.strikeUntil > w.tick) return this.planStrike();
     if (this.age < CFG.INFANT_DAYS) return this.planWander(3, true);
     if (this.isChild()) return this.planWander(7, true);
     const inCouncil = w.gov.council.some(c => c.id === this.id);
@@ -201,6 +202,10 @@ class Villager {
     if (this.planWork()) return;
     if (this.social < 90 && this.planSocial()) return;
     this.planWander(6, false);
+  }
+  planStrike() {
+    const w = this.w; this.jobKind = 'strike';
+    this.steps = [go((x, y) => Math.abs(x - w.cx) + Math.abs(y - w.cy) <= 5, null, 'Gathering with the strikers', { maxCost: 90 }), work(120, 'On strike', null)];
   }
   planStocks() {
     const w = this.w; this.jobKind = 'stocks';

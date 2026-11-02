@@ -1,6 +1,6 @@
 // Old-size worlds still work, and the home island is identical in the wider map.
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','character','regime','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,serializeWorld,deserializeWorld});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','character','regime','strife','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,serializeWorld,deserializeWorld});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const a=new ctx.World(777,{}, [160,112]); const A=Array.from(a.terr), fa=Array.from(a.feat), ca=[a.cx,a.cy]; const wa=ctx.CFG.W;
 const b=new ctx.World(777); const Wb=ctx.CFG.W, ox=b.ox, oy=b.oy; let diff=0,fdiff=0;

@@ -209,7 +209,7 @@ function renderNeigh() {
     return `<div class="grp"><b>${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span>
       <div class="polh" style="margin-top:3px"><span class="hint">${relLabel(r)} (${r > 0 ? '+' : ''}${r})</span><span class="hint">${PACT_NAMES[n.pact || 0]}</span></div><div class="bar"><i style="background:${col};width:${pct}%"></i></div>
       <div class="hint">${compass(w, n.x, n.y)} · ${Math.max(1, Math.round(n.dist / 84 * 10) / 10)} day${n.dist > 100 ? 's' : ''} by boat · offers ${escapeHtml(NEIGH_PROFILE[n.kind].goods)}</div>
-      ${n.tribute > w.day ? `<div class="hint">Paid for peace until day ${n.tribute}</div>` : ''}${n.hist && n.hist[0] ? `<div class="hint">${escapeHtml(n.hist[0])}</div>` : ''}</div>`;
+      ${n.colony ? `<div class="hint">Founded on day ${n.colony.day} by ${escapeHtml(n.colony.circle)}, who left ${n.colony.mode === 'peace' ? 'in peace' : 'in bitterness'}.</div>` : ''}${n.tribute > w.day ? `<div class="hint">Paid for peace until day ${n.tribute}</div>` : ''}${n.hist && n.hist[0] ? `<div class="hint">${escapeHtml(n.hist[0])}</div>` : ''}</div>`;
   }).join('');
   html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '';
   el.innerHTML = html;
@@ -255,6 +255,16 @@ function renderRegime() {
   if (chief) h += `<div class="hint" style="margin-top:6px"><b style="color:var(--ink)">${escapeHtml(chief.v.name)}</b> leads. ${escapeHtml(R.leaderText.replace(chief.v.name + ' is', 'Is'))}</div>`;
   h += `<div class="hint" style="margin-top:4px">${R.ax.auth > 0.65 ? 'The Chief names the council.' : 'Councils are elected.'}${heir ? ` Heir: ${escapeHtml(heir.name)}.` : ''}${R.dynasty ? ` ${R.dynasty} inherited leadership${R.dynasty > 1 ? 's' : ''}.` : ''}${R.coups ? ` ${R.coups} coup${R.coups > 1 ? 's' : ''}.` : ''}${R.revolts ? ` ${R.revolts} uprising${R.revolts > 1 ? 's' : ''}.` : ''}${R.purges ? ` ${R.purges} purge${R.purges > 1 ? 's' : ''}.` : ''}${R.prophet ? ` ${escapeHtml(R.prophet.name)} preaches.` : ''}</div>`;
   if (R.history.length) h += `<div class="hint" style="margin-top:6px">${R.history.slice(0, 3).map(x => `Y${x.year}: ${escapeHtml(x.from)} to ${escapeHtml(x.to)}`).join('<br>')}</div>`;
+  const S = w.strife;
+  if (S) {
+    const ln = [];
+    if (S.shadow) ln.push(`<b style="color:#e0705a">Rival council:</b> ${escapeHtml(S.shadow.name)} under ${escapeHtml(S.shadow.leaderName)}, ${w.day - S.shadow.since} days`);
+    if (S.civil) ln.push(`<b style="color:#e0705a">Fighting</b> between the council and ${escapeHtml(S.civil.name)}`);
+    if (S.strike) ln.push(`<b style="color:#d9a24a">Strike:</b> ${escapeHtml(S.strike.name)} over ${escapeHtml(ISSUE_TXT[S.strike.issue].name.toLowerCase())}`);
+    if (S.sect) ln.push(`<b style="color:#b89cf0">${escapeHtml(S.sect.name)}</b> (${DOCTRINES[S.sect.doctrine].label.toLowerCase()}, ${S.sect.stance}): ${S.sect.members.length} followers`);
+    if (S.secessions || S.clashes || S.strikes || S.schisms) ln.push(`<span class="hint">History: ${S.secessions} secession${S.secessions === 1 ? '' : 's'}, ${S.strikes} strike${S.strikes === 1 ? '' : 's'}, ${S.clashes} clash${S.clashes === 1 ? '' : 'es'}${S.casualties ? ' (' + S.casualties + ' dead)' : ''}, ${S.schisms} sect${S.schisms === 1 ? '' : 's'}</span>`);
+    if (ln.length) h += `<div class="hint" style="margin-top:8px;line-height:1.5">${ln.join('<br>')}</div>`;
+  }
   el.innerHTML = h;
 }
 function renderCouncil() {
@@ -297,7 +307,7 @@ function updateInspector() {
   } else if (s instanceof Animal && s.alive) {
     el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'} Health ${Math.max(0, Math.round(s.hp))}.</div>`;
   } else if (s && s.type && s.w) {
-    const names = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', market: 'Market square', house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+    const names = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', market: 'Market square', house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
     let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
     if (s.type === 'market') extra = 'Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.';
     if (s.type === 'dock') { const bs = w.boats.filter(b => b.dock === s.id); extra = `${bs.length} fishing boat${bs.length === 1 ? '' : 's'} work from here (${bs.filter(b => b.state === 'out').length} at sea). Catches go straight to the stores.` }
