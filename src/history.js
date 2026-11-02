@@ -17,7 +17,7 @@ const LESSONS = {
   crime: { name: 'Crime', teaches: 'take law and order more seriously' }
 };
 const LESSON_STEPS = [0.3, 0.55, 0.8];
-const CHRON_KINDS = new Set(['discovery', 'era', 'project', 'election', 'lesson', 'event', 'cold', 'faction']);
+const CHRON_KINDS = new Set(['voyage', 'discovery', 'era', 'project', 'election', 'lesson', 'event', 'cold', 'faction']);
 function initHistory(w) { w.chron = { lessons: Object.fromEntries(Object.keys(LESSONS).map(k => [k, 0])), noted: Object.fromEntries(Object.keys(LESSONS).map(k => [k, 0])), events: [] } }
 const lesson = (w, k) => (w.chron ? w.chron.lessons[k] || 0 : 0);
 function chronicle(w, kind, text) {

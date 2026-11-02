@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'neighCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -183,7 +183,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  renderTech(); renderEcon(); renderProjects(); renderChron(); renderCouncil(); renderGroups();
+  renderTech(); renderEcon(); renderProjects(); renderChron(); renderNeigh(); renderCouncil(); renderGroups();
   $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -196,6 +196,15 @@ function renderTech() {
     <div class="techchips">${known.map(id => `<span class="chip" title="${escapeHtml(TECHS[id].desc)}"><i style="background:#9cc4ff"></i>${TECHS[id].name}</span>`).join('')}</div>
     ${t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('')}
     ${locked.length ? `<div class="hint" style="margin-top:6px">Still ahead: ${locked.map(id => TECHS[id].name).join(', ')}</div>` : ''}`;
+}
+function renderNeigh() {
+  const w = world, el = $('neighCard'), box = el.parentElement; box.style.display = w.neigh ? '' : 'none'; if (!w.neigh) return;
+  if (!w.has('boats')) { el.innerHTML = '<div class="hint">Beyond the horizon the sea may hide other lands. With boats, the village could one day find out.</div>'; return }
+  const found = w.neigh.filter(n => n.found), left = w.neigh.length - found.length, vy = w.voyage && w.vills.find(v => v.id === w.voyage.id);
+  let html = vy ? `<div class="hint" style="margin-bottom:6px">⛵ ${escapeHtml(vy.name)} is at sea, bound for unknown shores.</div>` : '';
+  html += found.map(n => `<div class="grp"><b>${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span><div class="hint">${compass(w, n.x, n.y)} of here, ${Math.max(1, Math.round(n.dist / 84 * 10) / 10)} day${n.dist > 100 ? 's' : ''} by boat · found day ${n.foundDay}</div><div class="hint">${escapeHtml(NEIGH_KINDS[n.kind].blurb)}</div></div>`).join('');
+  html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '<div class="hint" style="margin-top:6px">Every nearby land has been found. Trade and diplomacy come next.</div>';
+  el.innerHTML = html;
 }
 function renderChron() {
   const w = world, C = w.chron, el = $('chronCard'); if (!C) return;

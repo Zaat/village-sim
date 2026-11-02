@@ -71,8 +71,8 @@ class Animal {
 function spawnWildlife(w) {
   const { W, H } = CFG, far = (x, y) => Math.hypot(x - w.cx, y - w.cy) > 22;
   const put = (kind, n, cx, cy, spread) => { for (let k = 0; k < n; k++) for (let g = 0; g < 8; g++) { const x = Math.round(cx + (w.r() * 2 - 1) * spread), y = Math.round(cy + (w.r() * 2 - 1) * spread); if (x > 2 && y > 2 && x < W - 2 && y < H - 2 && w.walkable(y * W + x)) { w.animals.push(new Animal(w, kind, x, y)); break } } };
-  for (let h = 0; h < 9; h++) { const x = 8 + ((w.r() * (W - 16)) | 0), y = 8 + ((w.r() * (H - 16)) | 0); if (far(x, y)) put('deer', 3 + ((w.r() * 3) | 0), x, y, 5) }
-  for (let k = 0; k < 28; k++) { const x = 8 + ((w.r() * (W - 16)) | 0), y = 8 + ((w.r() * (H - 16)) | 0); if (w.r() < 0.5 || far(x, y)) put('rabbit', 1, x, y, 2) }
+  for (let h = 0; h < 9; h++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (far(x, y)) put('deer', 3 + ((w.r() * 3) | 0), x, y, 5) }
+  for (let k = 0; k < 28; k++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (w.r() < 0.5 || far(x, y)) put('rabbit', 1, x, y, 2) }
   for (let k = 0; k < 4; k++) { const a = w.r() * 6.28, d = 14 + w.r() * 8; put('deer', 2, w.cx + Math.cos(a) * d, w.cy + Math.sin(a) * d, 3) }   // a few within hunting range
 }
 function animalsNewDay(w) {
@@ -82,5 +82,5 @@ function animalsNewDay(w) {
     if (dc < 40) for (const a of w.animals.slice()) if (a.kind === 'deer' && a.alive && a.sex === 'f' && w.r() < 0.06) { const n = new Animal(w, 'deer', a.x | 0, a.y | 0); n.x = a.x; n.y = a.y; w.animals.push(n) }
     if (rc < 90) for (const a of w.animals.slice()) if (a.kind === 'rabbit' && a.alive && w.r() < 0.12) { const n = new Animal(w, 'rabbit', a.x | 0, a.y | 0); n.x = a.x; n.y = a.y; w.animals.push(n) }
   }
-  if (count('deer') < 8) { for (let g = 0; g < 20; g++) { const x = 8 + ((w.r() * (CFG.W - 16)) | 0), y = 8 + ((w.r() * (CFG.H - 16)) | 0); if (Math.hypot(x - w.cx, y - w.cy) > 24 && w.walkable(y * CFG.W + x)) { for (let k = 0; k < 3; k++)w.animals.push(new Animal(w, 'deer', x, y)); break } } }
+  if (count('deer') < 8) { for (let g = 0; g < 20; g++) { const x = w.ox + 8 + ((w.r() * 144) | 0), y = w.oy + 8 + ((w.r() * 96) | 0); if (Math.hypot(x - w.cx, y - w.cy) > 24 && w.walkable(y * CFG.W + x)) { for (let k = 0; k < 3; k++)w.animals.push(new Animal(w, 'deer', x, y)); break } } }
 }

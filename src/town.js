@@ -73,6 +73,7 @@ function placeDock(w) {
       if (n >= 5 && deep >= 2) { cands.push({ x, y, dir: [ux, uy], score: d - deep * 0.5 + w.r() * 3 }); break }
     }
   }
+  if (w.neigh) { const sea = seaMask(w), open = cands.filter(c => sea[(c.y + c.dir[1]) * W + c.x + c.dir[0]]); if (open.length) cands.splice(0, cands.length, ...open) }     // with other islands out there, prefer docks on the open sea over an inland lake
   cands.sort((a, b) => a.score - b.score);
   for (const c of cands.slice(0, 6)) {
     if (w.search(w.cx - 1, w.cy, (x, y) => x === c.x && y === c.y, 160)) return makeBp(w, 'dock', c.x, c.y, { dir: c.dir });       // must be reachable on foot from the camp

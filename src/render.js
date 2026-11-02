@@ -36,7 +36,8 @@ function zoomAt(f, sx, sy) {
 /* ---------- terrain cache (one canvas for the whole map, rebuilt each season) ---------- */
 function buildTerrain(w) {
   const { W, H, T } = CFG, s = w.season, P = PAL[s];
-  if (!R.terr) { R.terr = document.createElement('canvas'); R.terr.width = W * T; R.terr.height = H * T }
+  if (!R.terr || R.terr.width !== W * T || R.terr.height !== H * T) { R.terr = document.createElement('canvas'); R.terr.width = W * T; R.terr.height = H * T }
+  if (R.mini) R.mini.style.height = Math.round(224 * H / W) + 'px';
   const g = R.terr.getContext('2d'), isW = i => w.terr[i] <= TERR.SHALLOW;
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x, t = w.terr[i], X = x * T, Y = y * T, h = hash2(x, y);
@@ -296,13 +297,14 @@ function drawVillager(g, v, w, now, sel) {
 
 /* ---------- main draw ---------- */
 function render(w, sel, now) {
-  const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.season;
+  const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.season + ':' + W;
   if (R.terrKey !== key) { buildTerrain(w); R.terrKey = key }
   R.hasPlaza = w.of('plaza').length > 0;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d1114'; g.fillRect(0, 0, R.cv.width, R.cv.height);
   const tlx = c.x - R.vw / (2 * z), tly = c.y - R.vh / (2 * z);
   g.setTransform(z * d, 0, 0, z * d, -tlx * z * d, -tly * z * d); g.imageSmoothingEnabled = false;
   g.drawImage(R.terr, 0, 0);
+  if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighArt(g, w, n, now);
   const x0 = Math.max(0, Math.floor(tlx / T) - 2), x1 = Math.min(W - 1, Math.ceil((tlx + R.vw / z) / T) + 2), y0 = Math.max(0, Math.floor(tly / T) - 3), y1 = Math.min(H - 1, Math.ceil((tly + R.vh / z) / T) + 2);
   const t = w.tod; let dark = 0; if (t > 0.6 && t < 0.75) dark = (t - 0.6) / 0.15; else if (t >= 0.75 && t < 0.95) dark = 1; else if (t >= 0.95) dark = (1 - t) / 0.05;
   const tick = (now / 450) | 0;
@@ -327,6 +329,8 @@ function render(w, sel, now) {
   if (sel instanceof Villager && sel.alive && sel.path.length) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sel.x * T, sel.y * T); for (const p of sel.path) g.lineTo((p % W + .5) * T, ((p / W | 0) + .5) * T); g.stroke() }
   if (sel && sel.type && sel.w) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T - .5, sel.y * T - .5, sel.w * T + 1, sel.h * T + 1) }
   if (w.festival) bunting(g, w, now);
+  if (w.fog && w.seen) { updateFog(w); g.imageSmoothingEnabled = true; g.drawImage(R.fog, 0, 0, W * T, H * T); g.imageSmoothingEnabled = false }      // unexplored lands and sea stay in the mist, covering everything beneath
+  if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighLabel(g, n);
   // light & atmosphere (screen space)
   g.setTransform(d, 0, 0, d, 0, 0);
   const tint = [null, 'rgba(255,225,120,.04)', 'rgba(255,140,40,.05)', 'rgba(180,210,255,.05)'][w.season]; if (tint) { g.fillStyle = tint; g.fillRect(0, 0, R.vw, R.vh) }
@@ -357,6 +361,9 @@ function bunting(g, w, now) {
 function drawMinimap(w, sel) {
   const m = R.mini; if (!m || !R.miniBase) return; const g = m.getContext('2d');
   g.drawImage(R.miniBase, 0, 0);
+  if (w.fog && w.seen) { updateFog(w); g.drawImage(R.fog, 0, 0) }
+  if (w.neigh) for (const n of w.neigh) if (n.found) { g.fillStyle = '#ff8a5a'; g.fillRect(n.x - 1.5, n.y - 1.5, 3, 3) }
+  for (const b of w.boats) if (b.state === 'out') { g.fillStyle = '#fff'; g.fillRect(b.x - 1, b.y - 1, 2, 2) }
   for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : b.type === 'market' ? '#ffd24a' : b.type === 'plaza' ? '#e6dcb8' : b.type === 'tavern' ? '#e8805a' : PROJECTS[b.type] ? '#ffffff' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
   g.fillStyle = '#b99d6c'; for (let i = 0; i < w.road.length; i++) if (w.road[i]) g.fillRect(i % CFG.W, (i / CFG.W) | 0, 1, 1);
   for (const a of w.animals) if (a.alive && a.kind === 'wolf') { g.fillStyle = '#ff3b3b'; g.fillRect(a.x - 1, a.y - 1, 2, 2) }
@@ -442,4 +449,33 @@ function tavernArt(g, w, b, now, dark) {
   rc(g, '#5a3d22', X + Wd - 6, Y + 20, 1, 10); rc(g, '#5a3d22', X + Wd - 6, Y + 20, 6, 1); rc(g, '#c9a22a', X + Wd - 4, Y + 22, 4, 5); rc(g, '#e8c84a', X + Wd - 3, Y + 23, 2, 3);
   rc(g, '#6a4a2a', X + 1, Y + 38, 5, 7); rc(g, '#8a6a3a', X + 1, Y + 40, 5, 1); rc(g, '#6a4a2a', X + 7, Y + 41, 4, 5);
   rc(g, '#6a6a66', X + 6, Y + 1, 5, 9); if (w.season !== 1 || lit) for (let k = 0; k < 2; k++) { const t = ((now / 850) + k / 2) % 1; g.fillStyle = `rgba(200,200,205,${0.5 * (1 - t)})`; g.fillRect(X + 7 + Math.sin(t * 4 + k) * 2, Y - 1 - t * 10, 3, 3) }
+}
+
+/* ---- fog of war and neighbouring settlements ---- */
+function updateFog(w) {
+  const { W, H } = CFG; if (!R.fog || R.fog.width !== W || R.fog.height !== H) { R.fog = document.createElement('canvas'); R.fog.width = W; R.fog.height = H; R.fogWorld = null }
+  if (R.fogWorld === w && R.fogVer === w.seenVer) return;
+  const fg = R.fog.getContext('2d'), im = fg.createImageData(W, H), d = im.data;
+  for (let i = 0; i < W * H; i++) if (!w.seen[i]) { const o = i * 4; d[o] = 9; d[o + 1] = 14; d[o + 2] = 22; d[o + 3] = 240 }
+  fg.putImageData(im, 0, 0); R.fogWorld = w; R.fogVer = w.seenVer;
+}
+function neighArt(g, w, n, now) {
+  const T = CFG.T, X = n.x * T, Y = n.y * T, snow = w.season === 3, roof = { traders: '#3c6fb4', scholars: '#6a4a8c', farmers: '#c4a24a', raiders: '#8a3c30' }[n.kind], wall = n.kind === 'raiders' ? '#6f5436' : '#b9a47a';
+  const nh = 4 + (n.pop > 20 ? 2 : n.pop > 14 ? 1 : 0), huts = [];
+  for (let k = 0; k < nh; k++) { const a = k * 2.4 + n.id, d = 22 + (k % 2) * 12; huts.push([X + Math.cos(a) * d * 1.25, Y + Math.sin(a) * d * 0.9]) }
+  huts.sort((p, q) => p[1] - q[1]);
+  if (n.kind === 'farmers') for (let k = 0; k < 3; k++) { rc(g, '#d9b34a', X - 52 + k * 36, Y + 30, 28, 16); for (let s = 0; s < 28; s += 4) rc(g, '#b8963e', X - 52 + k * 36 + s, Y + 30, 1, 16) }
+  if (n.kind === 'raiders') { for (let k = -5; k <= 5; k++) { rc(g, '#5a3d22', X + k * 9, Y - 38, 3, 12); rc(g, '#7a5a34', X + k * 9, Y - 38, 1, 12) } rc(g, '#5a3d22', X, Y - 58, 2, 22); rc(g, '#c4282c', X + 2, Y - 58, 12, 8) }
+  if (n.kind === 'scholars') { rc(g, '#cfc8b6', X - 5, Y - 40, 12, 36); rc(g, '#bdb6a2', X + 3, Y - 40, 4, 36); rc(g, '#6a4a8c', X - 8, Y - 46, 18, 7); rc(g, '#ffe58a', X - 1, Y - 30, 4, 5) }
+  if (n.kind === 'traders') { for (let k = 0; k < 2; k++) { rc(g, ['#c8443c', '#4a9a4a'][k], X - 18 + k * 26, Y - 28, 18, 5); rc(g, '#5a3d22', X - 17 + k * 26, Y - 23, 2, 12); rc(g, '#5a3d22', X - 3 + k * 26, Y - 23, 2, 12); rc(g, '#8a6a42', X - 17 + k * 26, Y - 14, 16, 4) } }
+  for (const [hx, hy] of huts) {
+    rc(g, 'rgba(0,0,0,.2)', hx - 9, hy + 12, 22, 3); rc(g, wall, hx - 8, hy, 20, 12); rc(g, '#6f5436', hx - 8, hy + 8, 20, 1);
+    for (let r2 = 0; r2 < 8; r2++) { const l = Math.round(r2 * 1.4); rc(g, roof, hx - 10 + l, hy - 8 + r2, 24 - 2 * l, 1); if (r2 % 2) rc(g, 'rgba(0,0,0,.14)', hx - 10 + l, hy - 8 + r2, 24 - 2 * l, 1) } rc(g, snow ? '#f4f6fa' : 'rgba(0,0,0,.18)', hx - 10, hy - 8, 24, 1);
+    rc(g, '#3e2a18', hx, hy + 4, 5, 8);
+  }
+  const sx = X + 2, sy = Y + 8; rc(g, '#5a5a56', sx - 3, sy + 2, 7, 3); const f = ((now / 120) | 0) % 3; rc(g, '#e8672a', sx - 1, sy - 3 + (f === 1 ? 1 : 0), 3, 5);
+  for (let k = 0; k < 2; k++) { const t = ((now / 900) + k / 2) % 1; g.fillStyle = `rgba(210,210,215,${0.5 * (1 - t)})`; g.fillRect(sx + Math.sin(t * 4 + k) * 2, sy - 6 - t * 18, 3, 3) }
+}
+function neighLabel(g, n) {
+  const X = n.x * CFG.T, Y = n.y * CFG.T; g.font = 'bold 9px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(10,14,20,.85)'; g.strokeText(n.name, X, Y - 68); g.fillStyle = '#ffe9b0'; g.fillText(n.name, X, Y - 68); g.textAlign = 'start';
 }

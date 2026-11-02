@@ -4,7 +4,7 @@
    All balance numbers live in CFG. No DOM access in the simulation files.
    ========================================================================== */
 const CFG = {
-  W: 160, H: 112, T: 16,            // map size (tiles), tile size (world px)
+  W: 160, H: 112, MAP_NEW: [260, 180], T: 16,            // map size (tiles), tile size (world px)
   TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
   DPS: 8,                           // days per season (year = 4 seasons)
   INFANT_DAYS: 3, CHILD_DAYS: 8, ADULT_DAYS: 14, ELDER_DAYS: 80, FERTILE_MAX: 85, OLD_DAYS: 120,   // life stages (in days)
@@ -46,9 +46,9 @@ class Heap {
 }
 
 /* smooth value noise: makeNoise(rng)(scale) -> (x,y)=>0..1 */
-function makeNoise(rng) {
+function makeNoise(rng, bw = 160, bh = 112) {          // lattice size is fixed to the home window, so the home island never depends on the map size
   return (scale) => {
-    const gw = Math.ceil(CFG.W / scale) + 2, gh = Math.ceil(CFG.H / scale) + 2;
+    const gw = Math.ceil(bw / scale) + 2, gh = Math.ceil(bh / scale) + 2;
     const g = new Float32Array(gw * gh).map(() => rng());
     return (x, y) => {
       const fx = x / scale, fy = y / scale, ix = Math.floor(fx), iy = Math.floor(fy);

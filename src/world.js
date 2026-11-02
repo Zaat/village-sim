@@ -4,7 +4,9 @@
    ========================================================================== */
 const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 class World {
-  constructor(seed, settings = {}) {
+  constructor(seed, settings = {}, dims) {
+    const [mw, mh] = dims || CFG.MAP_NEW; CFG.W = mw; CFG.H = mh; this.ox = (mw - 160) >> 1; this.oy = (mh - 112) >> 1;     // the home island always occupies the same 160x112 window; wider maps add open sea for other islands
+    this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
     this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this);
@@ -40,18 +42,19 @@ class World {
     const { W, H } = CFG, rng = this.rng, nz = makeNoise(rng);
     const e1 = nz(46), e2 = nz(20), e3 = nz(9), e4 = nz(4), m1 = nz(28), m2 = nz(11), r1 = nz(7);
     const E = new Float32Array(W * H), M = new Float32Array(W * H);
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-      const i = y * W + x; let e = 0.5 * e1(x, y) + 0.3 * e2(x, y) + 0.15 * e3(x, y) + 0.05 * e4(x, y);
+    const OX = this.ox, OY = this.oy;
+    for (let y = OY; y < OY + 112; y++) for (let x = OX; x < OX + 160; x++) {
+      const xx = x - OX, yy = y - OY, i = y * W + x; let e = 0.5 * e1(xx, yy) + 0.3 * e2(xx, yy) + 0.15 * e3(xx, yy) + 0.05 * e4(xx, yy);
       e = (e - 0.5) * 1.6 + 0.5;
-      const dx = (x - W / 2) / (W / 2), dy = (y - H / 2) / (H / 2);
+      const dx = (xx - 80) / 80, dy = (yy - 56) / 56;
       e -= 0.34 * Math.pow(Math.min(1, Math.hypot(dx, dy) / 1.05), 2.6);
-      E[i] = e; M[i] = 0.6 * m1(x, y) + 0.4 * m2(x, y); this.shade[i] = (rng() * 5) | 0;
+      E[i] = e; M[i] = 0.6 * m1(xx, yy) + 0.4 * m2(xx, yy); this.shade[i] = (rng() * 5) | 0;
       this.terr[i] = e < 0.28 ? TERR.DEEP : e < 0.34 ? TERR.SHALLOW : e < 0.37 ? TERR.SAND : e > 0.80 ? TERR.PEAK : e > 0.66 ? TERR.ROCK : TERR.GRASS;
     }
     this.E = E; this.M = M;
     // choose a start: flat grass, close to water, near hills, near the map middle
     let best = null, bs = -1e9;
-    for (let y = 14; y < H - 14; y += 3) for (let x = 14; x < W - 14; x += 3) {
+    for (let y = OY + 14; y < OY + 112 - 14; y += 3) for (let x = OX + 14; x < OX + 160 - 14; x += 3) {
       let grass = 0; for (let dy = -6; dy <= 6; dy += 2) for (let dx = -6; dx <= 6; dx += 2) if (this.terr[(y + dy) * W + x + dx] === TERR.GRASS) grass++;
       if (grass < 40) continue;
       let water = 0, rock = 0;
@@ -67,11 +70,11 @@ class World {
       const i = (this.cy + dy) * W + this.cx + dx; if (Math.hypot(dx, dy) < 7.5) this.terr[i] = TERR.GRASS;
     }
     // vegetation & resources
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    for (let y = OY; y < OY + 112; y++) for (let x = OX; x < OX + 160; x++) {
       const i = y * W + x, t = this.terr[i], m = M[i], e = E[i];
       if (Math.hypot(x - this.cx, y - this.cy) < 7.5) continue;
       if (t === TERR.GRASS) {
-        const p = clamp((m - 0.46) * 2.4, 0, 0.78) * (0.55 + 0.9 * r1(x, y));
+        const p = clamp((m - 0.46) * 2.4, 0, 0.78) * (0.55 + 0.9 * r1(x - OX, y - OY));
         if (rng() < p) { this.feat[i] = e > 0.58 || m < 0.5 && rng() < 0.3 ? FEAT.PINE : FEAT.OAK; this.res[i] = 4 }
         else if (rng() < 0.014) { this.feat[i] = FEAT.BUSH; this.res[i] = 4 }
       } else if (t === TERR.ROCK) {
@@ -91,6 +94,7 @@ class World {
     this.addBuilding('campfire', this.cx, this.cy);
     this.addBuilding('store', this.cx + CFG.LATTICE, this.cy);
     spawnWildlife(this);
+    if (this.ox > 0) genNeighbours(this);                     // other islands in the open sea (new, wider maps only)
   }
   put(f, x, y, rad, res) {
     const { W, H } = CFG;
@@ -313,7 +317,7 @@ class World {
     if (this.tick % Math.round((this.settings.survival ? 400 : 200) * (projBuilt(this, 'lighthouse') ? 0.7 : 1)) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if ((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) this.fish[i]++;
     if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * (this.has('forestry') ? 1.6 : 1.3)) {      // saplings spread from existing woods (capped, and never beside roads or buildings); foresters replant more
       for (let a = 0; a < (this.has('forestry') ? 24 : 14); a++) {
-        const x = 1 + ((this.r() * (CFG.W - 2)) | 0), y = 1 + ((this.r() * (CFG.H - 2)) | 0), i = y * CFG.W + x;
+        const x = this.ox + 1 + ((this.r() * 158) | 0), y = this.oy + 1 + ((this.r() * 110) | 0), i = y * CFG.W + x;
         if (this.terr[i] !== TERR.GRASS || this.feat[i] || this.bmap[i] || this.road[i] || this.bpAt.has(i) || this.claim[i] >= 0) continue;
         if (Math.hypot(x - this.cx, y - this.cy) < 8) continue;
         let busy = false; for (let dy = -2; dy <= 2 && !busy; dy++) for (let dx = -2; dx <= 2; dx++) { const j = (y + dy) * CFG.W + x + dx; if (this.road[j] || this.bmap[j]) { busy = true; break } } if (busy) continue;
@@ -334,6 +338,7 @@ class World {
     if (!this.holidayDone && this.tod > 0.68) this.section('holiday', () => resolveHoliday(this));
     if (!this.meetingDone && this.tod > 0.62) { this.meetingDone = true; this.section('council', () => holdMeeting(this)) }
     if (this.tick % 240 === 0) this.section('roles', () => assignRoles(this));
+    if (this.fog && this.tick % 40 === 0) this.section('fog', () => revealTick(this));
     if (this.tick % 100 === 0) {
       this.hist.push({ pop: this.vills.length, food: this.stock.food, wood: this.stock.wood, stone: this.stock.stone, season: this.season });
       if (this.hist.length > 1500) this.hist.shift();
