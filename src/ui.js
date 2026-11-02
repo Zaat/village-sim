@@ -86,11 +86,63 @@ function saveSettings() { try { localStorage.setItem('villagesim.settings', JSON
 for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('change', e => { world.settings[k] = e.target.checked; saveSettings() });
 
 /* ---------- world lifecycle ---------- */
-function newWorld(seed) {
-  seed = seed >>> 0; $('seed').value = seed; const st = loadSettings(); world = new World(seed, st); world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
+function adoptWorld(w) {
+  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k];
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); updateUI();
 }
+function newWorld(seed) { seed = seed >>> 0; $('seed').value = seed; adoptWorld(new World(seed, loadSettings())) }
+
+/* ---------- save & load ----------
+   Autosave and "Save now" use this browser's storage; Export/Import use a file, which is the
+   safe way to keep or move a village. Jobs in progress are not saved: after loading, villagers
+   simply decide again. */
+const SAVE_KEY = 'villagesim.save', META_KEY = 'villagesim.meta', BACKUP_KEY = 'villagesim.backup', BACKUP_META = 'villagesim.backupmeta';
+let autosaveOn = true, DL = null;
+(async () => { try { DL = (typeof claude !== 'undefined' && claude.use) ? await claude.use('downloads') : null } catch (e) { DL = null } })();
+const seasonName = m => SEASONS[m.season];
+const metaText = m => `Year ${m.year}, ${seasonName(m)}, day ${m.day} · ${m.pop} people · seed ${m.seed}`;
+function saveInfo(t) { $('saveInfo').textContent = t }
+function readMeta(key = META_KEY) { try { const m = JSON.parse(localStorage.getItem(key) || 'null'); return m && m.pop !== undefined ? m : null } catch (e) { return null } }
+function saveToStorage(manual) {
+  if (!world || world.tick === 0) return false;
+  try {
+    const json = JSON.stringify(serializeWorld(world)), meta = saveMeta(world);
+    localStorage.setItem(SAVE_KEY, json); localStorage.setItem(META_KEY, JSON.stringify(meta));
+    saveInfo(`${manual ? 'Saved' : 'Autosaved'} at ${new Date().toLocaleTimeString()}: ${metaText(meta)} (${Math.round(json.length / 1024)} KB).`); $('loadSave').disabled = false; return true;
+  } catch (e) { saveInfo('This browser would not store the save (' + ((e && e.name) || 'error') + '). Use "Export file" to keep your village.'); return false }
+}
+function loadFromStorage() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY); if (!raw) { saveInfo('No browser save found.'); return false }
+    adoptWorld(deserializeWorld(JSON.parse(raw))); saveInfo('Loaded the browser save: ' + metaText(saveMeta(world)) + '.'); return true;
+  } catch (e) { saveInfo('Could not load that save: ' + ((e && e.message) || e)); return false }
+}
+async function exportFile() {
+  if (!world) return; const json = JSON.stringify(serializeWorld(world)), name = `village-y${world.year}-${SEASONS[world.season].toLowerCase()}-d${world.seasonDay}-seed${world.seed}.json`;
+  try {
+    if (DL) { const r = await DL.save({ filename: name, data: json }); saveInfo(r.status === 'saved' ? 'Exported ' + name + '.' : 'Export sent.') }
+    else { const url = URL.createObjectURL(new Blob([json], { type: 'application/json' })), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); saveInfo('Exported ' + name + '.') }
+  } catch (e) { saveInfo(e && e.code === 'declined' ? 'Export cancelled.' : 'Export did not complete (' + ((e && (e.code || e.message)) || 'error') + '). Try again.') }
+}
+function importFileObj(file) {
+  const rd = new FileReader();
+  rd.onload = () => { try { adoptWorld(deserializeWorld(JSON.parse(rd.result))); autosaveOn = true; hideResume(); saveInfo('Imported ' + file.name + ': ' + metaText(saveMeta(world)) + '.') } catch (e) { saveInfo('That file could not be loaded: ' + ((e && e.message) || e)) } };
+  rd.onerror = () => saveInfo('Could not read that file.'); rd.readAsText(file);
+}
+function hideResume() { $('resume').style.display = 'none' }
+$('saveNow').onclick = () => saveToStorage(true);
+$('loadSave').onclick = () => { if (loadFromStorage()) { autosaveOn = true; hideResume() } };
+$('exportBtn').onclick = exportFile; $('importBtn').onclick = () => $('importFile').click();
+$('importFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) importFileObj(f); e.target.value = '' });
+$('resumeBtn').onclick = () => { if (loadFromStorage()) { autosaveOn = true; hideResume(); setSpeed(10) } };
+$('resumeNo').onclick = () => {          // keep the old save as a backup before the new village starts overwriting it
+  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { localStorage.setItem(BACKUP_KEY, raw); localStorage.setItem(BACKUP_META, localStorage.getItem(META_KEY) || '') } } catch (e) { }
+  autosaveOn = true; hideResume(); setSpeed(10);
+};
+setInterval(() => { if (autosaveOn && $('autosave').checked && speed >= 0) saveToStorage(false) }, 60000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && autosaveOn && $('autosave').checked) saveToStorage(false) });
+addEventListener('pagehide', () => { if (autosaveOn && $('autosave').checked) saveToStorage(false) });
 
 /* ---------- panels ---------- */
 function bar(label, val, col) { return `<div class="hint">${label} ${Math.round(val)}</div><div class="bar"><i style="width:${clamp(val, 0, 100)}%;background:${col}"></i></div>` }
@@ -214,5 +266,6 @@ function frame(now) {
   uiAcc += dt; if (uiAcc > 300) { uiAcc = 0; updateUI() } miniAcc += dt; if (miniAcc > 120) { miniAcc = 0; drawMinimap(world, selected) }
   requestAnimationFrame(frame);
 }
-window.__sim = { get world() { return world }, newWorld, setSpeed, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND };
+window.__sim = { get world() { return world }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND };
 newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
+{ const m = readMeta(); if (m) { autosaveOn = false; setSpeed(0); $('loadSave').disabled = false; $('resumeInfo').textContent = metaText(m) + (m.savedAt ? ' · saved ' + new Date(m.savedAt).toLocaleString() : ''); $('resume').style.display = 'flex'; saveInfo('A saved village is waiting: ' + metaText(m) + '.') } }

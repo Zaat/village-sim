@@ -17,6 +17,7 @@
       <button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button><button id="fol" title="Follow selected (F)">Follow</button>
     </div>
     <canvas id="mini" title="Click to move the camera"></canvas>
+    <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
     <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause</div>
   </div>
   <aside id="side">
@@ -40,6 +41,14 @@
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
     </div>
+    <div class="card"><h3>Save &amp; load</h3>
+      <div class="hint" id="saveInfo">Nothing saved yet.</div>
+      <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave" disabled>Load saved</button></div>
+      <div class="btnrow"><button id="exportBtn">Export file</button><button id="importBtn">Import file</button></div>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+      <label class="tog" style="margin-top:8px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
+      <div class="hint" style="margin-top:6px">Browser saves stay on this device and can be cleared by the browser. Export a file to keep a village safe or move it to another device.</div>
+    </div>
     <div class="card"><h3>World</h3>
       <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="restart">New world</button></div></div>
   </aside>
@@ -49,6 +58,7 @@
 <script src="src/villager.js"></script>
 <script src="src/town.js"></script>
 <script src="src/society.js"></script>
+<script src="src/save.js"></script>
 <script src="src/world.js"></script>
 <script src="src/render.js"></script>
 <script src="src/ui.js"></script>

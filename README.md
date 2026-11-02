@@ -1,4 +1,4 @@
-# Village Sim v0.3
+# Village Sim v0.4
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -6,6 +6,11 @@ A watch-mostly village simulation: a 160×112 island you can pan and zoom, four 
 Open `index.html` in a browser. There is no build step and no dependencies (plain script tags, so it also works from `file://`).
 
 The optional **Claude counsel** (right panel) only works on the published page, where the page can call Claude. It is **off by default**. When on, the council and courts hand Claude a short list of concrete options (pass or reject a motion, pick a remedy for a crime wave, choose a sentence). Claude picks one based on each member's personality, opinions and what worked before, and writes the debate. The choice is validated; if it is off, slow or invalid, the village's own rules decide. Limited to 40 deliberations per session.
+
+## Saving
+- **Autosave** every minute to this browser, plus when you leave the page. Next visit, a prompt offers to **Resume** (the game stays paused until you choose). **Start fresh** keeps the old save as a backup.
+- **Export file / Import file** writes a .json save you can keep, share or move to another device. On the published page the export asks your permission first.
+- Jobs in progress are not saved: after loading, villagers simply decide again (a carried load or half-finished trip is lost, nothing else).
 
 ## Controls
 Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows pan · Space pause · 1–4 speed · F follow selected · minimap click to jump.
@@ -19,6 +24,7 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 | `src/villager.js` | personality, skills, needs, jobs (lazy `go`/`work` steps), wolf response |
 | `src/town.js` | what to build, resource targets, role assignment (self-correcting), events (newcomers, wolves, fever, fire, storm, drought, harsh winter) |
 | `src/society.js` | opinions and debates, bonds and rivalries, emergent social circles, elected council and policies, crime and justice, holidays and games |
+| `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
 | `src/render.js` | camera, seasonal terrain cache, pixel art drawn in code, lighting, minimap |
 | `src/ui.js` | panels, input, Claude narrator toggle, main loop |
 | `tests/` | headless engine test (`node tests/sim.js SEED DAYS`), Playwright screenshots |

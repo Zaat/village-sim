@@ -1,7 +1,7 @@
 // Headless engine test: node tests/sim.js [seed] [days]
 const fs=require('fs'),vm=require('vm'),path=require('path');
 const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;';
+const code=['config','animals','villager','town','society','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;';
 const ctx={console};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+(process.argv[2]||12345),days=+(process.argv[3]||96);
 const w=new ctx.World(seed);
