@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Village Sim</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span></div>
+    <div id="ctl">
+      <button data-sp="0" title="Space">⏸</button><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button>
+      <span class="sep"></span>
+      <button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button><button id="fol" title="Follow selected (F)">Follow</button>
+    </div>
+    <canvas id="mini" title="Click to move the camera"></canvas>
+    <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause</div>
+  </div>
+  <aside id="side">
+    <div class="card" id="statCard"></div>
+    <div class="card"><h3>History</h3><canvas id="chart" width="300" height="84"></canvas>
+      <div class="leg"><span><i style="background:#8fd18b"></i>population</span><span><i style="background:#e0a458"></i>food stock</span></div></div>
+    <div class="card" id="sel"><h3>Inspector</h3><div class="hint">Click something on the map.</div></div>
+    <div class="card" id="narCard">
+      <h3>Claude narrator</h3>
+      <label class="tog"><input type="checkbox" id="narToggle"><span class="sw"></span><span id="narLabel">Off — uses your Claude usage when on</span></label>
+      <div class="hint" id="narStatus"></div>
+      <div id="chron"></div>
+    </div>
+    <div class="card"><h3>Events</h3><div id="log"></div></div>
+    <div class="card"><h3>World</h3>
+      <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="restart">New world</button></div></div>
+  </aside>
+</div>
+<script src="src/config.js"></script>
+<script src="src/animals.js"></script>
+<script src="src/villager.js"></script>
+<script src="src/town.js"></script>
+<script src="src/world.js"></script>
+<script src="src/render.js"></script>
+<script src="src/ui.js"></script>
+</body>
+</html>

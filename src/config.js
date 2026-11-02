@@ -1,0 +1,63 @@
+'use strict';
+/* ==========================================================================
+   config.js — constants, enums and small utilities shared by every module.
+   All balance numbers live in CFG. No DOM access in the simulation files.
+   ========================================================================== */
+const CFG = {
+  W: 160, H: 112, T: 16,            // map size (tiles), tile size (world px)
+  TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
+  DPS: 8,                           // days per season (year = 4 seasons)
+  CHILD_DAYS: 6, FERTILE_MAX: 60, OLD_DAYS: 90,
+  START_VILLAGERS: 8,
+  START_STOCK: { wood: 24, stone: 6, food: 40 },
+  COST: { house: { wood: 8, stone: 3 }, farm: { wood: 3, stone: 0 }, store: { wood: 10, stone: 4 }, road: { wood: 0, stone: 1 } },
+  BUILD_TIME: { house: 160, farm: 60, store: 140, road: 20 },
+  SIZE: { house: [2, 2], farm: [3, 2], store: [2, 2], campfire: [1, 1] },
+  SOLID: { house: true, store: true, campfire: true, farm: false },
+  HOUSE_CAP: 4, FARM_YIELD: 6, FARM_GROW: 2400, FISH_MAX: 5, CARRY: 4, EAT_RESTORE: 55,
+  BIRTH_CHANCE: 0.12, PREGNANCY: 960, BIRTH_COOLDOWN: 4800,
+  LATTICE: 3,                        // buildings snap to a 3-tile grid so lanes stay open
+};
+const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5 };
+const FEAT = { NONE: 0, OAK: 1, PINE: 2, STONE: 3, BUSH: 4 };
+const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
+const GROW = [1, 1.3, 0.6, 0];       // crop growth multiplier by season
+const ROLES = ['builder', 'farmer', 'hunter', 'fisher', 'woodcutter', 'miner'];
+const TRAITS = ['soc', 'ind', 'cur', 'brave', 'kind'];
+const TRAIT_WORDS = { soc: ['Reserved', 'Gregarious'], ind: ['Easygoing', 'Hardworking'], cur: ['Practical', 'Curious'], brave: ['Timid', 'Brave'], kind: ['Gruff', 'Kind'] };
+const NB = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 } }
+function hash2(x, y) { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263); h = Math.imul(h ^ h >>> 13, 1274126177); return (h ^ h >>> 16) >>> 0 }
+
+class Heap {
+  constructor() { this.k = []; this.v = [] }
+  push(key, val) {
+    const k = this.k, v = this.v; let i = k.length; k.push(key); v.push(val);
+    while (i > 0) { const p = (i - 1) >> 1; if (k[p] <= key) break; k[i] = k[p]; v[i] = v[p]; i = p } k[i] = key; v[i] = val
+  }
+  pop() {
+    const k = this.k, v = this.v; const rv = v[0]; const lk = k.pop(), lv = v.pop(); const n = k.length;
+    if (n > 0) { let i = 0; for (; ;) { let c = 2 * i + 1; if (c >= n) break; if (c + 1 < n && k[c + 1] < k[c]) c++; if (k[c] >= lk) break; k[i] = k[c]; v[i] = v[c]; i = c } k[i] = lk; v[i] = lv }
+    return rv
+  }
+  get size() { return this.k.length }
+}
+
+/* smooth value noise: makeNoise(rng)(scale) -> (x,y)=>0..1 */
+function makeNoise(rng) {
+  return (scale) => {
+    const gw = Math.ceil(CFG.W / scale) + 2, gh = Math.ceil(CFG.H / scale) + 2;
+    const g = new Float32Array(gw * gh).map(() => rng());
+    return (x, y) => {
+      const fx = x / scale, fy = y / scale, ix = Math.floor(fx), iy = Math.floor(fy);
+      let tx = fx - ix, ty = fy - iy; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+      const a = g[iy * gw + ix], b = g[iy * gw + ix + 1], c = g[(iy + 1) * gw + ix], d = g[(iy + 1) * gw + ix + 1];
+      return (a + (b - a) * tx) * (1 - ty) + (c + (d - c) * tx) * ty;
+    };
+  };
+}
+
+const NAMES_M = ['Alder', 'Bram', 'Cael', 'Doran', 'Eryk', 'Finn', 'Gareth', 'Hale', 'Ivo', 'Jorin', 'Kellan', 'Lorcan', 'Marek', 'Niall', 'Osric', 'Pell', 'Quill', 'Rowan', 'Soren', 'Tobin', 'Ulric', 'Vance', 'Wystan', 'Yarrow', 'Aldous', 'Bryn', 'Corwin', 'Dunstan', 'Elric', 'Fenwick'];
+const NAMES_F = ['Ada', 'Brea', 'Cora', 'Dara', 'Elin', 'Faye', 'Gwen', 'Hana', 'Isla', 'Juna', 'Kira', 'Lena', 'Mira', 'Nessa', 'Orla', 'Perrin', 'Rhea', 'Sela', 'Tilda', 'Una', 'Vera', 'Wren', 'Ysolde', 'Zora', 'Aveline', 'Briar', 'Cerys', 'Delphine', 'Edda', 'Fleur'];
