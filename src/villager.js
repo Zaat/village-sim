@@ -29,9 +29,9 @@ class Villager {
     // society: identity, opinions, desires, story
     this.family = parents && (parents[1] || parents[0]) ? (parents[1] || parents[0]).family : SURNAMES[(w.r() * SURNAMES.length) | 0];
     this.partner = null; this.kids = []; this.parentIds = []; this.mood = 70; this.debates = 0; this.desire = null; this.nextDesire = w.day + 2; this.bio = []; this.reputation = 50; this.record = 0;
-    this.duty = 0; this.stocksUntil = 0; this.group = null; this.friends = 0; this.enemies = 0; this.won = 0; this.mournUntil = 0;
+    this.coins = 0; this.output = 0; this.earned = 0; this.duty = 0; this.stocksUntil = 0; this.group = null; this.friends = 0; this.enemies = 0; this.won = 0; this.mournUntil = 0;
     const t = this.trait, o = b => clamp((b - 0.5) * 1.8 + (g() - 0.5) * 0.8, -1, 1);
-    this.op = { growth: o(0.4 * t.kind + 0.3 * t.soc + 0.3 * t.cur), labor: o(0.6 * (1 - t.ind) + 0.4 * t.soc), law: o(0.5 * (1 - t.kind) + 0.3 * t.brave + 0.2 * (1 - t.cur)), defense: o(0.6 * (1 - t.brave) + 0.2 * (1 - t.kind) + 0.2) };
+    this.op = { growth: o(0.4 * t.kind + 0.3 * t.soc + 0.3 * t.cur), labor: o(0.6 * (1 - t.ind) + 0.4 * t.soc), law: o(0.5 * (1 - t.kind) + 0.3 * t.brave + 0.2 * (1 - t.cur)), defense: o(0.6 * (1 - t.brave) + 0.2 * (1 - t.kind) + 0.2), tax: o(0.55 * (1 - t.ind) + 0.45 * t.kind) };
     if (parents && parents[0]) for (const k of ISSUES) { const a = parents[0].op[k], b = parents[1] ? parents[1].op[k] : a; this.op[k] = clamp(0.6 * (a + b) / 2 + 0.4 * this.op[k], -1, 1) }
     this._st = this.stage();
   }
@@ -51,6 +51,7 @@ class Villager {
     const w = this.w; let t = 50 + (this.hunger - 50) * 0.25 + (this.energy - 50) * 0.08 + (this.social - 50) * 0.12 + (this.health - 70) * 0.1;
     if (w.cold) t -= 15; t += Math.min(10, this.friends * 2.5) - Math.min(15, this.enemies * 4);
     let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4;
+    if (w.has('coinage')) t += clamp(((this.coins || 0) - 25) / 40, -3, 4);
     if (this.partner != null) t += 6; if (this.home == null && this.isAdult()) t -= 6; if (this.mournUntil > w.tick) t -= 18; if (this.desire && w.day - this.desire.since > 40) t -= 4;
     this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
   }
@@ -272,7 +273,7 @@ class Villager {
   }
   deliverSteps(kind = 'food') {      // the nearest drop-off counts: the village stores, or a camp for that resource
     const w = this.w, ca = w.campAdj[kind];
-    return [go((x, y, i) => w.storeAdj[i] === 1 || (ca && ca[i] === 1), null, 'Carrying to the depot', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { w.stock[this.carry.kind] = Math.min(w.cap(), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
+    return [go((x, y, i) => w.storeAdj[i] === 1 || (ca && ca[i] === 1), null, 'Carrying to the depot', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { this.output = (this.output || 0) + this.carry.amt; w.stock[this.carry.kind] = Math.min(w.cap(), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
   }
   planGather(kind) {
     const w = this.w;
@@ -352,7 +353,7 @@ class Villager {
       work(trip, 'Sailing out', null, { onTick: at }),
       work(this.wt(100, 'fish'), 'Fishing at sea', () => { if (w.fish[best.idx] > 0) { w.fish[best.idx]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }),
       work(trip, 'Sailing home', null, { onTick: p => at(1 - p) }),
-      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; if (this.carry) { w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
+      work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; if (this.carry) { this.output = (this.output || 0) + this.carry.amt; w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
     return true;
   }
   planBuild() {

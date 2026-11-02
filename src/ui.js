@@ -6,6 +6,14 @@ const $ = id => document.getElementById(id);
 let world = null, selected = null, speed = 10, follow = false;
 const keys = {};
 const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', builder: '#e8a03a', hunter: '#3f7d4a', fisher: '#4aa3d8' };
+/* panels redraw only when their content actually changed, which stops needless reflow and flicker */
+(function () {
+  const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
+  for (const id of ['statCard', 'techCard', 'econCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+    const el = document.getElementById(id); if (!el) continue;
+    Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
+  }
+})();
 const escapeHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /* ---------- Claude counsel (OFF by default) ----------
@@ -57,7 +65,7 @@ function parseJson(text) { const m = String(text || '').match(/\{[\s\S]*\}/); if
 async function askCounsel(req) {
   MIND.busy = true; MIND.count++; mindMsg('The council is deliberating with Claude… (' + MIND.count + '/' + MIND.MAX + ')');
   const names = req.members.map(m => m.name), f = x => (x >= 0 ? '+' : '') + x.toFixed(1);
-  const prompt = `You are the deliberative mind of a small village council in a simulation. Decide what the council actually does, in character, from the members' personalities and opinions.\n\nSituation: ${req.topic}\n\nVillage: ${req.state}\n\nCouncil members:\n${req.members.map(m => `- ${m.name} (${m.title}; ${m.traits}${m.group ? '; belongs to ' + m.group : ''}) opinions on a -1..+1 scale: growth ${f(m.op.growth)}, leisure ${f(m.op.labor)}, strict law ${f(m.op.law)}, watch/defense ${f(m.op.defense)}`).join('\n')}\n\nEarlier decisions and how they turned out:\n${req.history.length ? req.history.join('\n') : '(none yet)'}\n\nOptions (choose exactly one id):\n${req.options.map(o => `- ${o.id}: ${o.text}`).join('\n')}\n\nReply with ONLY compact JSON in this form: {"choice":"<one option id>","speeches":[{"who":"<council member name>","line":"<under 25 words, in their voice>"}],"reason":"<one short sentence>"}. Give 2 to 4 speeches that reflect real disagreement where the members' views differ. Pick the option this particular group would most plausibly choose; do not invent options or names.`;
+  const prompt = `You are the deliberative mind of a small village council in a simulation. Decide what the council actually does, in character, from the members' personalities and opinions.\n\nSituation: ${req.topic}\n\nVillage: ${req.state}\n\nCouncil members:\n${req.members.map(m => `- ${m.name} (${m.title}; ${m.traits}${m.group ? '; belongs to ' + m.group : ''}) opinions on a -1..+1 scale: growth ${f(m.op.growth)}, leisure ${f(m.op.labor)}, strict law ${f(m.op.law)}, watch/defense ${f(m.op.defense)}, higher taxes ${f(m.op.tax || 0)}`).join('\n')}\n\nEarlier decisions and how they turned out:\n${req.history.length ? req.history.join('\n') : '(none yet)'}\n\nOptions (choose exactly one id):\n${req.options.map(o => `- ${o.id}: ${o.text}`).join('\n')}\n\nReply with ONLY compact JSON in this form: {"choice":"<one option id>","speeches":[{"who":"<council member name>","line":"<under 25 words, in their voice>"}],"reason":"<one short sentence>"}. Give 2 to 4 speeches that reflect real disagreement where the members' views differ. Pick the option this particular group would most plausibly choose; do not invent options or names.`;
   try {
     const r = await Promise.race([MIND.sample(prompt, { modelTier: 'quick', cache: false }), new Promise((_, rej) => setTimeout(() => rej({ code: 'timeout' }), 30000))]);
     const j = parseJson(r.text); if (!j || typeof j.choice !== 'string') throw { code: 'bad_reply' };
@@ -174,7 +182,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  renderTech(); renderCouncil(); renderGroups();
+  renderTech(); renderEcon(); renderCouncil(); renderGroups();
   $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -187,6 +195,16 @@ function renderTech() {
     <div class="techchips">${known.map(id => `<span class="chip" title="${escapeHtml(TECHS[id].desc)}"><i style="background:#9cc4ff"></i>${TECHS[id].name}</span>`).join('')}</div>
     ${t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('')}
     ${locked.length ? `<div class="hint" style="margin-top:6px">Still ahead: ${locked.map(id => TECHS[id].name).join(', ')}</div>` : ''}`;
+}
+function renderEcon() {
+  const w = world, E = w.econ, card = $('econCard'), box = card.parentElement; box.style.display = w.has('trade') ? '' : 'none'; if (!w.has('trade')) return;
+  const coin = w.has('coinage'), arrow = d => d > 0.15 ? '▲' : d < -0.15 ? '▼' : '•', ad = w.vills.filter(v => v.isAdult()), rich = ad.slice().sort((a, b) => (b.coins || 0) - (a.coins || 0)).slice(0, 3), cs = ad.map(v => v.coins || 0).sort((a, b) => a - b);
+  const c = E.caravan;
+  card.innerHTML = `${coin ? `<div class="era"><b>${Math.round(E.treasury)} coins</b><span class="hint">treasury · tax ${Math.round(taxRate(w) * 100)}%</span></div>` : '<div class="era"><b>Bartering</b><span class="hint">no coins yet</span></div>'}
+    <table class="prices">${['wood', 'stone', 'food'].map(k => `<tr><td>${k}</td><td>${coin ? E.prices[k].toFixed(1) + ' coins' : w.stock[k] + ' in store'}</td><td class="tr ${E.trend[k] > 0.15 ? 'up' : E.trend[k] < -0.15 ? 'down' : ''}">${arrow(E.trend[k])}</td></tr>`).join('')}</table>
+    <div class="hint">${w.of('market').length ? (c ? `${escapeHtml(c.name)} ${c.sea ? '(by ship) ' : ''}stay until day ${c.leaves}.` : `Next merchants expected around day ${E.nextCaravan}.`) : 'Build a market and merchants will come.'}</div>
+    ${E.trades.slice(0, 3).map(t => `<div class="techrow">${escapeHtml(t.text)}<span class="hint">day ${t.day}</span></div>`).join('')}
+    ${coin ? `<div class="hint" style="margin-top:6px">Wealth: median ${cs.length ? cs[cs.length >> 1] : 0} coins · richest ${rich.map(v => escapeHtml(v.name) + ' ' + (v.coins || 0)).join(', ') || '–'}</div>` : ''}`;
 }
 function renderCouncil() {
   const w = world, g = w.gov, el = $('councilCard');
@@ -218,16 +236,18 @@ function updateInspector() {
       <div style="margin-bottom:6px">${escapeHtml(s.label)}${s.carry ? ' · carrying ' + s.carry.amt + ' ' + s.carry.kind : ''}</div>
       ${bar('Mood (' + moodWord(s.mood) + ')', s.mood, '#c678dd')}${bar('Hunger (full)', s.hunger, '#e0a458')}${bar('Energy', s.energy, '#6a8fd0')}${bar('Health', s.health, '#8fd18b')}
       ${s.desire ? `<div class="hint" style="margin:4px 0"><b>Dreams</b> ${escapeHtml(s.desireText())}</div>` : ''}
+      ${w.has('coinage') ? `<div class="hint">Coins: ${s.coins || 0} (earned ${s.earned || 0} in all)</div>` : ''}
       <div class="hint">Partner: ${ptn ? escapeHtml(ptn) : 'none'} · children: ${s.kids.length} · home: ${home ? 'cabin at ' + home.x + ',' + home.y : 'none'}</div>
       <div class="hint">Skills: ${sk.length ? sk.map(([k, v]) => k + ' (' + skillWord(v) + ')').join(', ') : 'still learning'}</div>
       <div class="hint">Bonds: ${friends.length ? friends.map(f => escapeHtml(f.o.name) + ' ' + (f.r > 0 ? '+' : '') + Math.round(f.r)).join(', ') : 'none yet'}</div>
-      ${s.isChild() ? '' : `<div class="opinions"><div class="hint">Opinions</div>${opBar('Growth', s.op.growth)}${opBar('Leisure', s.op.labor)}${opBar('Strict law', s.op.law)}${opBar('Watch', s.op.defense)}</div>`}
+      ${s.isChild() ? '' : `<div class="opinions"><div class="hint">Opinions</div>${opBar('Growth', s.op.growth)}${opBar('Leisure', s.op.labor)}${opBar('Strict law', s.op.law)}${opBar('Watch', s.op.defense)}${opBar('Taxes', s.op.tax || 0)}</div>`}
       <div class="story"><div class="hint">Life story</div>${s.bio.slice(-8).reverse().map(b => `<div><b>D${b.day}</b>${escapeHtml(b.text)}</div>`).join('') || '<div class="hint">Just beginning.</div>'}</div>`;
   } else if (s instanceof Animal && s.alive) {
     el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'} Health ${Math.max(0, Math.round(s.hp))}.</div>`;
   } else if (s && s.type && s.w) {
-    const names = { house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+    const names = { market: 'Market square', house: HOUSE_STYLES[s.style || 0], farm: 'Field', store: ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0], campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
     let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
+    if (s.type === 'market') extra = 'Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.';
     if (s.type === 'dock') { const bs = w.boats.filter(b => b.dock === s.id); extra = `${bs.length} fishing boat${bs.length === 1 ? '' : 's'} work from here (${bs.filter(b => b.state === 'out').length} at sea). Catches go straight to the stores.` }
     if (s.type === 'logcamp') extra = 'A depot beside the forest. Woodcutters within about 14 tiles work about 15% faster and get a quarter more wood from every tree.';
     if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
@@ -270,7 +290,8 @@ addEventListener('keydown', e => {
   if (e.code === 'Space') { e.preventDefault(); setSpeed(speed === 0 ? 10 : 0) }
   const m = { '1': 1, '2': 3, '3': 10, '4': 30 }[e.key]; if (m) setSpeed(m);
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
-  if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key === 'Escape') { selected = null; follow = false; updateUI() }
+  if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer();
+  if (e.key === 'Escape') { if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
 addEventListener('resize', () => { resizeRender(); clampCam() });
@@ -286,6 +307,7 @@ function updateDiag() {
   const limited = speed > 0 && DBG.tps < want * 0.7 && want > 0;
   $('diagBadge').textContent = total ? total + ' error' + (total === 1 ? '' : 's') : limited ? 'slow' : 'ok'; $('diagBadge').classList.toggle('bad', total > 0);
   const hw = $('hudWarn'); if (total || limited) { hw.style.display = ''; hw.textContent = total ? '⚠ ' + total + ' error' + (total === 1 ? '' : 's') : '⏱ running at ' + fmt(eff, 1) + '× (CPU-limited)' } else hw.style.display = 'none';
+  if (!drawerOpen()) return;
   const rows = secs.slice(0, 6).map(r => `<tr><td>${r.name}</td><td>${fmt(r.avgMs, 3)} ms avg · ${fmt(r.maxMs, 1)} max · ${Math.round(r.share * 100)}%</td></tr>`).join('');
   $('diagBody').innerHTML = `<table><tr><td>Speed</td><td>${fmt(eff, 1)}× actual of ${speed}× requested${limited ? ' · <span class="err">can\'t keep up</span>' : ''}</td></tr>
     <tr><td>Per tick</td><td>${d.ticks ? fmt(d.tickMs / d.ticks, 3) : '–'} ms avg · ${fmt(d.tickMax, 1)} ms worst</td></tr><tr><td>Frame</td><td>${fmt(DBG.fps, 0)} fps · draw ${fmt(DBG.renderMs, 1)} ms</td></tr>
@@ -304,7 +326,10 @@ async function reportAction(kind) {
 $('diagCopy').onclick = () => reportAction('copy'); $('diagSave').onclick = () => reportAction('save');
 $('diagProf').onclick = () => { world.profReset(); world.dbg.errors.clear(); DBG.session.clear(); DBG.previous = []; try { localStorage.removeItem(ERR_KEY) } catch (e) { } updateDiag() };
 $('diagCheck').onclick = () => { const before = world.dbg.total; world.sanity(); for (const v of world.vills) { try { v.abort(0) } catch (e) { } } saveInfo(world.dbg.total > before ? 'Self-check repaired corrupted values and reset every villager’s current job.' : 'Self-check found nothing to repair; every villager’s current job was reset.'); updateDiag() };
-$('hudWarn').onclick = () => { $('diagCard').open = true; $('diagCard').scrollIntoView({ block: 'center' }) };
+const drawer = $('drawer'), drawerOpen = () => drawer.classList.contains('open');
+function toggleDrawer(open) { drawer.classList.toggle('open', open === undefined ? !drawerOpen() : open); $('gear').classList.toggle('on', drawerOpen()); if (drawerOpen()) updateDiag() }
+$('gear').onclick = () => toggleDrawer(); $('drawerClose').onclick = () => toggleDrawer(false);
+$('hudWarn').onclick = () => { toggleDrawer(true); $('diagCard').open = true; $('diagCard').scrollIntoView({ block: 'center' }) };
 $('autoresume').checked = (() => { try { return localStorage.getItem(AUTORESUME_KEY) !== '0' } catch (e) { return true } })();
 $('autoresume').addEventListener('change', e => { try { localStorage.setItem(AUTORESUME_KEY, e.target.checked ? '1' : '0') } catch (_) { } });
 

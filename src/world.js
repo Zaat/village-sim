@@ -7,7 +7,7 @@ class World {
   constructor(seed, settings = {}) {
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this); initTech(this);
+    this.settings = { survival: false, disasters: true, crime: true, ...settings }; initSociety(this); initTech(this); initEcon(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -154,6 +154,7 @@ class World {
     if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
     const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' || bp.type === 'store' ? styleNow(this) : 0;
     if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.say('A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
+    if (bp.type === 'market') this.say('A market square is opened. Merchants will know where to find us.');
     if (bp.type === 'logcamp') this.say('A logging camp is raised beside the forest.');
     if (bp.type === 'minecamp') this.say('A mining camp opens at the rockface.');
     if (bp.type === 'lodge') this.say('A hunting lodge is built near the game trails.');
@@ -253,6 +254,7 @@ class World {
     townNewDay(this);
     societyNewDay(this);
     techDay(this);
+    tradeDay(this);
   }
 
   /* ----- diagnostics: every subsystem is timed and isolated, so one bug cannot stop the village ----- */

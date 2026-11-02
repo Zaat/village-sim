@@ -5,12 +5,13 @@
    Claude counsel), it is handed a request with concrete options and picks one;
    its answer is validated and applied, and rules decide if it fails.
    ========================================================================== */
-const ISSUES = ['growth', 'labor', 'law', 'defense'];
+const ISSUES = ['growth', 'labor', 'law', 'defense', 'tax'];
 const ISSUE_TXT = {
   growth: { name: 'Growth', hi: 'welcome newcomers and let the village grow', lo: 'keep the village small and close-knit', q: 'whether the village should keep growing' },
   labor: { name: 'Work & leisure', hi: 'make more time for rest, games and festivals', lo: 'put work and industry first', q: 'how much of life belongs to work and how much to rest' },
   law: { name: 'Justice', hi: 'enforce stricter justice', lo: 'favor mercy and leniency', q: 'how harshly wrongdoers should be punished' },
   defense: { name: 'Defense', hi: 'organize a village watch', lo: 'rely on trust and open doors', q: 'whether to keep a watch against danger' },
+  tax: { name: 'Taxes', hi: 'raise taxes so the village can afford more', lo: 'keep taxes light and let people keep their earnings', q: 'how much of everyone\'s earnings the village should take' },
 };
 const REMEDIES = {
   watch: { text: 'set a night watch', apply: g => { g.policy.defense = Math.min(1, g.policy.defense + 0.5) } },
@@ -38,7 +39,7 @@ const crimeRate = (w, days) => w.crimeLog.filter(d => d > w.day - days).length;
 const motionText = (k, dir) => dir > 0 ? ISSUE_TXT[k].hi : ISSUE_TXT[k].lo;
 
 function initSociety(w) {
-  w.gov = { council: [], termEnd: 0, policy: { growth: 0, labor: 0, law: 0, defense: 0 }, approval: 70, welfare: false, mediation: false, nextMeeting: 6, trial: null, decisions: [], elections: 0,
+  w.gov = { council: [], termEnd: 0, policy: { growth: 0, labor: 0, law: 0, defense: 0, tax: 0 }, approval: 70, welfare: false, mediation: false, nextMeeting: 6, trial: null, decisions: [], elections: 0,
     efficacy: { watch: 0.5, strict: 0.5, lenient: 0.5, mediation: 0.5, welfare: 0.5, festival: 0.5 } };
   w.groups = []; w.groupNext = 1; w.crimes = []; w.crimeLog = []; w.banished = []; w.scars = [];
   w.holiday = null; w.holidayDone = true; w.meetingDay = 0; w.meetingDone = true; w.forceFeast = false; w.mind = null; w.pendingMind = 0;
@@ -197,6 +198,10 @@ function recordDecision(w, text, speeches, source) {
   w.emit('council', `Council: ${text}${source === 'claude' ? ' (deliberated with Claude)' : ''}`, { text, speeches });
   speeches.slice(0, 3).forEach(s => w.say(`   ${s.who}: “${s.line}”`));
 }
+function councilBase(w) {
+  const ms = councilMembers(w);
+  return { members: ms.map(m => ({ name: m.v.name, title: m.title, traits: m.v.traitWords().join(', ') || 'even-tempered', op: m.v.op, group: (w.groups.find(x => x.id === m.v.group) || {}).name || null })), history: w.gov.decisions.slice(0, 5).map(d => `Day ${d.day}: ${d.text}`), state: stateBrief(w) };
+}
 function holdMeeting(w) {
   const g = w.gov, ms = councilMembers(w); if (ms.length < 2) return;
   const pop = w.vills.length, ad = adultsOf(w);
@@ -259,7 +264,7 @@ function crimeDay(w) {
   for (const v of adultsOf(w)) {
     if (v.stocksUntil > w.tick || v.duty > w.tick) continue;
     const poor = v.hunger < 35 && w.stock.food < w.vills.length * 2.5;
-    let p = 0.0025 * (1.4 - v.trait.kind) * (v.mood < 35 ? 3 : v.mood < 50 ? 1.5 : 1) * (poor ? 5 : 1) * (1 - 0.4 * Math.max(0, law)) * (1 + 0.3 * Math.max(0, -law)) * (1 - 0.25 * Math.max(0, def)) * (warden ? 0.8 : 1) * (1 + Math.min(2, v.record * 0.4)) * (w.settings.survival ? 1.4 : 1) * (g.welfare ? 0.6 : 1);
+    let p = 0.0025 * (1.4 - v.trait.kind) * (v.mood < 35 ? 3 : v.mood < 50 ? 1.5 : 1) * (poor ? 5 : 1) * (1 - 0.4 * Math.max(0, law)) * (1 + 0.3 * Math.max(0, -law)) * (1 - 0.25 * Math.max(0, def)) * (warden ? 0.8 : 1) * (1 + Math.min(2, v.record * 0.4)) * (w.settings.survival ? 1.4 : 1) * (g.welfare ? 0.6 : 1) * (w.has('coinage') ? ((v.coins || 0) < 4 ? 1.35 : (v.coins || 0) > 60 ? 0.7 : 1) : 1);
     if (v.trait.kind > 0.75) p *= 0.4;
     if (w.r() < p) theft(w, v);
   }
@@ -336,6 +341,7 @@ function societyNewDay(w) {
   const ad = adultsOf(w); g.approval = ad.length ? ad.reduce((s, v) => s + v.mood, 0) / ad.length : 70;
   if (g.mediation) for (const [k, r] of w.rel) if (r < -30) w.rel.set(k, r + 3);
   if (w.stock.food < w.vills.length) nudge(w, 'growth', -0.05);
+  if (w.has('coinage')) { const cs = ad.map(v => v.coins || 0).sort((a, b) => a - b), med = cs.length ? cs[cs.length >> 1] : 0; for (const v of ad) v.op.tax = clamp(v.op.tax + clamp((med - (v.coins || 0)) / 300, -0.02, 0.02), -1, 1) }       // the poor lean toward taxes, the comfortable away from them
   setupHoliday(w);
   if (w.settings.crime) crimeDay(w);
   g.council = g.council.filter(c => memberOf(w, c.id));

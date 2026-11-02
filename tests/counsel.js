@@ -16,9 +16,9 @@ const { chromium } = require('playwright');
       return {text:JSON.stringify({choice,speeches:[{who:names[0],line:'We should act with care for everyone here.'},{who:names[1]||names[0],line:'I fear this will cost us more than it saves.'},{who:'Nobody Real',line:'ignored'}],reason:'The members lean toward '+choice+'.'})};
     }}};
   });
-  await p.goto('file:///home/claude/village-sim/index.html'); await p.waitForTimeout(500);
+  await p.goto('file:///home/claude/village-sim/index.html'); await p.waitForTimeout(500); await p.click('#gear');
   console.log('initial:',(await p.innerText('#mindStatus')).slice(0,90),'| disabled',await p.isDisabled('#mindToggle'));
-  await p.click('.tog:has(#mindToggle)'); await p.waitForTimeout(500);
+  await p.click('.tog:has(#mindToggle)'); await p.waitForTimeout(500); await p.click('#gear');
   console.log('after enable: checked',await p.isChecked('#mindToggle'),'|',(await p.innerText('#mindStatus')).slice(0,80));
   await p.evaluate(()=>{__sim.setSpeed(0);__sim.newWorld(777);});
   for(let i=0;i<100;i++){ await p.evaluate(()=>__sim.run(1200)); await p.waitForTimeout(40); }

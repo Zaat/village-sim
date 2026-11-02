@@ -14,6 +14,9 @@ const TECHS = {
   forestry: { name: 'Forestry', tier: 2, cost: 240, req: ['tools'], desc: 'Organized timber work: logging camps beside the forest cut about a quarter more wood and shorten every trip.' },
   mining: { name: 'Mining', tier: 2, cost: 260, req: ['tools', 'carpentry'], desc: 'Shafts and props: mining camps by the rock yield more stone, carry bigger loads and shorten every trip.' },
   lodges: { name: 'Hunting lodges', tier: 2, cost: 240, req: ['tools'], desc: 'Smoking and drying meat: lodges near the game trails make hunts surer and shorten every trip.' },
+  trade: { name: 'Trade', tier: 2, cost: 260, req: ['carpentry'], desc: 'Markets and visiting merchants: surplus goods can be swapped for what the village lacks.' },
+  coinage: { name: 'Coinage', tier: 3, cost: 480, req: ['trade', 'masonry'], desc: 'Coins and a village treasury: trade earns money, the council sets taxes, and families can grow wealthy.' },
+  seatrade: { name: 'Sea trade', tier: 3, cost: 520, req: ['trade', 'navigation'], desc: 'Harbor trade: merchant ships call at the docks with larger cargoes.' },
   boats: { name: 'Boat-building', tier: 2, cost: 260, req: ['nets', 'carpentry'], desc: 'Hulls and oars: docks and fishing boats can reach deep water.' },
   rotation: { name: 'Crop rotation', tier: 2, cost: 260, req: ['granary'], desc: 'Resting and alternating fields: crops yield about a quarter more.' },
   masonry: { name: 'Masonry', tier: 2, cost: 280, req: ['tools', 'carpentry'], desc: 'Cut stone: new homes are stone and sleep two more people; roads are cobbled.' },
@@ -28,7 +31,7 @@ const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house'];
 
 function initTech(w) { w.tech = { known: {}, points: 0, focus: null, wait: 0, contrib: {}, log: [], feverSeen: 0 }; w.boats = [] }
 const hasTech = (w, id) => !!w.tech.known[id];
-const techEra = w => { const n = Object.keys(w.tech.known).length; return n < 3 ? 0 : n < 7 ? 1 : n < 11 ? 2 : 3 };
+const techEra = w => { const n = Object.keys(w.tech.known).length; return n < 3 ? 0 : n < 8 ? 1 : n < 13 ? 2 : 3 };
 const styleNow = w => hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
 const bedsOf = b => CFG.HOUSE_CAP + (b.style || 0);
 const techAvailable = w => Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].req.every(r => w.tech.known[r]));
@@ -40,11 +43,11 @@ function addKnowledge(w, pts, v) {
 /* how much does the village need this discovery right now? (rules-based default for the council) */
 function techNeed(w, id) {
   const pop = w.vills.length, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
-  const base = { nets: w.fishOK ? 0.6 : 0.1, tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: w.fishOK ? 0.9 : 0.1, rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4, forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0) };
+  const base = { nets: w.fishOK ? 0.6 : 0.1, tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: w.fishOK ? 0.9 : 0.1, rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4, forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0), trade: 0.55 + (food > 6 ? 0.3 : 0), coinage: 0.5, seatrade: 0.35 + (w.of('dock').length ? 0.3 : 0) };
   return (base[id] || 0.5) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0);
 }
 function techPref(v, id) {         // each council member's taste
-  const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4 })[id] || 0;
+  const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4, trade: t.soc * 0.4 + t.cur * 0.2, coinage: t.ind * 0.3 + t.cur * 0.1, seatrade: t.cur * 0.3 + t.brave * 0.3 })[id] || 0;
 }
 function chooseResearch(w, id, source) {
   const t = w.tech; t.focus = id; t.wait = 0;

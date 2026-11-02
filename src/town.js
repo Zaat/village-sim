@@ -21,7 +21,7 @@ function placeBuilding(w, type) {
     }
     if (!ok) continue;
     const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5 || d > 40) continue;
-    const score = type === 'house' ? d + w.r() * 2 : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
+    const score = type === 'house' ? d + w.r() * 2 : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
     cands.push({ x, y, score });
   }
   cands.sort((a, b) => a.score - b.score);
@@ -81,7 +81,7 @@ function placeDock(w) {
 }
 function planRoads(w) {
   if (w.bps.filter(b => b.type === 'road').length >= 8) return;
-  const targets = [...w.houses(), ...w.of('farm'), ...w.of('store'), ...w.of('logcamp'), ...w.of('minecamp'), ...w.of('lodge')];
+  const targets = [...w.houses(), ...w.of('farm'), ...w.of('store'), ...w.of('logcamp'), ...w.of('minecamp'), ...w.of('lodge'), ...w.of('market')];
   for (const b of targets) {
     if (w.connected.has(b.id)) continue; w.connected.add(b.id);
     const path = w.search(b.x, b.y, (x, y, i) => w.storeAdj[i] === 1 && !(w.bmap[i] && w.blk[i])); if (!path) continue;
@@ -101,6 +101,7 @@ function planTown(w) {
     else if (cap < pop + 4 && w.stock.food > pop * 4 && w.stock.wood >= 10) placeBuilding(w, 'house');
   }
   if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(3, 1 + Math.floor(pop / 40)) && w.stock.wood > 30) placeDock(w);
+  if (w.has('trade') && pop >= 20 && w.of('market').length + count('market') < Math.min(3, 1 + Math.floor(pop / 70)) && w.stock.wood > 30) placeBuilding(w, 'market');
   planCamps(w);
   planUpgrades(w);
   planRoads(w);

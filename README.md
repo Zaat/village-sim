@@ -1,4 +1,4 @@
-# Village Sim v0.5
+# Village Sim v0.6
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -13,6 +13,13 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 - **Architecture changes with the ages:** log cabins, then timber-frame houses (carpentry), then stone houses (masonry). Roads become cobbled. Old homes are upgraded over time, and better homes sleep more people. Storehouses change style too.
 - **Docks and boats** (boat-building): fishing boats sail straight out from a dock to deep water, fish, and return; catches are unloaded at the dock.
 - **Camps** (forestry, mining, hunting lodges): a camp beside dense forest, rock or game acts as a local depot. Workers within about 14 tiles (22 for hunters) work faster, get more per trip, and hunts are surer.
+
+## Trade, money and taxes (new in 0.6)
+- **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
+- Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Settings drawer (new in 0.6)
+Settings, save/load, Claude counsel, diagnostics and the world seed live in a drawer opened with the ⚙ Settings button (or **G**; Esc closes it). It floats over the map and never moves, and the side panel's cards now keep a fixed size, so toggles stay put even at 30× speed.
 
 ## Diagnostics
 Open the **Diagnostics** panel (it shows ok / slow / N errors). It lists actual speed against requested speed, time per tick, where the time goes, and errors with counts. **Copy report** or **Download report** produces a full JSON report (world state counts, timings, errors with stack traces, last events, and errors left over from the previous session). Send that report if something goes wrong.
@@ -30,7 +37,7 @@ Safety nets: every subsystem and every villager/animal update is isolated, so on
 - Jobs in progress are not saved: after loading, villagers simply decide again (a carried load or half-finished trip is lost, nothing else).
 
 ## Controls
-Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows pan · Space pause · 1–4 speed · F follow selected · minimap click to jump.
+Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows pan · Space pause · 1–4 speed · F follow selected · G settings drawer · minimap click to jump.
 
 ## Layout
 | File | Purpose |
@@ -68,5 +75,5 @@ The simulation files never touch the DOM, so they run in Node for batch experime
 
 ## Roadmap
 1. **Next (water and technology):** boats, docks, fishing fleets and crossing the water; a tech tree with eras and building styles that change over time.
-2. **Then (civilization):** markets and money, great projects built by cooperating groups, learning from history, sports and games, science, bigger disasters.
+2. **Then (civilization):** great projects built by cooperating groups, learning from history, sports and games, science, bigger disasters.
 3. Save/load and export, richer analysis charts, bigger maps.
