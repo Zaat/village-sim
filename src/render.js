@@ -387,6 +387,25 @@ function projectArt(g, w, b, now, dark) {
     if (snow) for (let k = 0; k < 5; k++) rc(g, '#f4f6fa', X + 3 + k * 9, Y + 3, 6, 1);
     rc(g, '#2a2c30', X + 19, Y + 30, 10, 14); rc(g, '#4a3420', X + 20, Y + 31, 8, 13); rc(g, '#2a2c30', X + 9, Y + 20, 2, 7); rc(g, '#2a2c30', X + 37, Y + 20, 2, 7);
     rc(g, '#5a3d22', X + 23, Y - 8, 2, 12); rc(g, '#3c6fb4', X + 25, Y - 8, 9, 5); rc(g, '#f0e6d0', X + 28, Y - 7, 3, 3);
+  } else if (b.type === 'amphitheatre') {
+    rc(g, '#9a9588', X + 1, Y + 14, Wd - 2, 32); rc(g, '#b8b3a4', X + 3, Y + 16, Wd - 6, 28);
+    for (let k = 0; k < 4; k++) { rc(g, k % 2 ? '#cfcabb' : '#d9d4c5', X + 5 + k * 3, Y + 18 + k * 4, Wd - 10 - k * 6, 3); rc(g, '#8f8a7c', X + 5 + k * 3, Y + 21 + k * 4, Wd - 10 - k * 6, 1) }
+    rc(g, '#8a6a42', X + 22, Y + 34, 20, 8); rc(g, '#a98456', X + 23, Y + 35, 18, 2); rc(g, '#6b4f30', X + 22, Y + 42, 20, 1);
+    for (let k = 0; k < 5; k++) rc(g, '#e8e0c8', X + 4 + k * 13, Y + 8, 3, 8);
+    for (let k = 0; k < 5; k++) rc(g, '#cfc8b6', X + 3 + k * 13, Y + 6, 5, 2);
+    for (const [fx, c] of [[X + 8, '#c8443c'], [X + 52, '#3c6fb4']]) { rc(g, '#5a3d22', fx, Y - 4, 1, 12); rc(g, c, fx + 1, Y - 4, 6, 4) }
+    if (w.holiday && !w.holidayDone) for (let k = 0; k < 6; k++) rc(g, ['#ffd24a', '#c8443c', '#3c6fb4'][k % 3], X + 6 + k * 9, Y + 12 + (k % 2), 3, 3);
+  } else if (b.type === 'granaryhall') {
+    rc(g, '#8f8a80', X + 3, Y + 38, Wd - 6, 8); rc(g, '#a07a4a', X + 3, Y + 20, Wd - 6, 19); for (let k = 0; k < Wd - 6; k += 6) rc(g, '#8a6a42', X + 3 + k, Y + 20, 1, 19);
+    for (let r = 0; r < 16; r++) { const l = Math.round(r * 1.1); rc(g, r % 2 ? '#c4a24a' : '#b8963e', X + l, Y + 3 + r, Wd - 2 * l, 1) } rc(g, '#8a6a2a', X + 1, Y + 19, Wd - 2, 1); if (snow) rc(g, '#f4f6fa', X + 8, Y + 3, Wd - 16, 2);
+    rc(g, '#3e2a18', X + 17, Y + 28, 14, 18); rc(g, '#5a3d22', X + 18, Y + 29, 6, 17); rc(g, '#5a3d22', X + 25, Y + 29, 5, 17);
+    for (let k = 0; k < 4; k++) { rc(g, '#d9b34a', X + 6 + k * 3, Y + 41, 2, 4); rc(g, '#e8c84a', X + 34 + k * 2, Y + 42, 2, 3) }
+    rc(g, '#5a3d22', X + 8, Y + 28, 6, 6); rc(g, '#3e2a18', X + 34, Y + 26, 8, 6);
+  } else if (b.type === 'lighthouse') {
+    rc(g, '#8f8a80', X + 3, Y + 40, Wd - 6, 6); rc(g, '#dcd8cc', X + 8, Y + 14, 16, 27); rc(g, '#c4282c', X + 8, Y + 20, 16, 4); rc(g, '#c4282c', X + 9, Y + 30, 14, 4); rc(g, '#bdb9ac', X + 20, Y + 14, 4, 27);
+    rc(g, '#3a3a40', X + 6, Y + 11, 20, 3); rc(g, '#5a5a62', X + 9, Y + 5, 14, 6); rc(g, lit || w.tod < 0.15 ? '#fff2a8' : '#cfe8f4', X + 11, Y + 6, 10, 4);
+    rc(g, '#8a2a24', X + 10, Y + 1, 12, 4); rc(g, '#3a3a40', X + 15, Y - 3, 2, 4); rc(g, '#3e2c1c', X + 13, Y + 34, 6, 7); rc(g, '#8a8678', X + 12, Y + 26, 3, 3);
+    if (lit) { const a = now / 600; g.fillStyle = 'rgba(255,240,160,.35)'; const bx = X + 16 + Math.cos(a) * 40, by = Y + 7 + Math.sin(a) * 6; g.beginPath(); g.moveTo(X + 16, Y + 7); g.lineTo(bx, by - 5); g.lineTo(bx, by + 5); g.fill() }
   } else {
     rc(g, '#a8a498', X + 2, Y + 38, Wd - 4, 8); rc(g, '#bab6aa', X + 6, Y + 33, Wd - 12, 6); rc(g, '#cbc7bb', X + 10, Y + 28, Wd - 20, 6);
     rc(g, '#d9d5c8', X + 19, Y + 4, 10, 25); rc(g, '#bdb9ac', X + 26, Y + 4, 3, 25); rc(g, '#e8e4d8', X + 20, Y, 8, 4); rc(g, '#f4f0e4', X + 22, Y - 3, 4, 3);

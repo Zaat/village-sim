@@ -92,7 +92,7 @@ function tradeDay(w) {
   updatePrices(w);
   if (E.caravan && w.day >= E.caravan.leaves) { w.say(`${E.caravan.name.charAt(0).toUpperCase() + E.caravan.name.slice(1)} pack up and leave.`); E.caravan = null }
   if (E.caravan && money(w)) shopDay(w);
-  if (!w.of('market').length || E.caravan || w.day < E.nextCaravan) return;
+  if (!w.of('market').length || E.caravan || w.day < E.nextCaravan - (projBuilt(w, 'lighthouse') ? 1 : 0)) return;
   if (w.season === 3 && w.r() < 0.5) { E.nextCaravan = w.day + 2; return }
   if (w.gov.policy.growth < -0.75 && w.r() < 0.7) { E.nextCaravan = w.day + 4; return }        // a closed village discourages visitors
   const sea = w.has('seatrade') && w.of('dock').length > 0 && w.r() < 0.45, name = TRADER_NAMES[(w.r() * TRADER_NAMES.length) | 0];

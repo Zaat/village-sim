@@ -80,3 +80,4 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 @container (max-width:900px){#ctl{top:56px;right:auto;left:12px;max-width:calc(100% - 24px);flex-wrap:wrap}#drawer{top:104px;max-height:calc(100% - 300px)}}
 @container (max-width:420px){#drawer{width:calc(100% - 24px)}}
 #chronCard{height:470px;overflow-y:auto}
+#ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}

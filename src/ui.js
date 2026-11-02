@@ -95,8 +95,9 @@ for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('c
 
 /* ---------- world lifecycle ---------- */
 function adoptWorld(w) {
+  if (tt) { tt = null; $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false }
   world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
-  world.listeners.push(type => { if (type === 'season' && autosaveOn && $('autosave').checked) saveToStorage(false) });
+  world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
   world.dbg.onFault = () => dbgPersist(world); world.profReset();
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k];
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); updateUI();
@@ -157,7 +158,7 @@ $('resumeNo').onclick = () => {          // keep the old save as a backup before
   try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { localStorage.setItem(BACKUP_KEY, raw); localStorage.setItem(BACKUP_META, localStorage.getItem(META_KEY) || '') } } catch (e) { }
   autosaveOn = true; hideResume(); setSpeed(10);
 };
-setInterval(() => { if (autosaveOn && $('autosave').checked && speed >= 0) saveToStorage(false) }, 60000);
+setInterval(() => { if (!tt && autosaveOn && $('autosave').checked && speed >= 0) saveToStorage(false) }, 60000);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && autosaveOn && $('autosave').checked) saveToStorage(false) });
 addEventListener('pagehide', () => { if (autosaveOn && $('autosave').checked) saveToStorage(false) });
 
@@ -358,10 +359,42 @@ $('autoresume').addEventListener('change', e => { try { localStorage.setItem(AUT
 
 /* ---------- main loop: nothing in here is allowed to stop it ---------- */
 let last = performance.now(), acc = 0, uiAcc = 0, miniAcc = 0, lastFrameAt = performance.now(), frames = 0;
+/* ---- time travel: run the simulation flat out for a chosen span, then report what changed ---- */
+let tt = null;
+function startTimeTravel(days) {
+  if (tt || !world) return; const w = world;
+  try { localStorage.setItem('villagesim.pretravel', JSON.stringify(serializeWorld(w))) } catch (e) { $('ttInfo').textContent = 'Could not keep a copy to undo with, so nothing was skipped. Use Export file, then try again.'; return }
+  tt = { target: w.tick + days * CFG.TPD, start: w.tick, days, prevSpeed: speed, t0: performance.now(), day0: w.day, pop0: w.vills.length, deaths0: w.deaths, chron0: w.chron ? w.chron.events.length : 0, known0: new Set(Object.keys(w.tech.known)), done0: new Set(Object.keys(w.proj.done)), logMark: (w.chron && w.chron.events[0]) || null };
+  setSpeed(0); $('ttGo').disabled = true; $('ttCancel').disabled = false; $('ttSel').disabled = true; $('ttResult').innerHTML = '';
+}
+function stepTimeTravel() {
+  const w = world, T = tt, t0 = performance.now();
+  try { while (w.tick < T.target && !T.cancel && performance.now() - t0 < 24) w.step() } catch (e) { dbgNote('timetravel', e); dbgPersist(w); T.cancel = true }
+  const p = Math.min(1, (w.tick - T.start) / (T.target - T.start)), el = (performance.now() - T.t0) / 1000;
+  $('ttBar').style.width = Math.round(p * 100) + '%'; $('ttInfo').textContent = `Day ${w.day}, year ${w.year}: ${Math.round(p * 100)}% · ${Math.round(el)}s${p > 0.05 ? ' · about ' + Math.round(el / p * (1 - p)) + 's left' : ''}`;
+  if (w.tick >= T.target || T.cancel) finishTimeTravel();
+}
+function finishTimeTravel() {
+  const w = world, T = tt; tt = null; setSpeed(T.prevSpeed > 0 ? T.prevSpeed : 10);
+  $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false; $('ttBar').style.width = '100%';
+  const newTech = Object.keys(w.tech.known).filter(k => !T.known0.has(k)).map(k => TECHS[k].name), newProj = Object.keys(w.proj.done).filter(k => !T.done0.has(k)).map(k => PROJECTS[k].name);
+  const evs = w.chron ? w.chron.events.slice(0, Math.max(0, w.chron.events.length - T.chron0)).filter(e => e.kind === 'event' || e.kind === 'faction' || e.kind === 'era').slice(0, 5) : [];
+  const spanDays = w.day - T.day0, esc = escapeHtml;
+  $('ttInfo').textContent = T.cancel ? 'Stopped early.' : 'Done.';
+  $('ttResult').innerHTML = `<b>${spanDays} days passed.</b> Population ${T.pop0} → ${w.vills.length}, ${w.deaths - T.deaths0} died.${newTech.length ? `<br>Discovered: ${esc(newTech.join(', '))}.` : ''}${newProj.length ? `<br>Built: ${esc(newProj.join(', '))}.` : ''}${w.gov.ruling ? `<br>${esc(w.gov.ruling.name)} leads the council.` : ''}${evs.length ? '<br>' + evs.map(e => '· ' + esc(e.text.length > 90 ? e.text.slice(0, 87) + '…' : e.text)).join('<br>') : ''}`;
+  w.say(`Time travel: ${spanDays} days passed.`); $('ttResult').innerHTML += '<div style="margin-top:6px"><button id="ttUndo">Undo: go back to before</button></div>'; $('ttUndo').onclick = undoTimeTravel;
+}
+function undoTimeTravel() {
+  if (tt) return;
+  try { const raw = localStorage.getItem('villagesim.pretravel'); if (!raw) { $('ttInfo').textContent = 'No earlier copy found.'; return } adoptWorld(deserializeWorld(JSON.parse(raw))); setSpeed(10); $('ttResult').textContent = ''; $('ttInfo').textContent = 'Back to before the skip.'; $('ttBar').style.width = '0' }
+  catch (e) { $('ttInfo').textContent = 'Could not restore: ' + ((e && e.message) || e) }
+}
+$('ttGo').onclick = () => startTimeTravel(+$('ttSel').value); $('ttCancel').onclick = () => { if (tt) tt.cancel = true };
 function frame(now) {
   const ts = performance.now(); lastFrameAt = ts; frames++;
   try {
     const dt = Math.min(100, now - last); last = now;
+    if (tt) stepTimeTravel();
     if (speed > 0) {
       acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now();
       try { while (n-- > 0) { world.step(); if (performance.now() - t0 > 14) { acc = 0; break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }

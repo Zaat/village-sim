@@ -1,4 +1,4 @@
-# Village Sim v0.8
+# Village Sim v0.9
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,10 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Time travel and more projects (new in 0.9)
+- **Time travel:** in the ⚙ drawer, pick a span (a season, 1, 2, 5 or 10 years) and **Fast-forward**. The simulation runs flat out with a progress bar, ETA and a Stop button, then reports population change, deaths, discoveries, projects built, who leads the council and notable events. A copy of the village is kept first, and **Undo** takes you back. Autosave is paused while it runs.
+- **Three more great projects:** the **Amphitheatre** (masonry; holidays and games lift mood far more), the **Great Granary** (granary; +120 storage, food spoils 30% slower) and the **Lighthouse** (navigation, needs a dock; deep fisheries recover 30% faster and trading ships come more often). Seven projects in all, one at a time.
 
 ## Factions and history (new in 0.8)
 - **Factions:** every social circle now has a **platform**: the one or two issues that set it apart (a watch, lighter taxes, more leisure...) and a broader **focus** (learning, safety, fellowship or enterprise). Larger circles field their leader at elections, and voters weigh how closely a circle's platform matches their own views, with a little fatigue for a circle that keeps winning. The circle of the elected Chief **leads the council** (or the circle with the most seats). The ruling circle presses its platform in meetings and nudges research and projects toward its focus. Circles whose platform policy runs against grow bitter, circles whose platform wins grow content.
@@ -83,5 +87,5 @@ The simulation files never touch the DOM, so they run in Node for batch experime
 
 ## Roadmap
 1. **Done so far:** boats and docks, tech eras, camps, trade and money, great projects.
-2. **Then (civilization):** exploration, more projects, sports and games, science, bigger disasters.
+2. **Then (civilization):** exploration, sports and games, science, bigger disasters.
 3. Save/load and export, richer analysis charts, bigger maps.

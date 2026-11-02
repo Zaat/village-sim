@@ -29,8 +29,39 @@ const PROJECTS = {
     pitch: 'a monument to the village’s founders and those it has lost', gives: 'A steady lift in mood, and newcomers are drawn to the village.',
     fit: v => 0.4 * v.trait.soc + 0.3 * (1 - v.trait.ind) + 0.3 * v.trait.kind,
     focus: 'community', need: w => clamp((62 - avgMood(w)) / 30, 0, 1)
+  },
+  amphitheatre: {
+    name: 'Amphitheatre', tech: 'masonry', size: [4, 3], cost: { wood: 30, stone: 70 }, time: 1000, minPop: 45,
+    pitch: 'a stone amphitheatre for games, plays and festivals', gives: 'Holidays and games lift mood far more, for everyone in the village.',
+    fit: v => 0.5 * v.trait.soc + 0.2 * (v.op.labor + 1) / 2 + 0.3 * (1 - v.trait.ind),
+    focus: 'community', need: w => clamp((66 - avgMood(w)) / 30 + (w.holiday ? 0.1 : 0), 0, 1)
+  },
+  granaryhall: {
+    name: 'Great Granary', tech: 'granary', size: [3, 3], cost: { wood: 60, stone: 40 }, time: 900, minPop: 25,
+    pitch: 'a great granary so no winter finds the village hungry', gives: 'Stores hold 120 more, and food spoils far more slowly.',
+    fit: v => 0.4 * (1 - v.trait.brave) + 0.3 * (1 - v.trait.ind) + 0.3 * v.trait.kind,
+    focus: 'safety', need: w => clamp(0.8 * lesson(w, 'famine') + (w.stock.food < w.vills.length * 5 ? 0.3 : 0), 0, 1)
+  },
+  lighthouse: {
+    name: 'Lighthouse', tech: 'navigation', size: [2, 3], cost: { wood: 40, stone: 60 }, time: 900, minPop: 30, req: w => w.of('dock').length > 0, place: placeLighthouse,
+    pitch: 'a lighthouse above the docks to guide the boats home', gives: 'The deep fisheries recover faster, and trading ships come more often.',
+    fit: v => 0.4 * v.trait.cur + 0.3 * v.trait.brave + 0.3 * (1 - v.trait.soc),
+    focus: 'enterprise', need: w => clamp(w.stock.food < w.vills.length * 4 ? 0.5 : 0.15 + (w.has('seatrade') ? 0.2 : 0), 0, 1)
   }
 };
+/* the lighthouse stands on free ground near a dock */
+function placeLighthouse(w) {
+  const [bw, bh] = CFG.SIZE.lighthouse, { W, H } = CFG, cands = [];
+  for (const d of w.of('dock')) for (let y = d.y - 7; y <= d.y + 7; y++) for (let x = d.x - 7; x <= d.x + 7; x++) {
+    if (x < 2 || y < 2 || x + bw >= W - 2 || y + bh >= H - 2) continue;
+    let ok = true;
+    for (let dy = 0; dy < bh && ok; dy++) for (let dx = 0; dx < bw; dx++) { const i = (y + dy) * W + x + dx; if ((w.terr[i] !== TERR.GRASS && w.terr[i] !== TERR.SAND) || w.feat[i] || w.bmap[i] || w.road[i] || w.bpAt.has(i) || w.claim[i] >= 0) { ok = false; break } }
+    if (!ok) continue; const dd = Math.hypot(x - d.x, y - d.y); if (dd < 2 || dd > 8) continue; cands.push({ x, y, s: Math.abs(dd - 4) + w.r() });
+  }
+  cands.sort((a, b) => a.s - b.s);
+  for (const c of cands.slice(0, 8)) if (w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: bw, h: bh }), 160)) return makeBp(w, 'lighthouse', c.x, c.y);
+  return null;
+}
 for (const id in PROJECTS) {
   const p = PROJECTS[id]; CFG.COST[id] = p.cost; CFG.SIZE[id] = p.size; CFG.BUILD_TIME[id] = p.time; CFG.SOLID[id] = true;
 }
@@ -39,7 +70,7 @@ const avgMood = w => { const a = adultsOf(w); return a.length ? a.reduce((s, v) 
 function initProjects(w) { w.proj = { active: null, done: {}, cooldown: 10 } }
 function projAvailable(w) {
   const pop = adultsOf(w).length + 0;
-  return Object.keys(PROJECTS).filter(id => { const p = PROJECTS[id]; return w.has(p.tech) && !projBuilt(w, id) && w.vills.length >= p.minPop && pop >= 8 });
+  return Object.keys(PROJECTS).filter(id => { const p = PROJECTS[id]; return (!p.req || p.req(w)) && w.has(p.tech) && !projBuilt(w, id) && w.vills.length >= p.minPop && pop >= 8 });
 }
 /* which circles back it: those whose members like it, best first */
 function projBackers(w, id) {
@@ -67,7 +98,7 @@ function projectAgenda(w, base, ms) {
     apply: (id, sp, reason, src) => {
       const g = w.gov;
       if (id === 'wait') { P.cooldown = 6; P.waits = (P.waits || 0) + 1; recordDecision(w, 'to hold off on any great project for now.', sp, src); g.nextMeeting = w.day + 4; return }
-      const bp = placeBuilding(w, id);
+      const bp = PROJECTS[id].place ? PROJECTS[id].place(w) : placeBuilding(w, id);
       if (!bp) { P.cooldown = 8; recordDecision(w, `to raise a ${PROJECTS[id].name}, but no good site could be found. They will try again.`, sp, src); g.nextMeeting = w.day + 4; return }
       bp.maxWorkers = 6; bp.proj = true;
       const back = projBackers(w, id).filter(x => x.fit > 0.5).slice(0, 3), champ = ms.slice().sort((a, b) => PROJECTS[id].fit(b.v) - PROJECTS[id].fit(a.v))[0];
@@ -84,6 +115,7 @@ function projectDone(w, b, bp) {
   const ad = adultsOf(w); for (const v of w.vills) v.mood = clamp(v.mood + (a.backers.includes(v.group) ? 10 : 5), 0, 100);
   if (id === 'hall') w.gov.approval = clamp(w.gov.approval + 10, 0, 100);
   if (id === 'library') w.tech.points += 40;
+  if (id === 'amphitheatre') for (const v of w.vills) v.mood = clamp(v.mood + 4, 0, 100);
   w.emit('project', `The ${p.name} is finished! ${a.names.length ? a.names.join(' and ') + ' are proud of their work. ' : ''}${p.gives}`, { id, done: true });
   w.gov.decisions.unshift({ day: w.day, text: `the ${p.name} was completed after ${w.day - (a.since || w.day)} days of labour`, speeches: [], source: 'rules' }); if (w.gov.decisions.length > 12) w.gov.decisions.pop();
   void ad;

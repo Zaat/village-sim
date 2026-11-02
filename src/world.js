@@ -134,7 +134,7 @@ class World {
   campNear(kind, x, y, r = 14) { const type = kind === 'wood' ? 'logcamp' : kind === 'stone' ? 'minecamp' : 'lodge'; for (const b of this.buildings.values()) if (b.type === type && Math.hypot(b.x + 1 - x, b.y + 1 - y) <= r) return true; return false }
   has(id) { return !!this.tech.known[id] }
   beds() { let n = 0; for (const b of this.buildings.values()) if (b.type === 'house') n += bedsOf(b); return n }
-  cap() { return 60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length }
+  cap() { return 60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length + (projBuilt(this, 'granaryhall') ? 120 : 0) }
   passable(i) { const t = this.terr[i], f = this.feat[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.blk[i] === 0 && (f === FEAT.OAK || f === FEAT.PINE || f === FEAT.BUSH) }
   clearTile(i) { const f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) this.trees--; this.feat[i] = 0; this.res[i] = 0 }
   walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.feat[i] === 0 && this.blk[i] === 0 }
@@ -244,7 +244,7 @@ class World {
       this.emit('season', null, { season: s });
     }
     const stc = this.gov.council.find(c => c.title === 'Steward'), std = stc ? this.vills.find(v => v.id === stc.id) : null;
-    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1) * (this.has('granary') ? 0.7 : 1)));
+    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1) * (this.has('granary') ? 0.7 : 1) * (projBuilt(this, 'granaryhall') ? 0.7 : 1)));
     if (s === 3) {
       const need = Math.ceil((this.vills.length * 0.3 + this.houses().length * 0.7 + 1) * (this.harsh ? 1.8 : 1) * (this.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(this)));
       if (this.stock.wood >= need) { this.stock.wood -= need; if (this.cold) this.say('Warm hearths again; the cold has eased.'); this.cold = false }
@@ -308,7 +308,7 @@ class World {
     const g = GROW[this.season] * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1) * (this.has('rotation') ? 1.15 : 1);
     for (const b of this.buildings.values()) if (b.type === 'farm' && b.state === 1) { b.g += g / CFG.FARM_GROW; if (b.g >= 1) { b.state = 2; b.g = 1 } }
     if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) { const g = this.regrow[k]; if (g.at > this.tick || this.season >= 3) continue; if (g.tree) { const i = g.idx; if (this.terr[i] === TERR.GRASS && !this.feat[i] && !this.bmap[i] && !this.road[i] && !this.bpAt.has(i)) { this.feat[i] = g.tree; this.res[i] = 4; this.trees++ } } else this.res[g.idx] = 4; this.regrow.splice(k, 1) }
-    if (this.tick % (this.settings.survival ? 400 : 200) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if ((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) this.fish[i]++;
+    if (this.tick % Math.round((this.settings.survival ? 400 : 200) * (projBuilt(this, 'lighthouse') ? 0.7 : 1)) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if ((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) this.fish[i]++;
     if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * (this.has('forestry') ? 1.6 : 1.3)) {      // saplings spread from existing woods (capped, and never beside roads or buildings); foresters replant more
       for (let a = 0; a < (this.has('forestry') ? 24 : 14); a++) {
         const x = 1 + ((this.r() * (CFG.W - 2)) | 0), y = 1 + ((this.r() * (CFG.H - 2)) | 0), i = y * CFG.W + x;

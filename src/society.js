@@ -373,8 +373,8 @@ function setupHoliday(w) {
 }
 function resolveHoliday(w) {
   if (w.holidayDone) return; w.holidayDone = true;
-  const near = w.vills.filter(v => !v.sleeping && Math.hypot(v.x - w.cx, v.y - w.cy) < 9);
-  for (const v of near) v.mood = Math.min(100, v.mood + 8);
+  const amph = projBuilt(w, 'amphitheatre'), near = w.vills.filter(v => !v.sleeping && Math.hypot(v.x - w.cx, v.y - w.cy) < (amph ? 16 : 9));
+  for (const v of near) v.mood = Math.min(100, v.mood + (amph ? 14 : 8));
   if (w.holiday === 'Midsummer Games') {
     const ps = near.filter(v => !v.isChild() && v.age < 65).sort(() => w.r() - 0.5).slice(0, 10); if (ps.length < 3) return;
     const events = [['footrace', v => v.trait.ind * 0.4 + v.trait.brave * 0.2 - (v.age > 50 ? 0.3 : 0)], ['archery', v => v.skill.hunt + v.trait.cur * 0.2], ['wrestling', v => v.trait.brave * 0.6 + v.trait.ind * 0.3 + (v.sex === 'm' ? 0.1 : 0)], ['riddle contest', v => v.trait.cur * 0.7 + v.trait.soc * 0.2]];
