@@ -210,6 +210,7 @@ function holdMeeting(w) {
   const history = g.decisions.slice(0, 5).map(d => `Day ${d.day}: ${d.text}`);
   const base = { members, history, state: stateBrief(w) };
   if (!crisis && !w.tech.focus && techAvailable(w).length) { researchAgenda(w, base, ms); return }
+  if (!crisis && projectAgenda(w, base, ms)) return;
   if (crisis) {
     const options = Object.keys(REMEDIES).map(id => ({ id, text: `${REMEDIES[id].text} (past results score ${g.efficacy[id].toFixed(2)} of 1)` }));
     const score = id => ms.reduce((s, m) => s + remedyPref(m.v, id) + 0.8 * g.efficacy[id] + w.r() * 0.2, 0);
@@ -266,7 +267,7 @@ function crimeDay(w) {
     const poor = v.hunger < 35 && w.stock.food < w.vills.length * 2.5;
     let p = 0.0025 * (1.4 - v.trait.kind) * (v.mood < 35 ? 3 : v.mood < 50 ? 1.5 : 1) * (poor ? 5 : 1) * (1 - 0.4 * Math.max(0, law)) * (1 + 0.3 * Math.max(0, -law)) * (1 - 0.25 * Math.max(0, def)) * (warden ? 0.8 : 1) * (1 + Math.min(2, v.record * 0.4)) * (w.settings.survival ? 1.4 : 1) * (g.welfare ? 0.6 : 1) * (w.has('coinage') ? ((v.coins || 0) < 4 ? 1.35 : (v.coins || 0) > 60 ? 0.7 : 1) : 1);
     if (v.trait.kind > 0.75) p *= 0.4;
-    if (w.r() < p) theft(w, v);
+    if (w.r() < p * (projBuilt(w, 'bastion') ? 0.67 : 1)) theft(w, v);
   }
   const wd = wardenOf(w);
   for (const c of w.crimes) {
@@ -350,6 +351,6 @@ function societyNewDay(w) {
     else if (g.council.length < councilSize(ad.length)) fillCouncil(w);
   }
   if (g.council.length && !g.council.some(c => c.title === 'Chief')) g.council[0].title = 'Chief';
-  if (g.council.length && w.day >= g.nextMeeting && w.meetingDay !== w.day) { w.meetingDay = w.day; w.meetingDone = false }
+  if (g.council.length && w.day >= g.nextMeeting - (projBuilt(w, 'hall') ? 1 : 0) && w.meetingDay !== w.day) { w.meetingDay = w.day; w.meetingDone = false }
   if (g.trial && w.day >= g.trial.start + 8) reviewRemedy(w);
 }

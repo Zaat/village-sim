@@ -187,7 +187,7 @@ function townNewDay(w) {
   if (d < 4) return;
   if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1)) fire(w); if (w.r() < 0.02 * sv) storm(w) }
   const cap = w.beds(), gp = w.gov.policy.growth;
-  if (pop < 70 && cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1)) {            // travelers seek a home
+  if (pop < 70 && cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1)) {            // travelers seek a home
     const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * 3) | 0);
     if (sp) {
       const names = []; for (let k = 0; k < n; k++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 12 + w.r() * 20, sp.x, sp.y); v.hunger = 85; v.story('Arrived at the village as a traveler seeking shelter.'); w.vills.push(v); names.push(v.name) }
@@ -199,7 +199,7 @@ function townNewDay(w) {
     for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
-  const wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv;
+  const wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1);
   if (pop >= 6 && w.r() < wolfChance && !w.animals.some(a => a.kind === 'wolf' && a.alive)) {
     const sp = ringSpot(w, 24, 32), n = 2 + ((w.r() * 3) | 0);
     if (sp) { for (let k = 0; k < n; k++) w.animals.push(new Animal(w, 'wolf', sp.x, sp.y)); w.emit('event', `A pack of ${n} wolves has been spotted near the village!`, { kind: 'wolves' }) }

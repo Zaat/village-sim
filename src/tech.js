@@ -38,6 +38,7 @@ const techAvailable = w => Object.keys(TECHS).filter(id => !w.tech.known[id] && 
 
 function addKnowledge(w, pts, v) {
   if (v && v.isElder && v.isElder()) pts *= 1.3;                       // elders pass on what they know
+  if (projBuilt(w, 'library')) pts *= 1.5;
   w.tech.points += pts; if (v) w.tech.contrib[v.id] = (w.tech.contrib[v.id] || 0) + pts;
 }
 /* how much does the village need this discovery right now? (rules-based default for the council) */

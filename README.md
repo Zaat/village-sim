@@ -1,4 +1,4 @@
-# Village Sim v0.6
+# Village Sim v0.7
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,9 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Great projects (new in 0.7)
+Once the village has the know-how and the stores to spare, the council may commit to **one great project at a time**: a **Great Hall** (carpentry: more frequent council meetings, approval and feast mood), a **Library** (masonry: learning counts 1.5x), a **Bastion** (watchtowers: half the wolves, a third fewer thefts) or a **Monument** (masonry: steady mood lift, more newcomers). The council scores each option by public taste, its own members' leanings and current need, or waits. Claude counsel can choose instead if it is on. The social circles that like the project best pledge their labour and many villagers help build it (up to six workers on one site); backers feel extra pride when it is finished. The Great projects card shows progress and what is already built.
 
 ## Settings drawer (new in 0.6)
 Settings, save/load, Claude counsel, diagnostics and the world seed live in a drawer opened with the ⚙ Settings button (or **G**; Esc closes it). It floats over the map and never moves, and the side panel's cards now keep a fixed size, so toggles stay put even at 30× speed.
@@ -74,6 +77,6 @@ The simulation files never touch the DOM, so they run in Node for batch experime
 - **Resource balance:** stock targets scale with population and season, and role quotas shift hands toward whichever resource is short and away from a surplus.
 
 ## Roadmap
-1. **Next (water and technology):** boats, docks, fishing fleets and crossing the water; a tech tree with eras and building styles that change over time.
-2. **Then (civilization):** great projects built by cooperating groups, learning from history, sports and games, science, bigger disasters.
+1. **Done so far:** boats and docks, tech eras, camps, trade and money, great projects.
+2. **Then (civilization):** factions with platforms, learning from history, sports and games, science, bigger disasters.
 3. Save/load and export, richer analysis charts, bigger maps.

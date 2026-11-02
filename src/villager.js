@@ -191,6 +191,8 @@ class Villager {
     const inCouncil = w.gov.council.some(c => c.id === this.id);
     if (w.tod > 0.52 && w.tod < 0.72 && (w.festival || (inCouncil && w.meetingDay === w.day && !w.meetingDone) || (this.social < 95 && w.r() < 0.35 + 0.55 * this.trait.soc))) return this.planFire();
     if (this.duty > w.tick && (this.planBuild() || this.planGather('wood'))) return;
+    const pa = w.proj && w.proj.active;                       // backers of a great project lend their hands
+    if (pa && this.energy > 35 && w.r() < (pa.backers.includes(this.group) ? 0.6 : 0.08) && this.planBuild()) return;
     if (this.social < 40 + 30 * this.trait.soc && this.planSocial()) return;
     if (this.planWork()) return;
     if (this.social < 90 && this.planSocial()) return;
@@ -359,9 +361,9 @@ class Villager {
   planBuild() {
     const w = this.w, near = bp => (x, y) => w.nearRect(x, y, bp);
     for (const bp of w.bps) {
-      if (bp.ready() && bp.workers < 2) {
+      if (bp.ready() && bp.workers < (bp.maxWorkers || 2)) {
         bp.workers++; this.bpWork = bp; this.jobKind = 'build'; const chunk = Math.min(30, bp.time - bp.prog);
-        this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120 }), work(this.wt(chunk, 'build'), bp.type === 'upgrade' ? 'Upgrading a home' : 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
+        this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120 }), work(this.wt(chunk, 'build'), bp.type === 'upgrade' ? 'Upgrading a home' : bp.proj ? 'Raising the ' + PROJECTS[bp.type].name : 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
         return true;
       }
     }

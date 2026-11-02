@@ -27,9 +27,9 @@ function serializeWorld(w) {
     causes: w.causes, regrow: w.regrow, scars: w.scars, banished: w.banished, crimes: w.crimes, crimeLog: w.crimeLog, connected: [...w.connected],
     log: w.log.slice(0, 120), hist: w.hist.slice(-600), rel: [...w.rel].map(([k, r]) => [k, Math.round(r * 10) / 10]),
     gov: w.gov, groups: w.groups,
-    buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir })),
+    buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj })),
     bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir })),
-    tech: w.tech, econ: w.econ, boats: w.boats.map(b => ({ id: b.id, dock: b.dock })),
+    tech: w.tech, econ: w.econ, proj: w.proj, boats: w.boats.map(b => ({ id: b.id, dock: b.dock })),
     vills: w.vills.map(v => pickKeys(v, VILL_KEYS)), animals: w.animals.filter(a => a.alive).map(a => pickKeys(a, ANIMAL_KEYS)),
   };
 }
@@ -47,8 +47,8 @@ function deserializeWorld(d) {
     for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * CFG.W + b.x + dx; w.bmap[i] = b.id; if (CFG.SOLID[b.type]) w.blk[i] = 1 }
   }
   for (const b of w.buildings.values()) if (CFG.SOLID[b.type]) w.markAdj(b, w.adjFor(b.type));
-  for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.dir ? { dir: s.dir } : undefined); bp.id = s.id; bp.have = s.have; bp.prog = s.prog }
-  if (d.econ) w.econ = d.econ; if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
+  for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.dir ? { dir: s.dir } : undefined); if (s.proj) { bp.proj = true; bp.maxWorkers = 6 } bp.id = s.id; bp.have = s.have; bp.prog = s.prog }
+  if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
   if (d.tech) w.tech = d.tech; w.boats = []; for (const s of d.boats || []) { const dk = w.buildings.get(s.dock); if (dk && dk.dir) { const bt = new Boat(w, dk); bt.id = s.id; w.boats.push(bt) } }
   w.bpnext = d.counters.bpnext;
   for (const s of d.vills) {

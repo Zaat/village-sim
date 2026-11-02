@@ -241,7 +241,7 @@ function bpArt(g, w, bp, now) {
   if (bp.prog > 0 && bp.type !== 'upgrade') { const hgt = Math.round(Ht * 0.6 * bp.prog / bp.time); rc(g, 'rgba(150,110,70,.75)', X + 3, Y + Ht - 6 - hgt, Wd - 6, hgt) }
 }
 function drawBuilding(g, w, b, now, dark) {
-  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now);
+  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark);
 }
 
 /* ---------- animals & villagers ---------- */
@@ -355,9 +355,43 @@ function bunting(g, w, now) {
 function drawMinimap(w, sel) {
   const m = R.mini; if (!m || !R.miniBase) return; const g = m.getContext('2d');
   g.drawImage(R.miniBase, 0, 0);
-  for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : b.type === 'market' ? '#ffd24a' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
+  for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : b.type === 'market' ? '#ffd24a' : PROJECTS[b.type] ? '#ffffff' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
   g.fillStyle = '#b99d6c'; for (let i = 0; i < w.road.length; i++) if (w.road[i]) g.fillRect(i % CFG.W, (i / CFG.W) | 0, 1, 1);
   for (const a of w.animals) if (a.alive && a.kind === 'wolf') { g.fillStyle = '#ff3b3b'; g.fillRect(a.x - 1, a.y - 1, 2, 2) }
   for (const v of w.vills) { g.fillStyle = v === sel ? '#fff' : '#ffe24a'; g.fillRect(v.x - 0.5, v.y - 0.5, 1.5, 1.5) }
   const c = R.cam, T = CFG.T; g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect((c.x - R.vw / (2 * c.z)) / T, (c.y - R.vh / (2 * c.z)) / T, R.vw / c.z / T, R.vh / c.z / T);
+}
+
+/* ---- great projects ---- */
+function projectArt(g, w, b, now, dark) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T, Wd = b.w * CFG.T, Ht = b.h * CFG.T, snow = w.season === 3, lit = dark > 0.3;
+  rc(g, 'rgba(0,0,0,.22)', X + 1, Y + Ht - 3, Wd, 4);
+  if (b.type === 'hall') {
+    rc(g, '#8f8a80', X + 2, Y + 30, Wd - 4, 17); for (let k = 0; k < 6; k++) rc(g, '#7c776e', X + 2 + (k * 11) % (Wd - 6), Y + 32 + (k % 3) * 5, 8, 1);
+    rc(g, '#a07a4a', X + 4, Y + 18, Wd - 8, 13); for (let k = 0; k < Wd - 8; k += 6) rc(g, '#8a6a42', X + 4 + k, Y + 18, 1, 13);
+    for (let r = 0; r < 16; r++) { const l = Math.round(r * 0.9); rc(g, r % 2 ? '#8a3c30' : '#9c463a', X + l, Y + 2 + r, Wd - 2 * l, 1) } rc(g, '#6e2c22', X, Y + 18, Wd, 1);
+    if (snow) rc(g, '#f4f6fa', X + 10, Y + 2, Wd - 20, 2);
+    rc(g, '#3e2a18', X + 26, Y + 29, 12, 18); rc(g, '#5a3d22', X + 27, Y + 30, 5, 16); rc(g, '#5a3d22', X + 33, Y + 30, 4, 16); rc(g, '#d9b34a', X + 31, Y + 38, 1, 2);
+    for (const wx of [X + 9, X + 46]) { rc(g, '#3e2a18', wx, Y + 33, 8, 8); rc(g, lit ? '#ffd98a' : '#9fc4d8', wx + 1, Y + 34, 6, 6); rc(g, '#3e2a18', wx + 3, Y + 34, 1, 6) }
+    rc(g, '#5a3d22', X + 31, Y - 8, 2, 12); rc(g, '#c8443c', X + 33, Y - 8, 8, 5); rc(g, '#f0d878', X + 36, Y - 7, 2, 3);
+    rc(g, '#6a6a66', X + 52, Y + 3, 5, 10); if (w.season !== 1 || w.tod > 0.55) for (let k = 0; k < 2; k++) { const t = ((now / 900) + k / 2) % 1; g.fillStyle = `rgba(200,200,205,${0.5 * (1 - t)})`; g.fillRect(X + 53 + Math.sin(t * 4 + k) * 2, Y + 1 - t * 10, 3, 3) }
+  } else if (b.type === 'library') {
+    rc(g, '#d6d0c0', X + 2, Y + 44, Wd - 4, 3); rc(g, '#c4bdaa', X + 5, Y + 41, Wd - 10, 3);
+    rc(g, '#e4dfd0', X + 5, Y + 16, Wd - 10, 25); for (let k = 0; k < 4; k++) { rc(g, '#f4f0e4', X + 8 + k * 10, Y + 14, 4, 27); rc(g, '#cfc8b6', X + 11 + k * 10, Y + 14, 1, 27); rc(g, '#d9d2c0', X + 7 + k * 10, Y + 12, 6, 2) }
+    for (let r = 0; r < 10; r++) rc(g, r % 2 ? '#4c6a8c' : '#58789c', X + 3 + r * 2, Y + 2 + r, Wd - 6 - r * 4, 1); rc(g, '#3a5472', X + 3, Y + 12, Wd - 6, 1); if (snow) rc(g, '#f4f6fa', X + 14, Y + 2, Wd - 28, 2);
+    rc(g, '#3e2c1c', X + 20, Y + 28, 8, 13); rc(g, '#5a4028', X + 21, Y + 29, 6, 12); rc(g, lit ? '#ffd98a' : '#b9d4e8', X + 10, Y + 24, 4, 6); rc(g, lit ? '#ffd98a' : '#b9d4e8', X + 34, Y + 24, 4, 6);
+    rc(g, '#c9a22a', X + 22, Y + 6, 4, 4); rc(g, '#e8c84a', X + 23, Y + 7, 2, 2);
+  } else if (b.type === 'bastion') {
+    rc(g, '#7a7e84', X + 4, Y + 14, Wd - 8, Ht - 17); for (let r = 0; r < 6; r++) for (let k = 0; k < 6; k++) rc(g, (r + k) % 2 ? '#8b9096' : '#70747a', X + 4 + k * 7 + (r % 2) * 3, Y + 16 + r * 5, 6, 1);
+    rc(g, '#5f6368', X + 2, Y + 8, Wd - 4, 7); for (let k = 0; k < 5; k++) rc(g, '#8b9096', X + 3 + k * 9, Y + 3, 6, 6); rc(g, '#4a4e54', X + 2, Y + 14, Wd - 4, 1);
+    if (snow) for (let k = 0; k < 5; k++) rc(g, '#f4f6fa', X + 3 + k * 9, Y + 3, 6, 1);
+    rc(g, '#2a2c30', X + 19, Y + 30, 10, 14); rc(g, '#4a3420', X + 20, Y + 31, 8, 13); rc(g, '#2a2c30', X + 9, Y + 20, 2, 7); rc(g, '#2a2c30', X + 37, Y + 20, 2, 7);
+    rc(g, '#5a3d22', X + 23, Y - 8, 2, 12); rc(g, '#3c6fb4', X + 25, Y - 8, 9, 5); rc(g, '#f0e6d0', X + 28, Y - 7, 3, 3);
+  } else {
+    rc(g, '#a8a498', X + 2, Y + 38, Wd - 4, 8); rc(g, '#bab6aa', X + 6, Y + 33, Wd - 12, 6); rc(g, '#cbc7bb', X + 10, Y + 28, Wd - 20, 6);
+    rc(g, '#d9d5c8', X + 19, Y + 4, 10, 25); rc(g, '#bdb9ac', X + 26, Y + 4, 3, 25); rc(g, '#e8e4d8', X + 20, Y, 8, 4); rc(g, '#f4f0e4', X + 22, Y - 3, 4, 3);
+    rc(g, '#8a8678', X + 22, Y + 12, 4, 1); rc(g, '#8a8678', X + 22, Y + 16, 4, 1); rc(g, '#8a8678', X + 21, Y + 20, 6, 1);
+    for (const bx of [X + 5, X + 40]) { rc(g, '#5a5a56', bx, Y + 30, 4, 5); rc(g, '#ff9a3a', bx + 1, Y + 27 + Math.round(Math.sin(now / 130 + bx) * 0.6), 2, 3); rc(g, '#ffd24a', bx + 1, Y + 28, 2, 1) }
+    rc(g, '#4a8a3c', X + 9, Y + 42, 4, 3); rc(g, '#4a8a3c', X + 35, Y + 42, 4, 3); if (snow) rc(g, '#f4f6fa', X + 20, Y, 8, 1);
+  }
 }

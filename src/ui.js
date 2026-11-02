@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -162,8 +162,8 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 addEventListener('pagehide', () => { if (autosaveOn && $('autosave').checked) saveToStorage(false) });
 
 /* ---------- panels ---------- */
-function bar(label, val, col) { return `<div class="hint">${label} ${Math.round(val)}</div><div class="bar"><i style="width:${clamp(val, 0, 100)}%;background:${col}"></i></div>` }
-function resRow(name, val, cap, col) { return `<div class="res"><span class="hint">${name}</span><div class="bar"><i style="width:${clamp(val / cap * 100, 0, 100)}%;background:${col}"></i></div><b>${val} / ${cap}</b></div>` }
+function bar(label, val, col) { return `<div class="hint">${label} ${Math.round(val)}</div><div class="bar"><i style="background:var(--acc);width:${clamp(val, 0, 100)}%;background:${col}"></i></div>` }
+function resRow(name, val, cap, col) { return `<div class="res"><span class="hint">${name}</span><div class="bar"><i style="background:var(--acc);width:${clamp(val / cap * 100, 0, 100)}%;background:${col}"></i></div><b>${val} / ${cap}</b></div>` }
 function opBar(label, v) { const a = Math.abs(v) * 50; return `<div class="opr"><span>${label}</span><div class="opb"><i style="left:${v < 0 ? 50 - a : 50}%;width:${a}%;background:${v < 0 ? '#6a8fd0' : '#e0a458'}"></i></div></div>` }
 function skillWord(s) { return s > 0.7 ? 'expert' : s > 0.45 ? 'skilled' : s > 0.2 ? 'capable' : 'novice' }
 function moodWord(m) { return m > 80 ? 'joyful' : m > 62 ? 'content' : m > 42 ? 'uneasy' : m > 25 ? 'unhappy' : 'miserable' }
@@ -182,7 +182,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  renderTech(); renderEcon(); renderCouncil(); renderGroups();
+  renderTech(); renderEcon(); renderProjects(); renderCouncil(); renderGroups();
   $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -195,6 +195,22 @@ function renderTech() {
     <div class="techchips">${known.map(id => `<span class="chip" title="${escapeHtml(TECHS[id].desc)}"><i style="background:#9cc4ff"></i>${TECHS[id].name}</span>`).join('')}</div>
     ${t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('')}
     ${locked.length ? `<div class="hint" style="margin-top:6px">Still ahead: ${locked.map(id => TECHS[id].name).join(', ')}</div>` : ''}`;
+}
+function renderProjects() {
+  const w = world, P = w.proj, el = $('projCard'); if (!P) return;
+  const first = Object.keys(PROJECTS).some(id => w.has(PROJECTS[id].tech));
+  if (!first) { el.innerHTML = '<div class="hint">Once the village masters carpentry, masonry or watchtowers, the council may commit to a great project: a hall, library, bastion or monument.</div>'; return }
+  let html = '';
+  if (P.active) {
+    const p = PROJECTS[P.active.type], bp = w.bps.find(b => b.type === P.active.type), have = bp ? bp.have.wood + bp.have.stone : 0, need = bp ? bp.cost.wood + bp.cost.stone : 1, pr = bp ? bp.prog / bp.time : 0;
+    html += `<div class="big">${p.name}</div><div class="hint">${escapeHtml(p.pitch)}. Raised since day ${P.active.since}${P.active.names.length ? ' with ' + P.active.names.map(escapeHtml).join(' and ') : ''}.</div>
+      <div class="hint" style="margin-top:6px">Materials ${Math.round(100 * have / need)}% · construction ${Math.round(100 * pr)}%</div><div class="bar"><i style="background:var(--acc);width:${Math.round(100 * (0.5 * have / need + 0.5 * pr))}%"></i></div>`;
+  } else html += `<div class="hint">${P.cooldown > 0 ? 'The village is resting before its next great undertaking.' : 'No project underway. The council weighs one when stores allow.'}</div>`;
+  const done = Object.keys(P.done);
+  html += `<div style="margin-top:8px">${done.length ? done.map(id => `<div class="mini"><b>${PROJECTS[id].name}</b> <span class="hint">Year ${P.done[id].year}${P.done[id].names && P.done[id].names.length ? ', by ' + P.done[id].names.map(escapeHtml).join(' and ') : ''}</span><div class="hint">${PROJECTS[id].gives}</div></div>`).join('') : '<div class="hint">Nothing finished yet.</div>'}</div>`;
+  const next = projAvailable(w).filter(id => !(P.active && P.active.type === id));
+  if (next.length) html += `<div class="hint" style="margin-top:6px">Within reach: ${next.map(id => PROJECTS[id].name).join(', ')}</div>`;
+  el.innerHTML = html;
 }
 function renderEcon() {
   const w = world, E = w.econ, card = $('econCard'), box = card.parentElement; box.style.display = w.has('trade') ? '' : 'none'; if (!w.has('trade')) return;
