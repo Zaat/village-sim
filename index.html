@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Village Sim</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="stage">
+    <canvas id="cv"></canvas>
+    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span></div>
+    <div id="ctl">
+      <button data-sp="0" title="Space">⏸</button><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button>
+      <span class="sep"></span>
+      <button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button><button id="fol" title="Follow selected (F)">Follow</button><span class="sep"></span><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙ Settings</button>
+    </div>
+    <div id="drawer"><div class="drawerhead"><b>Settings &amp; tools</b><button id="drawerClose" title="Close (Esc)">✕</button></div>
+    <div class="card"><h3>Settings</h3>
+      <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
+    </div>
+    <div class="card"><h3>Save &amp; load</h3>
+      <div class="hint" id="saveInfo">Nothing saved yet.</div>
+      <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave" disabled>Load saved</button></div>
+      <div class="btnrow"><button id="exportBtn">Export file</button><button id="importBtn">Import file</button></div>
+      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+      <label class="tog" style="margin-top:8px"><input type="checkbox" id="autoresume" checked><span class="sw"></span><span>Resume automatically <span class="hint">when the page opens</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
+      <div class="hint" style="margin-top:6px">Browser saves stay on this device and can be cleared by the browser. Export a file to keep a village safe or move it to another device.</div>
+    </div>
+    <div class="card" id="mindCard">
+      <h3>Claude counsel <span class="beta">optional</span></h3>
+      <div class="hint" style="margin-bottom:6px">Lets Claude make the council's and courts' decisions from options the simulation offers, based on each member's personality and opinions. If it is off or unavailable, the village's own rules decide.</div>
+      <label class="tog"><input type="checkbox" id="mindToggle"><span class="sw"></span><span id="mindLabel">Off — uses your Claude usage when on</span></label>
+      <div class="hint" id="mindStatus"></div>
+      <button id="mindRetry" style="display:none;margin-top:6px">Request permission again</button>
+      <div id="mindLog"></div>
+    </div>
+    <details class="card" id="diagCard"><summary>Diagnostics <span class="beta" id="diagBadge">ok</span></summary>
+      <div id="diagBody" class="hint">Collecting…</div>
+      <div class="btnrow"><button id="diagCopy">Copy report</button><button id="diagSave">Download report</button></div>
+      <div class="btnrow"><button id="diagCheck">Self-check &amp; repair</button><button id="diagProf">Clear timings</button></div>
+      <textarea id="diagText" readonly style="display:none"></textarea>
+    </details>
+    <div class="card"><h3>Time travel</h3>
+      <div class="hint" style="margin-bottom:6px">Skip ahead and see what the village becomes. A copy is kept first, so you can undo the skip afterwards.</div>
+      <div style="display:flex;gap:6px;align-items:center"><select id="ttSel"><option value="8">One season</option><option value="32" selected>One year</option><option value="64">Two years</option><option value="160">Five years</option><option value="320">Ten years (slow)</option></select><button id="ttGo">Fast-forward</button><button id="ttCancel" disabled>Stop</button></div>
+      <div class="bar" style="margin-top:8px"><i id="ttBar" style="background:var(--acc);width:0"></i></div><div class="hint" id="ttInfo">Ready.</div><div id="ttResult" class="hint"></div></div>
+    <div class="card"><h3>World</h3>
+      <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="restart">New world</button></div></div>
+    </div>
+    <canvas id="mini" title="Click to move the camera"></canvas>
+    <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
+    <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause</div>
+  </div>
+  <aside id="side">
+    <div class="card" id="statCard"></div>
+    <div class="card"><h3>History</h3><canvas id="chart" width="300" height="84"></canvas>
+      <div class="leg"><span><i style="background:#8fd18b"></i>population</span><span><i style="background:#e0a458"></i>food stock</span></div></div>
+    <div class="card" id="sel"><h3>Inspector</h3><div class="hint">Click something on the map.</div></div>
+    <div class="card"><h3>Knowledge &amp; discoveries</h3><div id="techCard"></div></div>
+    <div class="card"><h3>Trade &amp; treasury</h3><div id="econCard"></div></div>
+    <div class="card"><h3>Great projects</h3><div id="projCard"></div></div>
+    <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
+    <div class="card"><h3>Neighbours</h3><div id="neighCard"></div></div>
+    <div class="card"><h3>Village council</h3><div id="councilCard"></div></div>
+    <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
+    <div class="card"><h3>Events</h3><div id="log"></div></div>
+  </aside>
+</div>
+<script src="src/config.js"></script>
+<script src="src/animals.js"></script>
+<script src="src/villager.js"></script>
+<script src="src/town.js"></script>
+<script src="src/society.js"></script>
+<script src="src/tech.js"></script>
+<script src="src/water.js"></script>
+<script src="src/trade.js"></script>
+<script src="src/projects.js"></script>
+<script src="src/history.js"></script>
+<script src="src/buildings.js"></script>
+<script src="src/places.js"></script>
+<script src="src/neighbours.js"></script>
+<script src="src/diplomacy.js"></script>
+<script src="src/save.js"></script>
+<script src="src/world.js"></script>
+<script src="src/render.js"></script>
+<script src="src/debug.js"></script>
+<script src="src/ui.js"></script>
+</body>
+</html>

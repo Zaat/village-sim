@@ -1,0 +1,11 @@
+const fs=require('fs'),path=require('path');const dir=path.join(__dirname,'..','src');
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n');
+fs.mkdirSync('/tmp/ss',{recursive:true});fs.writeFileSync('/tmp/ss/b.js',code+'\nmodule.exports={World,CFG};');
+const {World,CFG}=require('/tmp/ss/b.js');
+const w=new World(+(process.argv[2]||777));const orig=w.search.bind(w);
+const S={n:0,fail:0,ms:0,failMs:0,max:0,byLabel:{}};
+w.search=function(sx,sy,goal,maxCost,through){const t0=process.hrtime.bigint();const r=orig(sx,sy,goal,maxCost,through);const dt=Number(process.hrtime.bigint()-t0)/1e6;S.n++;S.ms+=dt;if(!r){S.fail++;S.failMs+=dt}if(dt>S.max)S.max=dt;const k=(maxCost===undefined?'unbounded':'max'+maxCost)+(r?'':' FAIL');const o=S.byLabel[k]||(S.byLabel[k]={n:0,ms:0});o.n++;o.ms+=dt;return r};
+const days=+(process.argv[3]||80);const t0=Date.now();for(let t=0;t<CFG.TPD*days;t++)w.step();
+const wall=(Date.now()-t0)/1000;
+console.log(`days ${days} pop ${w.vills.length} wall ${wall.toFixed(1)}s | searches ${S.n} (${(S.n/days).toFixed(0)}/day) total ${(S.ms/1000).toFixed(1)}s = ${(100*S.ms/1000/wall).toFixed(0)}% of wall | avg ${(S.ms/S.n).toFixed(2)}ms | failed ${S.fail} (${(100*S.fail/S.n).toFixed(0)}%) costing ${(S.failMs/1000).toFixed(1)}s | slowest ${S.max.toFixed(1)}ms`);
+console.log(Object.entries(S.byLabel).sort((a,b)=>b[1].ms-a[1].ms).slice(0,8).map(([k,o])=>`  ${k}: ${o.n} calls, ${(o.ms/1000).toFixed(1)}s, avg ${(o.ms/o.n).toFixed(2)}ms`).join('\n'));
