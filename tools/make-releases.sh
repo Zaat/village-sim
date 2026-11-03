@@ -53,3 +53,5 @@ sha=$(grep "^v0.24 " tools/release-commits.txt | cut -d" " -f2)
 gh release create v0.24 --repo $R --target "$sha" --title "v0.24 — Technology and ages" --notes-file docs/releases/v0.24.md
 sha=$(grep "^v0.24.1 " tools/release-commits.txt | cut -d" " -f2)
 gh release create v0.24.1 --repo $R --target "$sha" --title "v0.24.1 — Concerns" --notes-file docs/releases/v0.24.1.md
+sha=$(grep "^v0.24.2a " tools/release-commits.txt | cut -d" " -f2)
+gh release create v0.24.2a --repo $R --target "$sha" --title "v0.24.2a — Concern tracker" --notes-file docs/releases/v0.24.2a.md

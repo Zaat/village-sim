@@ -2,6 +2,12 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.24.2a — Concern tracker
+Concern cards now show a state (needs attention, responding, easing, didn't work), a severity bar with trend, countdown bars for running responses, council decisions, and resolved concerns stay for a while.
+
+<img src="docs/screenshots/v0.24.2a-feature.png" width="640" alt="Village Sim v0.24.2a">
+
+
 ### v0.24.1 — Concerns
 A badge, panel and toasts warn of falling population, food and firewood shortage and unity trouble, with feasts, rationing, orders and council nudges; secessions made rarer and smaller.
 
