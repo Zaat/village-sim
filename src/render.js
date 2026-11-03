@@ -49,6 +49,13 @@ function buildTerrain(w) {
       }
       continue;
     }
+    if (t === TERR.BRIDGE) {
+      const stone = w.bridgeStone && w.bridgeStone.has(i), horiz = !isW(i - 1) || !isW(i + 1), deck = stone ? '#a9a9a2' : '#a07a4a', dk = stone ? '#7e7e78' : '#7a5a34';
+      rc(g, P.shallow, X, Y, T, T);
+      if (horiz) { rc(g, 'rgba(0,0,0,.18)', X, Y + 4, T, 11); rc(g, deck, X, Y + 2, T, 11); for (let k = 0; k < T; k += 4) rc(g, dk, X + k, Y + 2, 1, 11); rc(g, dk, X, Y + 2, T, 1); rc(g, dk, X, Y + 12, T, 1) }
+      else { rc(g, 'rgba(0,0,0,.18)', X + 4, Y, 11, T); rc(g, deck, X + 2, Y, 11, T); for (let k = 0; k < T; k += 4) rc(g, dk, X + 2, Y + k, 11, 1); rc(g, dk, X + 2, Y, 1, T); rc(g, dk, X + 12, Y, 1, T) }
+      continue;
+    }
     if (t === TERR.FORD) {
       rc(g, P.shallow, X, Y, T, T); rc(g, P.sand, X + 2 + (h & 3), Y + 3, 6, 3); rc(g, P.sand, X + 8 + ((h >> 3) & 3), Y + 9, 5, 3); rc(g, 'rgba(255,255,255,.35)', X + ((h >> 6) & 7), Y + ((h >> 9) & 7) + 4, 5, 1); continue;
     }
@@ -244,6 +251,7 @@ function bpArt(g, w, bp, now) {
   g.fillStyle = bp.type === 'road' ? 'rgba(255,230,160,.35)' : 'rgba(255,255,255,.16)'; g.fillRect(X, Y, Wd, Ht);
   g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = 1; g.setLineDash([2, 2]); g.strokeRect(X + .5, Y + .5, Wd - 1, Ht - 1); g.setLineDash([]);
   if (bp.type === 'road') return;
+  if (bp.type === 'bridge') { const need = bp.cost.wood + bp.cost.stone, have = bp.have.wood + bp.have.stone, f = (need ? have / need : 1) * 0.5 + bp.prog / bp.time * 0.5; rc(g, 'rgba(160,122,74,.55)', X + 2, Y + 2, Wd - 4, Ht - 4); rc(g, '#000', X + 1, Y + Ht - 4, Wd - 2, 3); rc(g, '#ffd45a', X + 1, Y + Ht - 4, (Wd - 2) * f, 3); return }
   const need = bp.cost.wood + bp.cost.stone, have = bp.have.wood + bp.have.stone, f = (need ? have / need : 1) * 0.5 + bp.prog / bp.time * 0.5;
   rc(g, '#000', X + 1, Y + Ht - 4, Wd - 2, 3); rc(g, '#ffd45a', X + 1, Y + Ht - 4, (Wd - 2) * f, 3);
   if (bp.type === 'upgrade') { rc(g, '#a07a4a', X, Y, 2, Ht); rc(g, '#a07a4a', X + Wd - 2, Y, 2, Ht); for (let k = 4; k < Ht; k += 8) rc(g, '#8a6a42', X, Y + k, Wd, 1) }
@@ -322,7 +330,7 @@ function drawVillager(g, v, w, now, sel) {
 
 /* ---------- main draw ---------- */
 function render(w, sel, now) {
-  const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.arch + ':' + w.season + ':' + W;
+  const { W, H, T } = CFG, g = R.g, c = R.cam, z = c.z, d = R.dpr, key = w.seed + ':' + w.arch + ':' + w.season + ':' + W + ':' + (w.terrVer || 0);
   if (R.terrKey !== key) { buildTerrain(w); R.terrKey = key }
   R.hasPlaza = w.of('plaza').length > 0;
   g.setTransform(1, 0, 0, 1, 0, 0); g.fillStyle = '#0d1114'; g.fillRect(0, 0, R.cv.width, R.cv.height);
@@ -330,6 +338,7 @@ function render(w, sel, now) {
   g.setTransform(z * d, 0, 0, z * d, -tlx * z * d, -tly * z * d); g.imageSmoothingEnabled = false;
   g.drawImage(R.terr, 0, 0);
   if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighArt(g, w, n, now);
+  if (w.out) for (const o of w.out.list) if (o.state === 'active' && Math.abs(o.x * T - c.x) < R.vw / z + 60 && Math.abs(o.y * T - c.y) < R.vh / z + 60) outpostArt(g, w, o, now);
   const x0 = Math.max(0, Math.floor(tlx / T) - 2), x1 = Math.min(W - 1, Math.ceil((tlx + R.vw / z) / T) + 2), y0 = Math.max(0, Math.floor(tly / T) - 3), y1 = Math.min(H - 1, Math.ceil((tly + R.vh / z) / T) + 2);
   const t = w.tod; let dark = 0; if (t > 0.6 && t < 0.75) dark = (t - 0.6) / 0.15; else if (t >= 0.75 && t < 0.95) dark = 1; else if (t >= 0.95) dark = (1 - t) / 0.05;
   const tick = (now / 450) | 0;
@@ -357,6 +366,7 @@ function render(w, sel, now) {
   if (w.festival) bunting(g, w, now);
   if (w.fog && w.seen) { updateFog(w); g.imageSmoothingEnabled = true; g.drawImage(R.fog, 0, 0, W * T, H * T); g.imageSmoothingEnabled = false }      // unexplored lands and sea stay in the mist, covering everything beneath
   if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighLabel(g, n);
+  if (w.out) { for (const o of w.out.list) if (o.state === 'active' || o.state === 'travelling') outpostTraffic(g, w, o, now, sel === o); for (const o of w.out.list) if (o.state === 'active' && Math.abs(o.x * T - c.x) < R.vw / z + 60 && Math.abs(o.y * T - c.y) < R.vh / z + 60) outpostLabel(g, o) }
   // light & atmosphere (screen space)
   g.setTransform(d, 0, 0, d, 0, 0);
   const tint = [null, 'rgba(255,225,120,.04)', 'rgba(255,140,40,.05)', 'rgba(180,210,255,.05)'][w.season]; if (tint) { g.fillStyle = tint; g.fillRect(0, 0, R.vw, R.vh) }
@@ -389,6 +399,7 @@ function drawMinimap(w, sel) {
   g.drawImage(R.miniBase, 0, 0);
   if (w.fog && w.seen) { updateFog(w); g.drawImage(R.fog, 0, 0) }
   if (w.neigh) for (const n of w.neigh) if (n.found) { g.fillStyle = '#ff8a5a'; g.fillRect(n.x - 1.5, n.y - 1.5, 3, 3) }
+  if (w.out) for (const o of w.out.list) if (o.state === 'active') { g.fillStyle = '#9be37a'; g.fillRect(o.x - 1.5, o.y - 1.5, 3, 3) }
   for (const b of w.boats) if (b.state === 'out') { g.fillStyle = '#fff'; g.fillRect(b.x - 1, b.y - 1, 2, 2) }
   for (const b of w.buildings.values()) { g.fillStyle = b.type === 'farm' ? '#d9b34a' : b.type === 'dock' ? '#8fd0ff' : b.type === 'market' ? '#ffd24a' : b.type === 'plaza' ? '#e6dcb8' : b.type === 'tavern' ? '#e8805a' : PROJECTS[b.type] ? '#ffffff' : (b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') ? '#ff9a5a' : '#f4f0e0'; g.fillRect(b.x, b.y, b.w, b.h) }
   g.fillStyle = '#b99d6c'; for (let i = 0; i < w.road.length; i++) if (w.road[i]) g.fillRect(i % CFG.W, (i / CFG.W) | 0, 1, 1);
@@ -538,4 +549,39 @@ function wearArt(g, b, now) {
   if (b.maxHp === undefined) return; const r = b.hp / b.maxHp; if (r >= 0.6) return; const T = CFG.T, X = b.x * T, Y = b.y * T, Wd = b.w * T, Ht = b.h * T, n = r < 0.2 ? 9 : r < 0.4 ? 6 : 3;
   for (let k = 0; k < n; k++) { const h = hash2(b.x * 7 + k, b.y * 5 + k * 3); rc(g, 'rgba(20,14,10,.45)', X + 3 + (h & 255) % (Wd - 8), Y + Ht * 0.35 + ((h >> 8) & 255) % (Ht * 0.6), 1, 4 + (h & 3)); rc(g, 'rgba(20,14,10,.3)', X + 3 + ((h >> 4) & 255) % (Wd - 10), Y + Ht * 0.3 + ((h >> 10) & 127) % (Ht * 0.6), 4, 1) }
   if (r < 0.35) { const t = ((now / 1100) + b.x * 0.13) % 1; g.fillStyle = `rgba(150,140,125,${0.35 * (1 - t)})`; g.fillRect(X + Wd * 0.3 + Math.sin(t * 5) * 2, Y + Ht * 0.5 - t * 10, 3, 3) }
+}
+
+/* ---- outposts: camps that grow into towns, and the carts and ships that link them home ---- */
+function outpostArt(g, w, o, now) {
+  const T = CFG.T, X = o.x * T + 8, Y = o.y * T + 8, snow = w.season === 3, st = o.stage, roof = ['#a9824a', '#8a6a3a', '#7a5a34', '#6f4f30'][st], wall = '#c9b48a';
+  const huts = Math.min(8, 2 + st * 2 + (o.pop > 25 ? 1 : 0)); const spots = [];
+  for (let k = 0; k < huts; k++) { const a = k * 2.4 + o.id * 1.3, d = 14 + (k % 3) * 9 + st * 3; spots.push([X + Math.cos(a) * d * 1.2, Y + Math.sin(a) * d * 0.8]) }
+  spots.sort((p, q) => p[1] - q[1]);
+  if (o.role === 'farming') for (let k = 0; k < 2 + st; k++) { const fx = X - 54 + (k % 3) * 30, fy = Y + 22 + ((k / 3) | 0) * 18; rc(g, snow ? '#e8ecf0' : '#d9b34a', fx, fy, 26, 14); if (!snow) for (let s2 = 0; s2 < 26; s2 += 4) rc(g, '#b8963e', fx + s2, fy, 1, 14) }
+  if (o.role === 'timber') { for (let k = 0; k < 4; k++) rc(g, '#7a5230', X + 24 + (k % 2) * 6, Y + 14 - ((k / 2) | 0) * 4, 14, 4); rc(g, '#9a7040', X + 24, Y + 6, 14, 2) }
+  if (o.role === 'quarry') { for (let k = 0; k < 4; k++) rc(g, ['#8a8c90', '#9a9ca0', '#7a7c80'][k % 3], X + 22 + k * 5, Y + 12 - (k % 2) * 4, 8, 6) }
+  if (o.role === 'fishing') { rc(g, '#5a3d22', X - 30, Y + 16, 2, 14); rc(g, '#5a3d22', X - 12, Y + 16, 2, 14); rc(g, '#cfc7a6', X - 29, Y + 18, 17, 6) }
+  for (const [hx, hy] of spots) {
+    rc(g, 'rgba(0,0,0,.2)', hx - 7, hy + 10, 18, 3); rc(g, wall, hx - 6, hy, 16, 10); rc(g, '#6f5436', hx - 6, hy + 7, 16, 1);
+    for (let r2 = 0; r2 < 6; r2++) { const l = Math.round(r2 * 1.3); rc(g, roof, hx - 8 + l, hy - 6 + r2, 20 - 2 * l, 1) } rc(g, snow ? '#f4f6fa' : 'rgba(0,0,0,.16)', hx - 8, hy - 6, 20, 1); rc(g, '#3e2a18', hx, hy + 3, 4, 7);
+  }
+  if (st >= 2) { rc(g, '#5a3d22', X - 1, Y - 34, 2, 24); rc(g, '#4a9a4a', X + 1, Y - 34, 9, 6) }
+  if (st >= 3) { for (let k = -4; k <= 4; k++) rc(g, '#6a5230', X + k * 8, Y - 26, 4, 8) }
+  const f = ((now / 130) | 0) % 3; rc(g, '#5a5a56', X - 2, Y + 4, 6, 3); rc(g, '#e8672a', X, Y - 1 + (f === 1 ? 1 : 0), 3, 5);
+  for (let k = 0; k < 2; k++) { const t = ((now / 900) + k / 2) % 1; g.fillStyle = `rgba(210,210,215,${0.5 * (1 - t)})`; g.fillRect(X + Math.sin(t * 4 + k) * 2, Y - 4 - t * 16, 3, 3) }
+}
+function outpostLabel(g, o) {
+  const X = o.x * CFG.T + 8, Y = o.y * CFG.T + 8; g.font = 'bold 9px system-ui, sans-serif'; g.textAlign = 'center'; g.lineWidth = 3; g.strokeStyle = 'rgba(10,14,20,.85)'; const t = o.name + ' · ' + o.pop; g.strokeText(t, X, Y - 44); g.fillStyle = '#c8f0b0'; g.fillText(t, X, Y - 44); g.textAlign = 'start';
+}
+/* the party on the road and loads on their way home, drawn along the route */
+function outpostTraffic(g, w, o, now, selected) {
+  const T = CFG.T, W = CFG.W, tiles = outpostRouteTiles(w, o); if (tiles.length < 2) return;
+  const pt = f => { const p = tiles[Math.min(tiles.length - 1, Math.max(0, Math.round(f * (tiles.length - 1))))]; return [(p % W + .5) * T, ((p / W | 0) + .5) * T] };
+  const home = o.mode === 'sea' ? 0 : 0, nowD = w.day + w.tod;
+  if (selected) { g.strokeStyle = 'rgba(200,240,170,.65)'; g.lineWidth = 1.5; g.setLineDash([5, 4]); g.beginPath(); for (let k = 0; k < tiles.length; k += 2) { const [x, y] = pt(k / (tiles.length - 1)); k ? g.lineTo(x, y) : g.moveTo(x, y) } g.stroke(); g.setLineDash([]) }
+  const sprite = (f, back, kind) => { const [x, y] = pt(f), bob = Math.sin(now / 160 + f * 40) * 0.6;
+    if (o.mode === 'sea') { rc(g, 'rgba(0,0,0,.2)', x - 7, y + 4, 14, 3); rc(g, '#7a5230', x - 7, y + 1 + bob, 14, 4); rc(g, '#f2ead0', x - 1, y - 9 + bob, 7, 9); rc(g, '#5a3d22', x - 1, y - 10 + bob, 1, 11); if (kind === 'load') rc(g, '#b98a4a', x - 4, y - 1 + bob, 6, 3) }
+    else { rc(g, 'rgba(0,0,0,.2)', x - 6, y + 3, 12, 3); rc(g, kind === 'load' ? '#8a6a3a' : '#c9b48a', x - 5, y - 2, 10, 5); rc(g, '#3a2a18', x - 5, y + 3, 3, 2); rc(g, '#3a2a18', x + 2, y + 3, 3, 2); if (kind === 'party') { rc(g, '#e8c84a', x - 2, y - 7, 2, 5); rc(g, '#4a90d9', x + 1, y - 6, 2, 4) } } };
+  if (o.state === 'travelling') { const f = clamp((nowD - o.day) / Math.max(1, o.arrive - o.day), 0, 1); sprite(f, false, 'party'); return }
+  for (const c of o.cargo) { const f = clamp((nowD - c.from) / Math.max(1, c.at - c.from), 0, 1); sprite(1 - f, true, 'load') }
 }

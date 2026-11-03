@@ -1,4 +1,4 @@
-# Village Sim v0.20.1
+# Village Sim v0.21
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Settlements, bridges and bigger worlds (new in 0.21)
+- **Outposts:** when the village feels cramped, short of timber, stone or food, or simply grows large and bold, the council can send settlers to found an **outpost**: a logging outpost, quarry, fishing station or farming hamlet. It weighs gain against cost and risk (settlers, supplies, a journey that can fail) with the same rule as trade; bold, open villages expand, wary or communal ones seldom do.
+- **Life of an outpost:** the party walks (or sails, if the village has boats and a dock) along a route you can see; the outpost feeds itself, grows from a **camp** to a **hamlet**, **village** and **town**, and every few days sends a share of what it makes home by cart or ship (some loads are lost on the way). Click it on the map or in World &rarr; Settlements to see people, loyalty, share sent and founders.
+- **Loyalty:** it falls with a heavy share, distance, hunger and a bigger, prouder outpost, and rises with help. A restless outpost asks the council to send aid, lighten its share, or be left alone. An outpost that stays resentful **breaks away** and becomes a neighbour of its own (friendly or bitter).
+- **Bridges:** with carpentry (timber) or masonry (stone), the council can span a strait or river up to five tiles wide, tile by tile from our own bank, when the walking saved or land opened is worth the cost, and never where it would cut a dock off from the sea. Bridges are walkable by people and animals and saved with the world.
+- **New world dialog:** Settings &rarr; New world&hellip; picks the seed (with dice), map type, and **map size**: Compact (200&times;140), Standard (260&times;180) or Large (340&times;236). Island and archipelago worlds always use at least Standard (they need open sea).
+- **Tools:** `tests/outposts.js`, `tests/bridges.js`, `tests/sizes.js [days]` (every map type at every size), `tests/newworld.js` and `tests/shot20.js` (browser), `tests/pl4.js` (profile a slow world in the page).
+- **Not yet:** outposts do not build individual houses or have their own council; settlements are records, not a second simulation. Neighbours on large maps are still few.
 
 ## Harbour and trade abroad (new in 0.20)
 The village no longer waits for merchants. It now trades for itself.
@@ -41,7 +50,7 @@ New worlds now come in six map types, chosen in Settings (or **Auto**, picked by
 - **Neighbours on foot:** on the land maps, other peoples live a few days' walk away. Hunters and curious villagers go exploring to find them; they trade by wagon, send envoys, migrants and aid on foot, and can raid by land. Coastal maps also have an island or two reached by boat.
 - **Starts that work:** the village starts on the biggest connected land, with a shore fishers can actually walk to. If the only shore lies behind thick woods, fishers cut a way through when food runs short.
 - **Old saves** load as the original island map. New islands now also fade out toward the edge of the home area instead of being cut off.
-- **Not yet:** bridges (only fords) and wildlife migration between regions.
+- **Not yet:** wildlife migration between regions. (Bridges arrived in 0.21.)
 - **Tools:** `tests/maps.js [seeds] [show]` (ASCII previews and checks), `tests/mapsweep.js` (a short sweep for each map type), `tests/shot17.js` (overview images).
 
 ## Movement and population (new in 0.18)

@@ -82,7 +82,7 @@ function carveRivers(w, rng) {
 /* ----- which walkable ground is connected to which (computed from the terrain, never saved) ----- */
 function landRegions(w) {
   if (w._reg) return w._reg; const { W, H } = CFG, N = W * H, label = new Int32Array(N), q = new Int32Array(N), sizes = [0]; let next = 1;
-  const ok = i => { const t = w.terr[i]; return t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK || t === TERR.FORD };
+  const ok = i => { const t = w.terr[i]; return t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK || t === TERR.FORD || t === TERR.BRIDGE };
   for (let s = 0; s < N; s++) {
     if (label[s] || !ok(s)) continue; let h = 0, t = 0; q[t++] = s; label[s] = next;
     while (h < t) { const u = q[h++], x = u % W, y = (u / W) | 0; for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const v = ny * W + nx; if (!label[v] && ok(v)) { label[v] = next; q[t++] = v } } }

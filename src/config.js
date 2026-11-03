@@ -10,15 +10,15 @@ const CFG = {
   INFANT_DAYS: 3, CHILD_DAYS: 8, ADULT_DAYS: 14, ELDER_DAYS: 80, FERTILE_MAX: 85, OLD_DAYS: 120,   // life stages (in days)
   START_VILLAGERS: 8,
   START_STOCK: { wood: 24, stone: 6, food: 40 },
-  COST: { house: { wood: 8, stone: 3 }, farm: { wood: 3, stone: 0 }, store: { wood: 10, stone: 4 }, road: { wood: 0, stone: 1 }, dock: { wood: 12, stone: 0 }, logcamp: { wood: 14, stone: 0 }, minecamp: { wood: 12, stone: 4 }, lodge: { wood: 16, stone: 2 }, market: { wood: 16, stone: 4 } },
-  BUILD_TIME: { house: 160, farm: 60, store: 140, road: 20, dock: 100, upgrade: 120, logcamp: 140, minecamp: 150, lodge: 140, market: 130 },
-  SIZE: { house: [2, 2], farm: [3, 2], store: [2, 2], campfire: [1, 1], dock: [1, 1], logcamp: [2, 2], minecamp: [2, 2], lodge: [2, 2], market: [3, 2] },
+  COST: { house: { wood: 8, stone: 3 }, farm: { wood: 3, stone: 0 }, store: { wood: 10, stone: 4 }, road: { wood: 0, stone: 1 }, dock: { wood: 12, stone: 0 }, logcamp: { wood: 14, stone: 0 }, minecamp: { wood: 12, stone: 4 }, lodge: { wood: 16, stone: 2 }, market: { wood: 16, stone: 4 }, bridge: { wood: 3, stone: 0 } },
+  BUILD_TIME: { house: 160, farm: 60, store: 140, road: 20, dock: 100, upgrade: 120, logcamp: 140, minecamp: 150, lodge: 140, market: 130, bridge: 70 },
+  SIZE: { house: [2, 2], farm: [3, 2], store: [2, 2], campfire: [1, 1], dock: [1, 1], logcamp: [2, 2], minecamp: [2, 2], lodge: [2, 2], market: [3, 2], bridge: [1, 1] },
   SOLID: { house: true, store: true, campfire: true, farm: false, dock: false, logcamp: true, minecamp: true, lodge: true, market: false },
   HOUSE_CAP: 4, FARM_YIELD: 6, FARM_GROW: 2400, FISH_MAX: 5, FISH_DEEP: 9, CARRY: 4, EAT_RESTORE: 55,
   BIRTH_CHANCE: 0.35, PREGNANCY: 960, BIRTH_COOLDOWN: 2400,
   LATTICE: 3,                        // buildings snap to a 3-tile grid so lanes stay open
 };
-const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5, FORD: 6 };      // FORD: shallow river crossing, walkable
+const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5, FORD: 6, BRIDGE: 7 };      // FORD: shallow river crossing, BRIDGE: built span; both walkable
 const FEAT = { NONE: 0, OAK: 1, PINE: 2, STONE: 3, BUSH: 4 };
 const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];
 const GROW = [1, 1.3, 0.6, 0];       // crop growth multiplier by season

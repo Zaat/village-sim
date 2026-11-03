@@ -10,7 +10,7 @@ class World {
     this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0; this.visit = null; this.fortifyUntil = 0; this.dipDay = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this);
+    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -153,7 +153,7 @@ class World {
   cap() { return 60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length + (projBuilt(this, 'granaryhall') ? 120 : 0) }
   passable(i) { const t = this.terr[i], f = this.feat[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.blk[i] === 0 && (f === FEAT.OAK || f === FEAT.PINE || f === FEAT.BUSH) }
   clearTile(i) { const f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) this.trees--; this.feat[i] = 0; this.res[i] = 0 }
-  walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK || t === TERR.FORD) && this.feat[i] === 0 && this.blk[i] === 0 }
+  walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK || t === TERR.FORD || t === TERR.BRIDGE) && this.feat[i] === 0 && this.blk[i] === 0 }
   nearStock(x, y, i) { return this.storeAdj[i] === 1 }
   nearRect(x, y, b) { const dx = x < b.x ? b.x - x : x >= b.x + b.w ? x - (b.x + b.w - 1) : 0, dy = y < b.y ? b.y - y : y >= b.y + b.h ? y - (b.y + b.h - 1) : 0; return dx + dy <= 1 }
   assignHome(v) {
@@ -167,6 +167,7 @@ class World {
     bp.alive = false; this.bps.splice(this.bps.indexOf(bp), 1);
     for (let dy = 0; dy < bp.h; dy++) for (let dx = 0; dx < bp.w; dx++) this.bpAt.delete((bp.y + dy) * CFG.W + bp.x + dx);
     if (bp.type === 'road') { this.road[bp.idx] = this.has('masonry') ? 2 : 1; return }
+    if (bp.type === 'bridge') { bridgeTileDone(this, bp); return }
     if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
     const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' || bp.type === 'store' ? styleNow(this) : 0;
     ensureStats(this, b);
@@ -302,6 +303,8 @@ class World {
     techDay(this);
     tradeDay(this);
     routesDay(this);
+    outpostDay(this);
+    bridgeDay(this);
     neighbourDay(this);
     buildingDay(this);
     characterDay(this);

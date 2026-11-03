@@ -94,3 +94,10 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .sec{margin-top:10px;padding-top:6px;border-top:1px solid var(--line)}.sech{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:3px}.lnk{color:#9ec5ff;cursor:pointer;text-decoration:none;font-weight:600}.lnk:hover{text-decoration:underline}.spark{display:inline-flex;align-items:flex-end;gap:3px;height:18px}.spark i{display:block;width:6px;background:var(--acc);border-radius:1px}.kvl>div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}.kvl>div>span:last-child{text-align:right}
 
 .polb .fill{position:absolute;top:0;height:6px;border-radius:3px;opacity:.55}.polends{display:flex;justify-content:space-between;font-size:10px;color:var(--mut);margin-top:3px}
+
+#nw{position:absolute;inset:0;background:rgba(5,8,11,.62);display:flex;align-items:center;justify-content:center;z-index:30}
+.nwbox{width:min(520px,92vw);max-height:92vh;overflow-y:auto;background:rgba(18,24,30,.98);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nwbox h3{margin:0 0 10px}.nwrow{display:flex;gap:6px;align-items:center}.nwrow input{flex:1}
+.nwchoices{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:4px}
+.nwchoices button{text-align:left;padding:7px 9px;display:block}.nwchoices button b{display:block}.nwchoices button span{display:block;font-size:11px;color:var(--mut);line-height:1.25;margin-top:2px}
+.nwchoices button.sel{border-color:var(--acc);background:rgba(120,200,120,.14)}

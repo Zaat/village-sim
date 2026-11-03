@@ -22,9 +22,6 @@
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
-      <div class="hint" style="margin-top:10px">Map type for the next new world</div>
-      <select id="maptype" style="width:100%;margin-top:3px"><option value="auto">Auto (chosen by the seed)</option><option value="island">Island</option><option value="archipelago">Archipelago</option><option value="continent">Continent</option><option value="peninsula">Peninsula</option><option value="lakeland">Lakeland</option><option value="river">River land</option></select>
-      <div class="hint" id="mapnow" style="margin-top:4px"></div>
     </div>
     <div class="card"><h3>Save &amp; load</h3>
       <div class="hint" id="saveInfo">Nothing saved yet.</div>
@@ -54,8 +51,17 @@
       <div style="display:flex;gap:6px;align-items:center"><select id="ttSel"><option value="8">One season</option><option value="32" selected>One year</option><option value="64">Two years</option><option value="160">Five years</option><option value="320">Ten years (slow)</option></select><button id="ttGo">Fast-forward</button><button id="ttCancel" disabled>Stop</button></div>
       <div class="bar" style="margin-top:8px"><i id="ttBar" style="background:var(--acc);width:0"></i></div><div class="hint" id="ttInfo">Ready.</div><div id="ttResult" class="hint"></div></div>
     <div class="card"><h3>World</h3>
-      <div style="display:flex;gap:6px;align-items:center"><span class="hint">seed</span><input id="seed"><button id="dice" title="Pick a random seed" aria-label="Random seed">🎲</button><button id="restart">New world</button></div></div>
+      <div class="hint" id="mapnow"></div>
+      <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
+    <div id="nw" style="display:none"><div class="nwbox">
+      <h3>New world</h3>
+      <div class="nwrow"><span class="hint">Seed</span><input id="nw_seed" inputmode="numeric"><button id="nw_dice" title="Pick a random seed" aria-label="Random seed">🎲</button></div>
+      <div class="hint" style="margin-top:10px">Map type</div><div id="nw_types" class="nwchoices"></div>
+      <div class="hint" style="margin-top:10px">Map size</div><div id="nw_sizes" class="nwchoices"></div>
+      <div class="hint" id="nw_note" style="margin-top:8px"></div>
+      <div class="btnrow" style="margin-top:12px"><button id="nw_go" class="on">Start</button><button id="nw_cancel">Cancel</button></div>
+    </div></div>
     <canvas id="mini" title="Click to move the camera"></canvas>
     <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
     <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause</div>
@@ -80,6 +86,7 @@
     <div class="card"><h3>Great projects</h3><div id="projCard"></div></div>
     </section>
     <section class="tab" id="tab_world">
+    <div class="card" id="outBox"><h3>Settlements &amp; outposts</h3><div id="outCard"></div></div>
     <div class="card"><h3>Neighbours</h3><div id="neighCard"></div></div>
     <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
     </section>
@@ -102,6 +109,8 @@
 <script src="src/character.js"></script>
 <script src="src/regime.js"></script>
 <script src="src/strife.js"></script>
+<script src="src/outposts.js"></script>
+<script src="src/bridges.js"></script>
 <script src="src/places.js"></script>
 <script src="src/neighbours.js"></script>
 <script src="src/mapgen.js"></script>

@@ -95,7 +95,7 @@ for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('c
 
 /* ---------- world lifecycle ---------- */
 function adoptWorld(w) {
-  try { $('mapnow').textContent = 'This world: ' + MAP_TYPES[w.arch].label + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
+  try { $('mapnow').textContent = MAP_TYPES[w.arch].label + ' · ' + CFG.W + '×' + CFG.H + ' · seed ' + w.seed + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
   if (tt) { tt = null; $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false }
   world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
@@ -103,9 +103,31 @@ function adoptWorld(w) {
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k];
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); updateUI();
 }
-function mapChoice() { let m = 'auto'; try { m = localStorage.getItem('villagesim.maptype') || 'auto' } catch (e) { } return MAP_TYPES[m] ? m : 'auto' }
-function newWorld(seed) { seed = seed >>> 0; $('seed').value = seed; const mc = mapChoice(); adoptWorld(new World(seed, { ...loadSettings(), fade: true, map: mc === 'auto' ? pickMapType(seed) : mc })) }
-$('maptype').value = mapChoice(); $('maptype').addEventListener('change', e => { try { localStorage.setItem('villagesim.maptype', e.target.value) } catch (x) { } });
+const MAP_SIZES = { compact: { dims: [200, 140], label: 'Compact', note: '200 × 140: quick and close' }, standard: { dims: [260, 180], label: 'Standard', note: '260 × 180: the usual world' }, large: { dims: [340, 236], label: 'Large', note: '340 × 236: room for far settlements' } };
+const lsGet = (k, d) => { try { return localStorage.getItem(k) || d } catch (e) { return d } }, lsSet = (k, v) => { try { localStorage.setItem(k, v) } catch (e) { } };
+function mapChoice() { const m = lsGet('villagesim.maptype', 'auto'); return MAP_TYPES[m] ? m : 'auto' }
+function sizeChoice() { const m = lsGet('villagesim.mapsize', 'standard'); return MAP_SIZES[m] ? m : 'standard' }
+/* island and archipelago worlds need sea around them for neighbours, so the compact size is not used for them */
+function sizeFor(type, size) { return (size === 'compact' && (type === 'island' || type === 'archipelago')) ? 'standard' : size }
+function newWorld(seed, opts) {
+  seed = seed >>> 0; const mc = (opts && opts.type) || mapChoice(), type = mc === 'auto' ? pickMapType(seed) : mc, size = sizeFor(type, (opts && opts.size) || sizeChoice());
+  adoptWorld(new World(seed, { ...loadSettings(), fade: true, map: type }, MAP_SIZES[size].dims));
+}
+/* ---- the new-world dialog ---- */
+let nwType = 'auto', nwSize = 'standard';
+function nwRender() {
+  $('nw_types').innerHTML = [['auto', 'Auto', 'Chosen by the seed'], ...Object.keys(MAP_TYPES).map(k => [k, MAP_TYPES[k].label, MAP_TYPES[k].blurb])].map(([k, l, b]) => `<button data-t="${k}" class="${nwType === k ? 'sel' : ''}"><b>${l}</b><span>${b}</span></button>`).join('');
+  $('nw_sizes').innerHTML = Object.keys(MAP_SIZES).map(k => `<button data-s="${k}" class="${nwSize === k ? 'sel' : ''}"><b>${MAP_SIZES[k].label}</b><span>${MAP_SIZES[k].note}</span></button>`).join('');
+  const eff = sizeFor(nwType === 'auto' ? 'x' : nwType, nwSize); $('nw_note').textContent = eff !== nwSize ? 'Island and archipelago worlds need sea around them, so they use the Standard size.' : nwSize === 'large' ? 'Large maps take more memory and a little more time per step; they suit settlements and long games.' : '';
+}
+function nwOpen() { if (drawerOpen()) toggleDrawer(false); nwType = mapChoice(); nwSize = sizeChoice(); $('nw_seed').value = (Math.random() * 1e9) | 0; nwRender(); $('nw').style.display = 'flex'; $('nw_seed').focus(); $('nw_seed').select() }
+function nwClose() { $('nw').style.display = 'none' }
+$('restart').onclick = nwOpen; $('nw_cancel').onclick = nwClose; $('nw').addEventListener('pointerdown', e => { if (e.target === $('nw')) nwClose() });
+$('nw_dice').onclick = () => { $('nw_seed').value = (Math.random() * 1e9) | 0; $('nw_seed').focus(); $('nw_seed').select() };
+$('nw_types').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwType = b.dataset.t; nwRender() } });
+$('nw_sizes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwSize = b.dataset.s; nwRender() } });
+$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize }) };
+$('nw_seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('nw_go').click(); e.stopPropagation() });
 
 /* ---------- save & load ----------
    Autosave and "Save now" use this browser's storage; Export/Import use a file, which is the
@@ -187,7 +209,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -218,6 +240,32 @@ function renderHarbour() {
   if (L.trips || L.lost) h += `<div class="stats" style="margin-top:6px"><div><span class="hint">Trips made</span><b>${L.trips}</b></div><div><span class="hint">${coin ? 'Profit' : 'Goods gained'}</span><b>${coin ? (L.profit >= 0 ? '+' : '') + L.profit + ' coins' : L.imports + ' loads'}</b></div>${coin ? `<div><span class="hint">Sold abroad</span><b>${L.exports}</b></div><div><span class="hint">Bought abroad</span><b>${L.imports}</b></div>` : ''}${L.lost ? `<div><span class="hint">Lost at sea or road</span><b>${L.lost}</b></div>` : ''}</div>`;
   if (t.trips.length) h += `<div class="story" style="margin-top:6px"><div class="hint">Recent trips</div>${t.trips.slice(0, 3).map(x => `<div><b>D${x.day}</b>${escapeHtml(x.text)}</div>`).join('')}</div>`;
   el.innerHTML = h || '<div class="hint">No trade abroad yet.</div>';
+}
+/* settlements founded by the village */
+const LOY_WORDS = l => l >= 0.75 ? 'devoted' : l >= 0.55 ? 'loyal' : l >= 0.4 ? 'restless' : l >= 0.25 ? 'resentful' : 'on the brink of leaving';
+const loyCol = l => l >= 0.55 ? '#7ad07a' : l >= 0.4 ? '#d9c26a' : '#e07a5a';
+function renderOutposts() {
+  const w = world, el = $('outCard'), box = $('outBox'), S = w.out; const live = S ? S.list.filter(o => o.state !== 'gone') : [], gone = S ? S.list.filter(o => o.state === 'gone') : [];
+  const show = !!(S && (live.length || gone.length || S.lastPlan) && w.vills.length >= 1); box.style.display = show ? '' : 'none'; if (!show) return;
+  const app = expandAppetite(w); let h = '';
+  h += live.map(o => {
+    const role = OUT_ROLES[o.role], st = o.state === 'travelling' ? `on the road, arriving in ${Math.max(0, o.arrive - w.day)} day${o.arrive - w.day === 1 ? '' : 's'}` : `${OUT_STAGES[o.stage]} · ${o.pop} people`;
+    return `<div class="grp"><a class="lnk" data-oid="${o.id}"><b>${escapeHtml(o.name)}</b></a> <span class="hint">${role.label} · ${st}</span>
+      ${o.state === 'active' ? `<div class="polh" style="margin-top:3px"><span class="hint">${LOY_WORDS(o.loyalty)} (${Math.round(o.loyalty * 100)}%)</span><span class="hint">${o.mode === 'sea' ? 'by sea' : 'by land'} · ${Math.round(outFar(w, o.x, o.y))} tiles</span></div><div class="bar"><i style="background:${loyCol(o.loyalty)};width:${Math.round(o.loyalty * 100)}%"></i></div>` : ''}</div>`;
+  }).join('');
+  if (!live.length) h += `<div class="hint">${S.lastPlan && S.lastPlan.none ? 'The council has looked for good land to settle and found none yet.' : app < 0.6 ? 'The village is wary of leaving home.' : 'No outposts yet. When the village feels cramped or short of timber, stone or food, the council may send settlers.'}</div>`;
+  const back = S.back.food + S.back.wood + S.back.stone;
+  if (S.founded) h += `<div class="stats" style="margin-top:6px"><div><span class="hint">Founded</span><b>${S.founded}</b></div><div><span class="hint">Sent out</span><b>${S.sent.food + S.sent.wood}</b></div><div><span class="hint">Came home</span><b>${back}</b></div>${S.broke + S.freed ? `<div><span class="hint">Broke away</span><b>${S.broke + S.freed}</b></div>` : ''}${S.failed ? `<div><span class="hint">Failed</span><b>${S.failed}</b></div>` : ''}</div>`;
+  if (S.log.length) h += `<div class="story" style="margin-top:6px"><div class="hint">Recent</div>${S.log.slice(0, 4).map(x => `<div>${escapeHtml(x)}</div>`).join('')}</div>`;
+  el.innerHTML = h;
+}
+function outpostPanel(w, o) {
+  const role = OUT_ROLES[o.role], travelling = o.state === 'travelling', share = Math.round(outShare(w, o) * 100);
+  const rows = [['Kind', role.label], ['People', travelling ? o.pop + ' on the road' : o.pop + ' (room for ' + o.cap + ')'], ['Stage', travelling ? 'not yet built' : OUT_STAGES[o.stage]], ['Distance', Math.round(outFar(w, o.x, o.y)) + ' tiles ' + (o.mode === 'sea' ? 'by sea' : 'on foot') + ', about ' + o.days + ' days'], ['Led by', escapeHtml(o.leader)], ['Founded', dateText(o.day)]];
+  if (!travelling) rows.push(['Share sent home', share + '%'], ['Sent so far', (o.sentHome || 0) + ' goods'], ['Making', (OUT_ROLES[o.role].key === 'food' ? 'food' : OUT_ROLES[o.role].key) + ' (' + (Math.round(o.rich * 100)) + '% rich site)']);
+  return `<h3>${role.label.replace(/^./, c => c.toUpperCase())}</h3><div class="big">${escapeHtml(o.name)}</div><div class="hint">${travelling ? 'Settlers are on their way to found it.' : `Settlers from the village who ${role.verb}. They feed themselves and send a share home.`}</div>
+    ${travelling ? '' : bar('Loyalty to the village: ' + LOY_WORDS(o.loyalty), o.loyalty * 100, loyCol(o.loyalty)) + bar('Stores of food', clamp(o.food / (30 + o.pop * 7) * 100, 0, 100), '#e0a458')}
+    ${sec('Details', kvs(rows))}${o.founders && o.founders.length ? sec('Founders', `<div class="hint">${o.founders.map(escapeHtml).join(', ')}${o.fl > o.founders.length ? ' and others' : ''}</div>`) : ''}`;
 }
 function renderNeigh() {
   const w = world, el = $('neighCard'), box = el.parentElement; box.style.display = w.neigh ? '' : 'none'; if (!w.neigh) return;
@@ -405,6 +453,8 @@ function updateInspector() {
     el.innerHTML = `<h3>Animal</h3><div class="big">${s.kind === 'wolf' ? 'Wolf' : s.kind === 'deer' ? (s.sex === 'm' ? 'Stag' : 'Deer') : 'Rabbit'}</div><div class="hint">${s.kind === 'wolf' ? 'A predator. Hunters and brave villagers will fight it; others flee.' : 'Wild game. Hunters track it for food.'}</div>
       ${bar('Health', 100 * Math.max(0, s.hp) / mx, '#8fd18b')}${bar('Hunger (full)', s.hunger, '#e0a458')}
       ${sec('Details', kvs([['Sex', s.sex === 'm' ? 'Male' : 'Female'], s.born !== undefined ? ['Age', ageYears(w.day - s.born)] : null, ['Doing', s.moving ? (s.target ? 'Hunting or fleeing' : 'Roaming') : 'Resting'], ['Position', `${Math.round(s.x)}, ${Math.round(s.y)}`], s.kind === 'wolf' ? ['Pack nearby', pack] : null, ['Villagers near', near.length]]))}`;
+  } else if (s && s.role && s.loyalty !== undefined && s.state) {
+    el.innerHTML = outpostPanel(w, s);
   } else if (s && s.type && s.w) {
     let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
     if (s.type === 'market') extra = 'Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.';
@@ -422,9 +472,10 @@ function showTab(t) {
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab_' + t));
   if (world) updateUI();
 }
+$('outCard').addEventListener('click', e => { const a = e.target.closest('a.lnk'); if (!a || !world || !a.dataset.oid) return; e.preventDefault(); const o = world.out.list.find(x => x.id === +a.dataset.oid); if (o) { selected = o; R.cam.x = o.x * CFG.T + 8; R.cam.y = o.y * CFG.T + 8; follow = false; showTab('village'); updateUI() } });
 $('sel').addEventListener('click', e => {
   const a = e.target.closest('a.lnk'); if (!a || !world) return; e.preventDefault(); let o = null;
-  if (a.dataset.vid) o = world.vills.find(v => v.id === +a.dataset.vid); else if (a.dataset.bid) o = world.buildings.get(+a.dataset.bid);
+  if (a.dataset.vid) o = world.vills.find(v => v.id === +a.dataset.vid); else if (a.dataset.bid) o = world.buildings.get(+a.dataset.bid); else if (a.dataset.oid) o = world.out.list.find(x => x.id === +a.dataset.oid);
   if (o) { selected = o; const T = CFG.T; R.cam.x = (o.x + (o.w || 0) / 2) * T; R.cam.y = (o.y + (o.h || 0) / 2) * T; follow = o instanceof Villager; showTab('village'); updateUI() }
 });
 $('tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab) }); showTab(curTab);
@@ -448,6 +499,7 @@ function pick(sx, sy) {
   const p = screenToWorld(sx, sy), T = CFG.T, rad = Math.max(11, 16 / R.cam.z); let best = null, bd = rad;
   for (const v of world.vills) { const d = Math.hypot(v.x * T - p.x, v.y * T - 6 - p.y); if (d < bd) { bd = d; best = v } }
   for (const a of world.animals) if (a.alive) { const d = Math.hypot(a.x * T - p.x, a.y * T - 5 - p.y); if (d < bd) { bd = d; best = a } }
+  if (!best && world.out) for (const o of world.out.list) if (o.state === 'active') { const d = Math.hypot(o.x * T + 8 - p.x, o.y * T + 4 - p.y); if (d < Math.max(34, 30 / R.cam.z)) { best = o; break } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
   selected = best; if (!best) follow = false; else showTab('village'); updateUI();
 }
@@ -464,13 +516,10 @@ addEventListener('keydown', e => {
   const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 999 }[e.key]; if (m) setSpeed(m);       // 5 is a hidden "as fast as it can go" for testing
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
   if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer();
-  if (e.key === 'Escape') { if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
+  if (e.key === 'Escape') { if ($('nw').style.display !== 'none') nwClose(); else if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
 addEventListener('resize', () => { resizeRender(); clampCam() });
-$('restart').onclick = () => { const v = $('seed').value.trim(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v) };
-$('dice').onclick = () => { $('seed').value = (Math.random() * 1e9) | 0; $('seed').focus(); $('seed').select() };
-$('seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('restart').click() });
 
 /* ---------- diagnostics panel ---------- */
 const AUTORESUME_KEY = 'villagesim.autoresume';
