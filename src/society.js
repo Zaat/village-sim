@@ -87,7 +87,7 @@ function pairUp(w, a, b) {
   else if (m.home == null && f.home != null) { const h = w.buildings.get(f.home); if (h && h.occ.length < bedsOf(h)) { h.occ.push(m.id); m.home = f.home } }
   a.mood = Math.min(100, a.mood + 15); b.mood = Math.min(100, b.mood + 15);
   a.story(`Fell in love with ${b.name}.`); b.story(`Fell in love with ${a.name}.`);
-  w.say(`${a.name} and ${b.name} have become a couple.`);
+  w.say(`${a.name} and ${b.name} have become a couple.`); statCount(w, 'couples');
   try { feudMarriage(w, a, b) } catch (e) { }
 }
 
@@ -339,12 +339,12 @@ function crimeDay(w) {
 function witnesses(w, v) { return w.vills.filter(o => o !== v && !o.sleeping && Math.hypot(o.x - v.x, o.y - v.y) < 7 && w.r() < 0.4).map(o => o.id) }
 function theft(w, v) {
   const amt = Math.min(w.stock.food, 2 + ((w.r() * 4) | 0)); if (amt <= 0) return;
-  w.stock.food -= amt; v.hunger = Math.min(100, v.hunger + 30); w.crimeLog.push(w.day);
+  w.stock.food -= amt; v.hunger = Math.min(100, v.hunger + 30); w.crimeLog.push(w.day); statCount(w, 'theft');
   w.crimes.push({ type: 'theft', day: w.day, culprit: v.id, witnesses: witnesses(w, v), solved: false });
   v.story('Took food from the stores in secret.'); w.say('Food has gone missing from the stores.'); nudge(w, 'law', 0.03); nudge(w, 'defense', 0.03);
 }
 function assault(w, att, vic, a, b) {
-  vic = vic || (att === a ? b : a); vic.health -= 15 + w.r() * 15; vic.cause = 'hunger'; w.crimeLog.push(w.day); att.story(`Struck ${vic.name} in anger.`); vic.story(`Was struck by ${att.name}.`);
+  vic = vic || (att === a ? b : a); statCount(w, 'assault'); vic.health -= 15 + w.r() * 15; vic.cause = 'hunger'; w.crimeLog.push(w.day); att.story(`Struck ${vic.name} in anger.`); vic.story(`Was struck by ${att.name}.`);
   w.say(`${att.name} struck ${vic.name} in a heated quarrel.`); const c = { type: 'assault', day: w.day, culprit: att.id, victim: vic.id, witnesses: [vic.id], solved: true }; try { feudFight(w, att, vic) } catch (e) { w.fault('feud', e) } trial(w, c);
 }
 function trial(w, c) {

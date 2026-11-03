@@ -8,7 +8,7 @@ const { chromium } = require('playwright'); const fs=require('fs');
   await p.evaluate(()=>{__sim.setSpeed(0);__sim.newWorld(777);__sim.run(1200*45)});
   await p.evaluate(()=>localStorage.setItem('villagesim.autoresume','0')); const s1=await state(); await p.click('#saveNow'); console.log('2 saved:',JSON.stringify(s1),'\n   ',await p.innerText('#saveInfo'));
   await p.reload(); await p.waitForTimeout(600);
-  console.log('3 after reload: banner =',await p.isVisible('#resume'),'|',(await p.innerText('#resumeInfo')).replace(/\n/g,' ').slice(0,110),'| paused speed button on =',await p.evaluate(()=>document.querySelector('[data-sp="0"]').classList.contains('on')));
+  console.log('3 after reload: banner =',await p.isVisible('#resume'),'|',(await p.innerText('#resumeInfo')).replace(/\n/g,' ').slice(0,110),'| paused speed button on =',await p.evaluate(()=>document.getElementById('playBtn').classList.contains('paused')));
   const before=await state(); await p.waitForTimeout(800); const still=await state(); console.log('   world frozen while banner shown:',before.day===still.day);
   await p.click('#resumeBtn'); await p.waitForTimeout(500); await p.click('#gear');
   const s2=await state(); console.log('4 resumed:',JSON.stringify(s2),'| matches saved village:',s1.seed===s2.seed&&s1.pop===s2.pop&&s1.houses===s2.houses&&s1.year===s2.year,'| banner gone:',!(await p.isVisible('#resume')));
@@ -25,7 +25,7 @@ const { chromium } = require('playwright'); const fs=require('fs');
   fs.writeFileSync('/tmp/bad.json','{"hello":"world"}'); await p.setInputFiles('#importFile','/tmp/bad.json'); await p.waitForTimeout(400); console.log('7 bad file ->',await p.innerText('#saveInfo'),'| world untouched:',(await state()).seed===s3.seed);
   // start fresh keeps a backup
   await p.reload(); await p.waitForTimeout(500); await p.click('#resumeNo'); await p.click('#gear'); await p.waitForTimeout(300);
-  console.log('8 start fresh: backup stored =',await p.evaluate(()=>!!localStorage.getItem('villagesim.backup')),'| running =',await p.evaluate(()=>!document.querySelector('[data-sp="0"]').classList.contains('on')));
+  console.log('8 start fresh: backup stored =',await p.evaluate(()=>!!localStorage.getItem('villagesim.backup')),'| running =',await p.evaluate(()=>!document.getElementById('playBtn').classList.contains('paused')));
   await p.screenshot({path:'tests/p4_save.png'});
   console.log('errors:',errs); await b.close();
 })();

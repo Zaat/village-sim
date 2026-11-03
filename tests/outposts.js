@@ -1,6 +1,6 @@
 // v0.21 outposts: planning, founding, growth, hauls, loyalty, break-away, save/load
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,serializeWorld,deserializeWorld,planOutpost,sendSettlers,findOutpostSites,OP,outTend,breakAway,TERR});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,serializeWorld,deserializeWorld,planOutpost,sendSettlers,findOutpostSites,OP,outTend,breakAway,TERR});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 const seed=+process.argv[2]||777, map=process.argv[3]||'island';

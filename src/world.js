@@ -11,7 +11,7 @@ class World {
     this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0; this.visit = null; this.fortifyUntil = 0; this.dipDay = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this); initLives(this);
+    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this); initLives(this); initStats(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -37,7 +37,7 @@ class World {
   isNight() { return this.tod > 0.72 }
   r() { return this.rng() }
   say(text) { this.log.unshift({ day: this.day, season: this.season, text }); if (this.log.length > 120) this.log.pop() }
-  emit(type, text, data) { if (text) this.say(text); try { noteEvent(this, type, text, data) } catch (e) { console.error(e) } for (const f of this.listeners) { try { f(type, text, data) } catch (e) { console.error(e) } } }
+  emit(type, text, data) { if (text) this.say(text); try { statFromEmit(this, type, text, data) } catch (e) { console.error(e) } try { noteEvent(this, type, text, data) } catch (e) { console.error(e) } for (const f of this.listeners) { try { f(type, text, data) } catch (e) { console.error(e) } } }
 
   /* ----- generation ----- */
   gen() {
@@ -316,6 +316,7 @@ class World {
     livesDay(this);
     projectDay(this);
     historyDay(this);
+    statsDay(this);
   }
 
   /* ----- diagnostics: every subsystem is timed and isolated, so one bug cannot stop the village ----- */

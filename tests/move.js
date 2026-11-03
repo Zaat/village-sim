@@ -1,6 +1,6 @@
 // Movement checks: node tests/move.js [SEED] [DAYS]  - smoothing is valid (nobody walks through walls) and shortens trips
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,Villager,TERR});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,Villager,TERR});';
 const seed=+process.argv[2]||777,days=+process.argv[3]||100;
 function run(smooth){
   const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);

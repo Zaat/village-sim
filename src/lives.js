@@ -117,7 +117,7 @@ function inheritFrom(w, v) {
   if (partner) { give(partner, total * (kids.length ? 0.5 : 1)); const rest = total * 0.5; for (const k of (ak.length ? ak : kids)) give(k, rest / Math.max(1, (ak.length ? ak : kids).length)) }
   else if (kids.length) for (const k of (ak.length ? ak : kids)) give(k, total / (ak.length ? ak : kids).length); else give(main, total);
   for (const [o, x] of shares) { const wc = Math.round(x * 0.6 * 10) / 10; o.wealth = (o.wealth || 0) + wc; o.coins = (o.coins || 0) + Math.round(x * 0.4) }
-  L.stats.inherited++; main.story(`Inherited ${props.length ? 'the ' + props.map(b => b.type).join(' and ') : 'what ' + v.name + ' left'} from ${v.name}.`);
+  L.stats.inherited++; statCount(w, 'estate'); main.story(`Inherited ${props.length ? 'the ' + props.map(b => b.type).join(' and ') : 'what ' + v.name + ' left'} from ${v.name}.`);
   const excluded = ak.filter(k => k !== main && !shares.has(k) || (fav && k !== fav && k !== main));
   if (excluded.length && (props.length || total >= 8)) for (const k of excluded) {
     L.stats.disputes++; k.story(`Was passed over when ${v.name}'s estate was settled.`); k.mood = Math.max(0, k.mood - 8);

@@ -72,7 +72,7 @@
     <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause · [ ] speed · . next day</div>
   </div>
   <aside id="side">
-    <div class="tabbar" id="tabbar"><button data-tab="village" class="on">Village</button><button data-tab="society">Society</button><button data-tab="progress">Progress</button><button data-tab="world">World</button><button data-tab="events">Events</button></div>
+    <div class="tabbar" id="tabbar"><button data-tab="village" class="on">Village</button><button data-tab="society">Society</button><button data-tab="progress">Progress</button><button data-tab="world">World</button><button data-tab="stats">Stats</button><button data-tab="events">Events</button></div>
     <section class="tab on" id="tab_village">
     <div class="card" id="statCard"></div>
     <div class="card"><h3>History</h3><canvas id="chart" width="300" height="84"></canvas>
@@ -96,6 +96,20 @@
     <div class="card"><h3>Neighbours</h3><div id="neighCard"></div></div>
     <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
     </section>
+    <section class="tab" id="tab_stats">
+    <div class="card"><h3>A civilization in numbers</h3><div id="statSummary"></div></div>
+    <div class="card"><h3>Over time</h3>
+      <div class="chips" id="statViews" style="margin:0 0 6px"></div>
+      <div style="position:relative"><canvas id="statChart" style="width:100%;height:210px;display:block"></canvas><div id="statTip" class="stattip" style="display:none"></div></div>
+      <div id="statLegend" class="statlegend"></div>
+      <select id="statAdd" style="width:100%;margin-top:6px"></select>
+      <div class="statwin" id="statWin"></div>
+      <div class="hint" style="margin-top:4px">Each line is scaled to its own range. Triangles mark notable events (red: hard times); dashed lines mark new ages.</div>
+    </div>
+    <div class="card"><h3>What happens, and how often</h3><div id="statEvents"></div></div>
+    <div class="card"><h3>Records &amp; firsts</h3><div id="statRecords"></div>
+      <div class="btnrow" style="margin-top:10px"><button id="statCsv">Export CSV</button><button id="statJson">Export JSON</button></div></div>
+    </section>
     <section class="tab" id="tab_events">
     <div class="card"><h3>Events</h3><div id="log"></div></div>
     </section>
@@ -116,6 +130,7 @@
 <script src="src/regime.js"></script>
 <script src="src/strife.js"></script>
 <script src="src/lives.js"></script>
+<script src="src/stats.js"></script>
 <script src="src/outposts.js"></script>
 <script src="src/bridges.js"></script>
 <script src="src/places.js"></script>
@@ -127,6 +142,7 @@
 <script src="src/world.js"></script>
 <script src="src/render.js"></script>
 <script src="src/debug.js"></script>
+<script src="src/statsui.js"></script>
 <script src="src/ui.js"></script>
 </body>
 </html>

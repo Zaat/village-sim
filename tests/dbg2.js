@@ -1,5 +1,5 @@
 const fs=require('fs'),vm=require('vm'),path=require('path');const dir=path.join(__dirname,'..','src');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;globalThis.NB=NB;';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;globalThis.World=World;globalThis.CFG=CFG;globalThis.NB=NB;';
 const ctx={console};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(12345);let shown=0;
 for(let t=0;t<1200*40&&shown<3;t++){w.step();

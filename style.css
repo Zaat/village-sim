@@ -109,3 +109,10 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 
 .powbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#222}.powbar i{display:block;height:100%}
 .powkey{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:4px;font-size:11px;color:var(--mut)}.powkey i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+
+.stattip{position:absolute;top:4px;background:rgba(10,14,18,.94);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:11px;pointer-events:none;min-width:150px;z-index:4}.stattip i,.statchip i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
+.statlegend{display:flex;flex-wrap:wrap;gap:4px 8px;margin-top:6px}.statchip{font-size:11px;cursor:pointer;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:2px 6px}.statchip:hover{border-color:var(--mut)}
+#statViews button,#statWin button{padding:2px 8px;font-size:11px}#statViews button.on,#statWin button.on{background:var(--acc);color:#0d1a0d;border-color:var(--acc)}
+.evrow{display:flex;gap:8px;align-items:center;font-size:12px;padding:1px 0}.evrow>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.evn{font-weight:600;min-width:34px;text-align:right}.evr{min-width:62px;text-align:right}.up{color:#e0a070}.dn{color:#7ad07a}
+
+.statwin{display:flex;gap:4px;margin-top:6px}.statwin button{flex:1}.statlegend{flex-direction:column}

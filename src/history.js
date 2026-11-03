@@ -48,7 +48,7 @@ function noteEvent(w, type, text, data) {
   else if (CHRON_KINDS.has(type) && type !== 'event') chronicle(w, type, text);
   else if (type === 'death' && data) {
     const why = data.why;
-    if (why === 'starved') { learn(w, 'famine', 0.05); for (const v of w.vills) if (v.isAdult()) experience(v, 'hunger', 0.25); const C = w.chron; if (!C.lastFamine || w.day - C.lastFamine > 20) { C.lastFamine = w.day; chronicle(w, 'event', `Famine: ${data.v.name} ${data.v.family} starved. Food has run short.`) } }
+    if (why === 'starved') { learn(w, 'famine', 0.05); for (const v of w.vills) if (v.isAdult()) experience(v, 'hunger', 0.25); const C = w.chron; if (!C.lastFamine || w.day - C.lastFamine > 20) { C.lastFamine = w.day; statCount(w, 'famine', 1, 'Famine'); chronicle(w, 'event', `Famine: ${data.v.name} ${data.v.family} starved. Food has run short.`) } }
     else if (why === 'froze to death') learn(w, 'cold', 0.07); else if (why === 'was killed by a wolf') learn(w, 'wolves', 0.04); else if (why === 'succumbed to the fever') learn(w, 'fever', 0.02);
   }
 }

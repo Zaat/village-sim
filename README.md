@@ -1,4 +1,4 @@
-# Village Sim v0.22
+# Village Sim v0.23
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,14 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Statistics and insight (new in 0.23)
+- **Stats tab:** "A civilization in numbers" (age, population and peak, births and deaths, technologies, great works, peoples known, outposts, unrest) and an **Over time** chart. Pick a view (People, Wealth & mood, Regime, Policy, Growth) or add any of 38 measures (up to five), choose the last 5 years, 20 years or everything, and hover for exact values. Each line is scaled to its own range. Triangles along the bottom mark notable events (red for hard times such as coups, famines, fevers, strikes and secessions; green for outposts, bridges, great works and discoveries); dashed lines mark new ages.
+- **What happens, and how often:** about 50 kinds of event grouped as People (births, newcomers, couples, deaths by cause), Hardship (fires, storms, droughts, harsh winters, fevers, wolf attacks, famines, collapses, lost cargoes), Society (elections, council decisions, coups, uprisings, purges, reforms, rival councils, strikes, civil strife, secessions, sects, crimes, trials, feuds, estates, holidays), Economy & expansion (deals, trips, ships, harbours, peoples discovered, outposts, bridges) and Knowledge (discoveries, ages, great works, lessons). Each row shows the total, the rate per year over the last five years, a trend arrow against the five years before, and a yearly sparkline.
+- **Records & firsts:** largest and smallest population, most unequal, most united and divided, happiest and gloomiest, busiest years, and the day each kind of event first happened.
+- **Export:** CSV (every series, then every event by year) or JSON (summary plus all raw data) from the Stats tab. The data is saved with the world and kept for the whole run (thinned automatically after about 2,400 samples).
+- **Insight report:** `node tools/insight.js [days] [concurrency] [seeds per map]` runs many worlds across every map type and writes `insight-report.md`: results by map type and by final regime, the strongest correlations between features, and specific questions (does early inequality predict later unrest? does trade go with growth? does authority go with unrest?). Small samples give hints, not proof.
+- **Tools:** `tests/stats_events.js` (in the release checks), `tests/shot24.js`, `tools/insight.js`, `tools/insight_one.js`.
 
 ## Lives, property and feuds (new in 0.22)
 - **Hobbies and errands:** every adult has a hobby (angling, wood-carving, gardening, stargazing, singing, storytelling or long walks) chosen from their character. After work, adults may pursue it or run an errand: visiting kin, taking a meal to a hungry relative, fetching water at the well. Hobbies lift mood and sometimes give a little food, knowledge, keepsakes or friendship. The more leisure the council's work-and-leisure policy allows, the more of this the village does (and the slower the work).
