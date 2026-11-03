@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.24.1 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.24.2a · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -33,7 +33,10 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
 
-## Concerns: the village watches itself (new in 0.24.1)
+## Concerns now track what you did about them (new in 0.24.2a)
+Each concern card shows a state: **Needs your attention**, **Responding** (a countdown bar for each running response, "council deciding" for nudges), **Easing**, or **Didn't work** (a response ended or was declined and the trouble remains). A severity bar with a worsening/steady/easing arrow shows how bad it is. Resolved concerns stay visible for 16 days with what was tried. The badge turns calm blue when everything is being handled.
+
+## Concerns: the village watches itself (0.24.1)
 - **What it watches:** population (a fast fall, or a long slide from the recent peak, with the cause: deaths by kind, births, people who left with a faction), food (stock per person, starvation), firewood before winter, and unity (a divided village, a rival council, civil strife, outposts losing loyalty). Each concern is *watch* or *critical*, has a plain reason, and clears by itself when the trouble passes.
 - **Where you see it:** a **⚑ badge** in the date bar (amber, red and pulsing when something is critical) opens a **Concerns panel** with the reason, how long it has lasted and the responses you can try. Critical concerns also raise a **toast** that stays until you dismiss it or the trouble passes (at most three). Settings &rarr; Concern alerts chooses what a new critical concern does to the game: nothing extra (default), **pause**, or **slow to 1×**; toasts can be switched off.
 - **Responses (each has a cost, a cooldown and an effect you can see):** *Hold a feast* (spends food and firewood, lifts mood and unity), *Ration food* (16 days: slower hunger, shorter tempers), *More hands on food* and *More hands on firewood* (more farmers, hunters, fishers or woodcutters), *All hands* (10 days, no leisure, costs mood), and four **council nudges** (encourage families, less leisure, ease the laws, open reconciliation talks): the council still decides whether to heed you, and is more likely to when it is not an autocracy.

@@ -26,6 +26,14 @@ const { chromium } = require('playwright');
   await p.click('#cnBody button[data-resp="ration"]'); await p.waitForTimeout(200);
   ok(await p.evaluate(() => ordersOf(world).ration && world.concerns.used === 1 + 0 * 1), 'ration order given from the panel');
   ok(await p.evaluate(() => /Orders in force/.test(document.getElementById('cnBody').innerText)), 'panel shows orders in force');
+  ok(await p.evaluate(() => /Responding/.test(document.getElementById('cnBody').innerText) && /days? left/.test(document.getElementById('cnBody').innerText)), 'card shows Responding with a countdown');
+  ok(await p.evaluate(() => document.querySelector('#cnBody .cnact .cnbar.act') !== null && !document.querySelector('#cnBody button[data-resp="ration"]')), 'running response shows a bar and its button is gone');
+  ok(await p.evaluate(() => document.getElementById('hudConcern').classList.contains('crit') || document.getElementById('hudConcern').classList.contains('calm')), 'badge reflects state');
+  // a second concern (firewood) and a population fall for the screenshot, then let the ration end: "didn't work"
+  await p.evaluate(() => { world.tick += 1200 * 17; world.stock.food = 3; concernsDay(world); renderConcerns(true) });
+  ok(await p.evaluate(() => /Didn.t work/.test(document.getElementById('cnBody').innerText)), 'ended response with trouble remaining shows "Didn\'t work"');
+  ok(await p.evaluate(() => !!document.querySelector('#cnBody button[data-resp="hands_food"]:not([disabled])')), 'other responses are offered again');
+  await p.screenshot({ path: 'tests/ui_concern_states.png' });
   // alert modes
   await p.click('#cnClose');
   await setMode('pause');
