@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" shape-rendering="crispEdges" role="img" aria-label="Village Sim icon">
+  <defs><clipPath id="r"><rect width="64" height="64" rx="12"/></clipPath></defs>
+  <g clip-path="url(#r)">
+    <rect width="64" height="64" fill="#86cfe6"/>
+    <rect y="8" width="64" height="12" fill="#a4dcee"/>
+    <rect x="46" y="8" width="8" height="8" fill="#ffd35a"/><rect x="44" y="10" width="12" height="4" fill="#ffd35a"/><rect x="48" y="6" width="4" height="12" fill="#ffd35a"/>
+    <rect y="46" width="64" height="18" fill="#5fae5a"/><rect y="46" width="64" height="3" fill="#74c06b"/>
+    <rect x="26" y="52" width="12" height="12" fill="#d9b680"/><rect x="24" y="48" width="8" height="4" fill="#d9b680"/>
+    <rect x="3" y="30" width="10" height="10" fill="#2f8f4e"/><rect x="5" y="27" width="6" height="4" fill="#2f8f4e"/><rect x="7" y="40" width="3" height="8" fill="#6b4426"/>
+    <rect x="52" y="34" width="8" height="8" fill="#2f8f4e"/><rect x="54" y="42" width="3" height="6" fill="#6b4426"/>
+    <rect x="38" y="18" width="4" height="10" fill="#8a5a3c"/>
+    <rect x="39" y="12" width="4" height="4" fill="#ffffff" opacity=".85"/><rect x="42" y="8" width="3" height="3" fill="#ffffff" opacity=".6"/>
+    <rect x="28" y="20" width="8" height="4" fill="#c0392b"/><rect x="24" y="24" width="16" height="4" fill="#c0392b"/><rect x="20" y="28" width="24" height="4" fill="#c0392b"/><rect x="16" y="32" width="32" height="4" fill="#a82f23"/>
+    <rect x="18" y="36" width="28" height="12" fill="#c89b6a"/>
+    <rect x="28" y="38" width="8" height="10" fill="#6b4426"/><rect x="20" y="38" width="5" height="5" fill="#fff3c0"/><rect x="39" y="38" width="5" height="5" fill="#fff3c0"/>
+  </g>
+</svg>

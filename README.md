@@ -1,4 +1,19 @@
-# Village Sim v0.24.1
+<p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
+<h1 align="center">Village Sim</h1>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.24.1 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+
+<p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
+
+<table>
+<tr>
+<td width="50%"><img src="docs/screenshots/v0.24.1-feature.png" alt="Concerns panel"><br><sub><b>Concerns:</b> the village warns you when people, food or unity are in trouble, and you can respond.</sub></td>
+<td width="50%"><img src="docs/screenshots/v0.23-feature.png" alt="Stats tab"><br><sub><b>Statistics:</b> charts, event rates and records for everything that happens.</sub></td>
+</tr>
+<tr>
+<td width="50%"><img src="docs/screenshots/v0.22-feature.png" alt="Society tab"><br><sub><b>Society:</b> regimes, councils, feuds and policy that emerge from the people.</sub></td>
+<td width="50%"><img src="docs/screenshots/v0.19-feature.png" alt="World tab"><br><sub><b>Worlds:</b> islands, continents, lakes and rivers, with neighbours across the water.</sub></td>
+</tr>
+</table>
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
