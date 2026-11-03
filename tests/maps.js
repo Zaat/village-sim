@@ -1,6 +1,6 @@
 // Map type checks: node tests/maps.js [seeds=4]  - prints an ASCII preview and sanity numbers for each type
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,landRegions,MAP_ORDER,sameLand,serializeWorld,deserializeWorld});';
+const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,landRegions,MAP_ORDER,sameLand,serializeWorld,deserializeWorld});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const nseeds=+process.argv[2]||4,show=process.argv[3]==='show';let ok=0,bad=0;const check=(n,c,x)=>{if(!c||show)console.log((c?'PASS ':'FAIL ')+n+(x?'  '+x:''));c?ok++:bad++};
 const CH={0:'~',1:'-',2:'.',3:'"',4:'^',5:'A',6:'='};

@@ -1,6 +1,6 @@
 // Long-run stability probe: node tests/long.js SEED MAXDAYS [survival]
 const fs=require('fs'),vm=require('vm'),path=require('path');const dir=path.join(__dirname,'..','src');
-const files=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','outposts','bridges','save','world'];
+const files=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','concerns','outposts','bridges','save','world'];
 const code=files.map(f=>fs.readFileSync(path.join(dir,f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+(process.argv[2]||777),maxDays=+(process.argv[3]||460),mode=process.argv[4]||'',surv=mode==='survival';

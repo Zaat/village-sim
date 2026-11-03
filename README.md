@@ -1,4 +1,4 @@
-# Village Sim v0.24
+# Village Sim v0.24.1
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Concerns: the village watches itself (new in 0.24.1)
+- **What it watches:** population (a fast fall, or a long slide from the recent peak, with the cause: deaths by kind, births, people who left with a faction), food (stock per person, starvation), firewood before winter, and unity (a divided village, a rival council, civil strife, outposts losing loyalty). Each concern is *watch* or *critical*, has a plain reason, and clears by itself when the trouble passes.
+- **Where you see it:** a **⚑ badge** in the date bar (amber, red and pulsing when something is critical) opens a **Concerns panel** with the reason, how long it has lasted and the responses you can try. Critical concerns also raise a **toast** that stays until you dismiss it or the trouble passes (at most three). Settings &rarr; Concern alerts chooses what a new critical concern does to the game: nothing extra (default), **pause**, or **slow to 1×**; toasts can be switched off.
+- **Responses (each has a cost, a cooldown and an effect you can see):** *Hold a feast* (spends food and firewood, lifts mood and unity), *Ration food* (16 days: slower hunger, shorter tempers), *More hands on food* and *More hands on firewood* (more farmers, hunters, fishers or woodcutters), *All hands* (10 days, no leisure, costs mood), and four **council nudges** (encourage families, less leisure, ease the laws, open reconciliation talks): the council still decides whether to heed you, and is more likely to when it is not an autocracy.
+- **Secession is rarer and smaller:** a faction may break away at most once in about four years, takes at most 30% of the adults (the most aggrieved), and the village feels relief afterwards. Coup and purge penalties to unity now fade over 60 days instead of lasting while they recur, and purges need 50 days between them.
+- **Why:** in long runs the big population drops were whole factions sailing off (29&ndash;37 people each, five times in 45 years on one continent world), kept coming by permanently low unity.
+- **Tools:** `tests/concerns_events.js` (in the release checks), `tests/concerns_ui.js` (page test with screenshots), `tools/diag.js SEED MAP DAYS` (year-by-year health record: births, deaths, departures, resources, roles, stuck villagers, speed), `tools/probe_div.js` (which parts of the unity formula dominate), `tools/probe_social.js`.
+- **Next:** v0.24.2 Livelihoods (trades, side jobs, overtime, invented jobs, aspirations), because in big towns 40&ndash;55% of adults have no job role.
 
 ## Technology and ages (new in 0.24)
 - **A tree of 109 technologies in 8 branches** (Land & food, Building, Craft & metal, Sea & trade, Learning & faith, Society & law, War & defence, Medicine) and **9 ages**: Stone, Bronze, Iron, Classical, Medieval, Renaissance, Gunpowder, Industrial and Modern. The original 18 technologies keep their names and ids, so old saves load.

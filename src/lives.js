@@ -36,6 +36,7 @@ function ensureHobby(w, v) {
 }
 function leisureWanted(w, v) {
   if (!v.isAdult() || w.tod < 0.38 || w.tod > 0.55 || (v.leisureUntil || 0) > w.tick) return false;
+  if (w.concerns && ordersOf(w).allhands) return false;
   if (v.hunger < 40 || v.energy < 30 || w.festival || w.cold || v.duty > w.tick || v.stocksUntil > w.tick || v.strikeUntil > w.tick || w.stock.food < w.vills.length * 1.2) return false;
   const p = 0.12 + 0.25 * Math.max(0, w.gov.policy.labor) + 0.08 * (v.mood < 60 ? 1 : 0) + (v.isElder() ? 0.15 : 0) - 0.1 * Math.max(0, -w.gov.policy.labor);
   return w.r() < p;

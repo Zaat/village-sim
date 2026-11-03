@@ -143,10 +143,13 @@ function assignRoles(w) {
     woodcutter: Math.max(1, Math.round(n * (w.season >= 2 ? 0.27 : 0.2))),
     miner: Math.max(n >= 4 ? 1 : 0, Math.round(n * 0.13)),
   };
+  const O = ordersOf(w), hands = O.allhands;
   const { tgt, eff } = resourceTargets(w), ratio = k => eff[k] / Math.max(1, tgt[k]);       // self-correct: fewer hands on a surplus, more on a shortage
   if (ratio('wood') > 1.4) q.woodcutter = Math.max(1, Math.round(q.woodcutter * 0.5)); else if (ratio('wood') < 0.5) q.woodcutter = Math.min(Math.ceil(q.woodcutter * 1.5), Math.round(n * 0.3));
   if (ratio('stone') > 1.6) q.miner = Math.max(n >= 4 ? 1 : 0, Math.round(q.miner * 0.5)); else if (ratio('stone') < 0.5) q.miner = Math.ceil(q.miner * 1.5);
   if (ratio('food') > 1.6) { q.hunter = Math.max(1, Math.round(q.hunter * 0.5)); q.fisher = Math.round(q.fisher * 0.5) } else if (ratio('food') < 0.6) { q.hunter = Math.ceil(q.hunter * 1.5); q.fisher = Math.ceil(q.fisher * 1.5) }
+  if (O.food || hands) { if (!winter) q.farmer = Math.min(farms, Math.round(n * (hands ? 0.5 : 0.42))); q.hunter = Math.min(Math.round(n * 0.25), Math.ceil(q.hunter * (hands ? 2 : 1.6))); if (q.fisher) q.fisher = Math.min(Math.round(n * 0.2), Math.ceil(q.fisher * (hands ? 2 : 1.6))) }       // standing orders from the player
+  if (O.fuel || hands) q.woodcutter = Math.min(Math.round(n * 0.4), Math.ceil(q.woodcutter * (hands ? 1.8 : 1.7)));
   for (const v of adults) if (v.role && HEAVY.has(v.role) && v.isElder()) v.role = null;     // elders step back from heavy labor
   const cnt = {}; for (const r of ROLES) cnt[r] = 0;
   for (const v of adults) if (v.role) cnt[v.role]++;

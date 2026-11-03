@@ -20,10 +20,10 @@ const STAT_EVENTS = [
   ['election', 'Elections', 'Society'], ['decision', 'Council decisions', 'Society'], ['coup', 'Coups', 'Society'], ['uprising', 'Uprisings', 'Society'], ['purge', 'Purges', 'Society'], ['reform', 'Reforms', 'Society'], ['rival_council', 'Rival councils', 'Society'], ['strike', 'Strikes', 'Society'], ['civil_strife', 'Civil strife', 'Society'], ['secession', 'Secessions', 'Society'], ['sect', 'Sects founded', 'Society'],
   ['theft', 'Thefts', 'Society'], ['assault', 'Assaults', 'Society'], ['trial', 'Trials', 'Society'], ['banished', 'Banishments', 'Society'], ['feud', 'Feuds begun', 'Society'], ['feud_mended', 'Feuds mended', 'Society'], ['estate', 'Estates passed on', 'Society'], ['holiday', 'Holidays', 'Society'],
   ['deal', 'Market deals', 'Economy & expansion'], ['trip', 'Trading trips', 'Economy & expansion'], ['ship_built', 'Ships built', 'Economy & expansion'], ['harbour_upgrade', 'Harbour upgrades', 'Economy & expansion'], ['voyage', 'Peoples discovered', 'Economy & expansion'], ['outpost_founded', 'Outposts founded', 'Economy & expansion'], ['outpost_failed', 'Outposts failed', 'Economy & expansion'], ['outpost_free', 'Outposts broke away', 'Economy & expansion'], ['bridge', 'Bridges built', 'Economy & expansion'],
-  ['discovery', 'Discoveries', 'Knowledge'], ['tech_lost', 'Knowledge lost', 'Knowledge'], ['era', 'New ages', 'Knowledge'], ['project', 'Great works finished', 'Knowledge'], ['lesson', 'Lessons learned', 'Knowledge']
+  ['concern', 'Concerns raised', 'Society'], ['concern_critical', 'Critical concerns', 'Society'], ['concern_response', 'Responses tried', 'Society'], ['discovery', 'Discoveries', 'Knowledge'], ['tech_lost', 'Knowledge lost', 'Knowledge'], ['era', 'New ages', 'Knowledge'], ['project', 'Great works finished', 'Knowledge'], ['lesson', 'Lessons learned', 'Knowledge']
 ].map(([key, label, group]) => ({ key, label, group }));
 const STAT_LABEL = Object.fromEntries(STAT_EVENTS.map(e => [e.key, e.label]));
-const MARKED = new Set(['tech_lost', 'coup', 'uprising', 'secession', 'civil_strife', 'famine', 'era', 'outpost_founded', 'outpost_free', 'bridge', 'sect', 'rival_council', 'project', 'voyage', 'fever', 'strike']);
+const MARKED = new Set(['concern_critical', 'tech_lost', 'coup', 'uprising', 'secession', 'civil_strife', 'famine', 'era', 'outpost_founded', 'outpost_free', 'bridge', 'sect', 'rival_council', 'project', 'voyage', 'fever', 'strike']);
 
 const STAT_SERIES = [
   { id: 'pop', label: 'Population', group: 'People', get: w => w.vills.length },
@@ -48,6 +48,7 @@ const STAT_SERIES = [
   { id: 'indus', label: 'Industry', group: 'Society', get: w => w.regime.ax.indus },
   { id: 'open', label: 'Openness', group: 'Society', get: w => w.regime.ax.open },
   { id: 'circles', label: 'Social circles', group: 'Society', get: w => w.groups.length },
+  { id: 'concerns', label: 'Open concerns', group: 'Society', get: w => w.concerns ? w.concerns.list.length : 0 },
   { id: 'feuds', label: 'Active feuds', group: 'Society', get: w => w.lives ? w.lives.feuds.filter(f => !f.over).length : 0 },
   { id: 'crime', label: 'Crimes per 4 days', group: 'Society', delta: ['theft', 'assault'] },
   { id: 'p_law', label: 'Policy: strictness', group: 'Policy', get: w => w.gov.policy.law },

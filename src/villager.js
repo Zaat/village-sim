@@ -50,7 +50,7 @@ class Villager {
   }
   updateMood() {
     const w = this.w; let t = 50 + (this.hunger - 50) * 0.25 + (this.energy - 50) * 0.08 + (this.social - 50) * 0.12 + (this.health - 70) * 0.1;
-    if (w.cold) t -= 15; t += Math.min(10, this.friends * 2.5) - Math.min(15, this.enemies * 4);
+    if (w.cold) t -= 15; if (w.concerns) { const O = ordersOf(w); if (O.ration) t -= 4; if (O.allhands) t -= 6 } t += Math.min(10, this.friends * 2.5) - Math.min(15, this.enemies * 4);
     let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4; t += regimeMood(this);
     if (w.has('coinage')) t += clamp(((this.coins || 0) - 25) / 40, -3, 4);
     if (this.partner != null) t += 6; if (this.home == null && this.isAdult()) t -= 6; if (this.mournUntil > w.tick) t -= 18; if (this.desire && w.day - this.desire.since > 40) t -= 4;
@@ -86,7 +86,7 @@ class Villager {
 
   update() {
     const w = this.w, child = this.isChild();
-    this.hunger = Math.max(0, this.hunger - (this.sleeping ? 0.02 : 0.04) * (child ? 0.6 : 1) * (w.settings.survival ? 1.25 : 1));
+    this.hunger = Math.max(0, this.hunger - (this.sleeping ? 0.02 : 0.04) * (child ? 0.6 : 1) * (w.settings.survival ? 1.25 : 1) * (w.concerns && ordersOf(w).ration ? 0.8 : 1));
     this.energy = this.sleeping ? Math.min(100, this.energy + 0.15) : Math.max(0, this.energy - 0.025);
     this.social = Math.max(0, this.social - 0.012 - 0.025 * this.trait.soc);
     this.age += 1 / CFG.TPD;

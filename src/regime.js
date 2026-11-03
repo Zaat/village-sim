@@ -12,6 +12,7 @@
    learning, trade and succession. Strongmen seize power, prophets rise,
    hard regimes meet uprisings, and chiefs hand power to their children.
    ========================================================================== */
+const DIV_NAMES = ['rivalries between circles', 'polarised opinions', 'discontent', 'a split in faith', 'gaps between the circles on policy', 'a large opposition', 'people who feel alien under this rule', 'inequality', 'a recent coup', 'a recent purge', 'open strife'];
 const AXES = ['auth', 'comm', 'pious', 'indus', 'open', 'cohes'];
 const AXIS_TXT = { auth: 'Authority', comm: 'Community', pious: 'Faith', indus: 'Industry', open: 'Openness', cohes: 'Unity' };
 const REGIME_TXT = {
@@ -88,7 +89,7 @@ function regimeDay(w) {
   let gap = 0, gn = 0; for (const g of w.groups) for (const h of w.groups) if (g.id < h.id && g.op && h.op) { gap += ISSUES.reduce((s, k) => s + Math.abs(g.op[k] - h.op[k]), 0) / ISSUES.length; gn++ }
   const pm = ad.reduce((s, v) => s + v.char.piety, 0) / ad.length, psplit = clamp(Math.sqrt(ad.reduce((s, v) => s + (v.char.piety - pm) * (v.char.piety - pm), 0) / ad.length) / 0.3, 0, 1);
   const opp = w.groups.filter(g => g.satisfied < -0.4).reduce((s, g) => s + g.members.length, 0) / Math.max(1, ad.length);
-  const div = 0.22 * (pairs ? riv / pairs : 0) + 0.2 * clamp(polarization(ad) / 0.5, 0, 1) + 0.18 * disc + 0.12 * psplit + 0.14 * clamp((gn ? gap / gn : 0) / 0.5, 0, 1) + 0.14 * clamp(opp / 0.4, 0, 1) + 0.22 * clamp((alien0 - 0.1) / 0.2, 0, 1) + 0.15 * (w.has('coinage') ? giniOf(ad) : 0) + (w.day - R.lastCoup < 60 ? 0.1 : 0) + (w.day - (R.lastPurge || -999) < 60 ? 0.08 : 0) + strifeDiv(w); R.div = div; R.psplit = psplit; R.alien = alien0;
+  const divParts = [0.22 * (pairs ? riv / pairs : 0), 0.2 * clamp(polarization(ad) / 0.5, 0, 1), 0.18 * disc, 0.12 * psplit, 0.14 * clamp((gn ? gap / gn : 0) / 0.5, 0, 1), 0.14 * clamp(opp / 0.4, 0, 1), 0.22 * clamp((alien0 - 0.1) / 0.2, 0, 1), 0.15 * (w.has('coinage') ? giniOf(ad) : 0), 0.1 * clamp(1 - (w.day - R.lastCoup) / 60, 0, 1), 0.08 * clamp(1 - (w.day - (R.lastPurge || -999)) / 60, 0, 1), strifeDiv(w)], div = divParts.reduce((s, x) => s + x, 0); R.div = div; R.psplit = psplit; R.alien = alien0; R.divParts = divParts;
   const wealth = w.has('coinage') ? giniOf(ad) : 0, techs = id => (w.has(id) ? 1 : 0);
   const T = {}, P = Object.fromEntries(AXES.map(k => [k, 0]));
   for (const v of ad) { const st = styleOf(v); for (const k of AXES) P[k] += st[k] / ad.length }
@@ -171,7 +172,7 @@ function regimeEvents(w, crisis, approval, ad) {
     }
   }
   // 4. a hard ruler purges critics
-  if (R.ax.auth > 0.7 && chief && chief.char.ruth > 0.55 && w.day - (R.lastPurge || -999) > 25 && w.r() < 0.09) {
+  if (R.ax.auth > 0.7 && chief && chief.char.ruth > 0.55 && w.day - (R.lastPurge || -999) > 50 && w.r() < 0.09) {
     const targets = ad.filter(v => v !== chief && !g.council.some(c => c.id === v.id)).sort((a, b) => (relOf(w, chief, a) - 20 * a.trait.ind - 10 * a.op.law) - (relOf(w, chief, b) - 20 * b.trait.ind - 10 * b.op.law)).slice(0, 1 + (w.r() < 0.4 ? 1 : 0));
     if (targets.length) { R.lastPurge = w.day; R.purges++; for (const t of targets) { t.stocksUntil = w.tick + CFG.TPD * 3; t.mood = Math.max(0, t.mood - 15); w.rel.set(w.relKey(chief, t), -60); t.story(`Was seized on ${chief.name}'s orders for speaking out.`) } for (const v of ad) v.mood = Math.max(0, v.mood - 1.5); w.emit('regime', `${chief.name} has ${targets.map(t => t.name).join(' and ')} seized and locked in the stocks as critics. The village goes quiet.`, { purge: true }) }
   }

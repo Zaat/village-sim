@@ -27,11 +27,13 @@ const firstName = n => String(n).split(' ')[0];
 function slog(w, text) { const S = sOf(w); S.log.unshift(`D${w.day}: ${text}`); if (S.log.length > 6) S.log.pop() }
 
 /* how much the village's divisions weigh on its unity right now */
+const SECEDE_GAP = 128, SECEDE_SHARE = 0.3, SECEDE_RELIEF = 140;      // a faction may leave about once in four years, and never more than 30% of the adults
 function strifeDiv(w) {
   const S = w.strife; if (!S) return 0; let d = 0;
   if (S.shadow) d += 0.2; if (S.strike) d += 0.08; if (S.civil) d += 0.18;
   if (S.sect) { const share = S.sect.members.length / Math.max(8, w.vills.length), k = S.sect.doctrine === 'zealots' ? 0.5 : 0.3; d += k * share * (S.sect.stance === 'embraced' ? 0.4 : S.sect.stance === 'suppressed' ? 1.2 : 1) }
   if (w.day < S.truceUntil) d -= 0.1;
+  if (S.reliefUntil && w.day < S.reliefUntil) d -= 0.16 * (S.reliefUntil - w.day) / SECEDE_RELIEF;           // the air clears after a faction leaves
   return d;
 }
 /* what the great buildings of a regime add to its effects */
@@ -81,14 +83,14 @@ function shadowDay(w, ad) {
     if (R.ax.cohes > 0.62 && w.gov.approval > 68 && w.r() < 0.1) return endShadow(w, 'reconciled', `Calm returns, and ${sh.name} quietly set aside their rival council.`);
     if (!sh.asked && sh.days >= 4 && !S.civil) { sh.asked = true; return respondShadow(w, sh, g, leader, ms, chief) }
     if (S.civil) return;
-    if (sh.days >= 12 && !sh.sailAsked && ms.length >= 5 && canSail(w) && w.r() < 0.1) { sh.sailAsked = true; return secessionTalks(w, g, leader, ms, 'standoff') }
+    if (sh.days >= 12 && !sh.sailAsked && ms.length >= 5 && canSail(w) && w.day - S.lastSecede > SECEDE_GAP && w.r() < 0.1) { sh.sailAsked = true; return secessionTalks(w, g, leader, ms, 'standoff') }
     if (sh.days >= 8 && w.settings.crime && R.ax.cohes < 0.45 && w.day >= S.truceUntil && w.r() < 0.1) return startCivil(w, ad, g, leader, ms);
     return;
   }
   if (w.day < 50 || ad.length < 16 || w.day - S.lastShadow < 40 || w.day < S.truceUntil || R.ax.cohes > 0.55 || S.civil) return;
   const p = 0.012 + 0.08 * (0.55 - R.ax.cohes) / 0.55 + (R.ax.auth > 0.6 ? 0.015 : 0); if (w.r() >= p) return;
   const bl = aggrievedBloc(w, ad); if (!bl) return; const leader = bl.leader, ms = vOf(w, bl.members);
-  if (canSail(w) && bl.members.length >= 6 && (S.crushes > 0 || R.ax.cohes < 0.38) && w.day - S.lastSecede > 60 && w.r() < 0.4) { S.lastShadow = w.day; w.emit('regime', `${bl.name} have had enough. ${leader.name} tells the council that ${bl.members.length} of them would rather leave than fight.`, { weary: true }); return secessionTalks(w, { name: bl.name, members: bl.members, op: bl.op }, leader, ms, 'weary') }
+  if (canSail(w) && bl.members.length >= 6 && (S.crushes > 0 || R.ax.cohes < 0.38) && w.day - S.lastSecede > SECEDE_GAP && w.r() < 0.4) { S.lastShadow = w.day; w.emit('regime', `${bl.name} have had enough. ${leader.name} tells the council that ${bl.members.length} of them would rather leave than fight.`, { weary: true }); return secessionTalks(w, { name: bl.name, members: bl.members, op: bl.op }, leader, ms, 'weary') }
   S.shadow = { name: bl.name, ids: bl.members, op: bl.op, leader: leader.id, leaderName: leader.name, since: w.day, days: 0, asked: false };
   experience(leader, 'power', 1); leader.story(`Set up a rival council for ${bl.name}.`);
   w.emit('regime', `${bl.name} no longer recognise the council. ${leader.name} gathers ${ms.length} of them under the old trees as a rival council, and the village has two governments.`, { shadow: true });
@@ -222,7 +224,8 @@ function findColonySite(w, host) {
 function secede(w, g, leader, mode) {
   const S = w.strife, council = new Set(w.gov.council.filter(c => c.title === 'Chief').map(c => c.id));
   const away = v => v.jobKind === 'voyage' || v.boat;
-  const core = vOf(w, g.members).filter(v => !v.isChild() && !council.has(v.id) && !away(v) && v.age < 80);
+  let core = vOf(w, g.members).filter(v => !v.isChild() && !council.has(v.id) && !away(v) && v.age < 80);
+  const maxCore = Math.max(3, Math.floor(SECEDE_SHARE * adultsOf(w).length)); if (core.length > maxCore) core = core.sort((a, b) => personalGrievance(w, b) - personalGrievance(w, a)).slice(0, maxCore);      // only the most aggrieved go; the rest stay
   if (core.length < 3) return endShadow(w, 'faded', `${g.name} decide to stay after all.`);
   const set = new Set(core.map(v => v.id)); for (const v of w.vills) if (!set.has(v.id) && !council.has(v.id) && !away(v) && v.isChild() && v.parentIds.some(p => set.has(p))) set.add(v.id);
   for (const v of core) if (v.partner != null && !set.has(v.partner)) { const p = memberOf(w, v.partner); if (p && !council.has(p.id) && !away(p) && w.r() < 0.5) set.add(p.id) }
@@ -234,7 +237,7 @@ function secede(w, g, leader, mode) {
   w.stock.food -= gifts.food; w.stock.wood -= gifts.wood;
   const story = `left ${mode === 'peace' ? 'in peace' : 'in bitterness'} after a split with the council`;
   for (const v of folk) { v.story(`${firstName(v.name)} ${story} and sailed away.`); departVillager(w, v) }
-  S.secessions++; S.lastSecede = w.day; S.shadow = null; S.lastShadow = w.day; S.truceUntil = w.day + 40;
+  S.secessions++; S.lastSecede = w.day; S.shadow = null; S.lastShadow = w.day; S.truceUntil = w.day + 40; S.reliefUntil = w.day + SECEDE_RELIEF;
   const R = w.regime; R.ax.cohes = Math.min(1, R.ax.cohes + 0.12); R.ax.auth = clamp(R.ax.auth + (mode === 'peace' ? 0 : 0.05), 0, 1);
   for (const v of w.vills) if (!v.isChild()) { v.mood = Math.max(0, v.mood - (mode === 'peace' ? 2 : 5)); }
   if (!site) { w.emit('regime', `${g.name} (${n} souls) board boats and sail over the horizon in search of new shores. They are not heard from again.`, { secession: true }); slog(w, `${g.name} sailed away beyond the horizon.`); return }

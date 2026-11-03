@@ -10,7 +10,9 @@
 <div id="app">
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span></div>
+    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span><button id="hudConcern" style="display:none" title="Concerns">⚑ 0</button></div>
+    <div id="toasts"></div>
+    <div id="concernPanel" style="display:none"><div class="cnhead"><b>Concerns</b><button id="cnClose" title="Close">✕</button></div><div id="cnBody"></div></div>
     <div id="ctl">
       <button id="playBtn" title="Pause / play (Space)">⏸</button>
       <span class="stepper"><button id="spDown" title="Slower ( [ )">◂</button><span id="spLabel" title="Simulation speed">10×</span><button id="spUp" title="Faster ( ] )">▸</button></span>
@@ -27,6 +29,11 @@
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
+    </div>
+    <div class="card"><h3>Concern alerts</h3>
+      <div class="hint" style="margin-bottom:6px">What should happen when something becomes critical (falling population, famine, a faction about to leave)?</div>
+      <select id="alertMode" style="width:100%"><option value="off">Only show the badge and toast</option><option value="pause">Pause the game</option><option value="slow">Slow the game to 1×</option></select>
+      <label class="tog" style="margin-top:8px"><input type="checkbox" id="alertToasts" checked><span class="sw"></span><span>Toasts for critical concerns <span class="hint">stay until dismissed</span></span></label>
     </div>
     <div class="card"><h3>Save &amp; load</h3>
       <div class="hint" id="saveInfo">Nothing saved yet.</div>
@@ -132,6 +139,7 @@
 <script src="src/strife.js"></script>
 <script src="src/lives.js"></script>
 <script src="src/stats.js"></script>
+<script src="src/concerns.js"></script>
 <script src="src/outposts.js"></script>
 <script src="src/bridges.js"></script>
 <script src="src/places.js"></script>
@@ -144,6 +152,7 @@
 <script src="src/render.js"></script>
 <script src="src/debug.js"></script>
 <script src="src/statsui.js"></script>
+<script src="src/concernsui.js"></script>
 <script src="src/ui.js"></script>
 </body>
 </html>
