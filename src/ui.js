@@ -209,7 +209,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -345,6 +345,18 @@ function flowLine(w) {
   const parts = [[flowYear(w, 'born'), 'born'], [flowYear(w, 'arrived'), 'arrived'], [flowYear(w, 'died'), 'died'], [flowYear(w, 'left'), 'left']].filter(p => p[0] > 0).map(p => `${p[0]} ${p[1]}`);
   return parts.length ? `<div class="hint" style="margin:-2px 0 4px">This past year: ${parts.join(', ')}</div>` : '';
 }
+/* families, wealth and feuds */
+function renderLives() {
+  const w = world, el = $('livesCard'), L = w.lives; if (!el || !L) return;
+  const ad = adultsOf(w), fams = new Map(); for (const v of w.vills) { const f = fams.get(v.family) || { n: 0, wealth: 0, own: 0, st: 0, ad: 0 }; f.n++; if (v.isAdult()) { f.wealth += wealthOf(v); f.st += v.status || 0; f.ad++ } fams.set(v.family, f) }
+  for (const b of w.buildings.values()) if (b.owner) { const o = w.vills.find(v => v.id === b.owner); if (o && fams.get(o.family)) fams.get(o.family).own++ }
+  const top = [...fams.entries()].filter(([, f]) => f.ad).sort((a, b) => b[1].st - a[1].st || b[1].n - a[1].n).slice(0, 5), feuds = L.feuds.filter(f => !f.over);
+  let h = top.length ? `<div class="hint" style="margin-bottom:3px">Leading families</div>` + top.map(([n, f]) => `<div class="polh"><span><b>${escapeHtml(n)}</b> <span class="hint">${f.n} ${f.n === 1 ? 'person' : 'people'}${f.own ? ' · owns ' + f.own : ''}</span></span><span class="hint">${STATUS_WORDS(f.st / f.ad)}</span></div>`).join('') : '';
+  h += feuds.length ? `<div class="hint" style="margin:8px 0 3px">Feuds</div>` + feuds.map(f => `<div class="grp"><b>${escapeHtml(f.na)}</b> <span class="hint">against</span> <b>${escapeHtml(f.nb)}</b> <span class="hint">· ${escapeHtml(f.cause)} · since day ${f.since}</span><div class="bar"><i style="background:${f.heat > 0.6 ? '#e07a5a' : '#d9c26a'};width:${Math.round(f.heat * 100)}%"></i></div></div>`).join('') : `<div class="hint" style="margin-top:6px">No family quarrels at the moment.</div>`;
+  const S = L.stats; if (S.feuds || S.inherited || S.hobbies) h += `<div class="stats" style="margin-top:6px"><div><span class="hint">Estates passed on</span><b>${S.inherited}</b></div><div><span class="hint">Feuds so far</span><b>${S.feuds}</b></div><div><span class="hint">Mended</span><b>${S.reconciled}</b></div><div><span class="hint">Pastimes enjoyed</span><b>${S.hobbies}</b></div></div>`;
+  if (L.log.length) h += `<div class="story" style="margin-top:6px">${L.log.slice(0, 3).map(x => `<div>${escapeHtml(x)}</div>`).join('')}</div>`;
+  el.innerHTML = h;
+}
 function renderCouncil() {
   const w = world, g = w.gov, el = $('councilCard');
   const ENDS = { growth: ['Small and close', 'Growing'], labor: ['Work first', 'More leisure'], law: ['Lenient', 'Strict'], defense: ['Trusting', 'Watchful'], tax: ['Light taxes', 'Heavy taxes'] }, STRENGTH = p => { const a = Math.abs(p); return a < 0.15 ? '' : a < 0.45 ? 'leans' : a < 0.8 ? 'favours' : 'strongly' };
@@ -354,6 +366,7 @@ function renderCouncil() {
   const dec = g.decisions.slice(0, 4).map(d => `<div><b>D${d.day}</b>${escapeHtml(d.text)}${d.source === 'claude' ? ' <span class="cl">Claude</span>' : ''}</div>`).join('');
   el.innerHTML = g.council.length ? `<div class="chips" style="margin:0 0 6px">${mem}</div><div class="hint" style="margin-bottom:4px">${(() => { const R = rulingGroup(w); return R ? `Led by <b>${escapeHtml(R.name)}</b>, pledged to ${escapeHtml(platformText(R))}. ` : 'No circle leads; a coalition of independents. ' })()}Approval ${Math.round(g.approval)}% · term ends day ${g.termEnd} · ${g.elections} election${g.elections === 1 ? '' : 's'} held${g.welfare ? ' · food relief' : ''}${g.mediation ? ' · mediation' : ''}</div>${meters}<div class="declog">${dec || '<span class="hint">No decisions yet.</span>'}</div>`
     : `<div class="hint">No council yet. When the village has enough adults (8+), they will hold an election.</div>`;
+  const ps = g.council.length ? powerShares(w) : []; if (ps.length) el.innerHTML += `<div class="hint" style="margin:8px 0 3px">Who holds power</div><div class="powbar">${ps.map(x => `<i title="${escapeHtml(x.label)} ${Math.round(x.share * 100)}%" style="width:${(x.share * 100).toFixed(1)}%;background:${x.col}"></i>`).join('')}</div><div class="powkey">${ps.slice(0, 4).map(x => `<span><i style="background:${x.col}"></i>${escapeHtml(x.label)} ${Math.round(x.share * 100)}%</span>`).join('')}</div>`;
 }
 function renderGroups() {
   const w = world, el = $('groupCard');
@@ -426,6 +439,7 @@ function familyBlock(w, s, home) {
   const fav = Object.entries(s.fav || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => `${(BUILDING_NAMES[t] || t).toLowerCase()} ×${n}`).join(', ');
   const rows = [['Partner', ptn ? vlink(ptn) : 'none'], par.length ? ['Parents', par.map(v => vlink(v)).join(', ')] : null, ['Children', kids.length ? kids.slice(0, 6).map(v => vlink(v)).join(', ') + (kids.length > 6 ? '…' : '') : 'none'],
     ['Home', home ? `<a class="lnk" data-bid="${home.id}">cabin at ${home.x},${home.y}</a>${mates.length ? ' with ' + mates.map(v => vlink(v)).join(', ') : ''}` : 'none'], fav ? ['Often found at', escapeHtml(fav)] : null,
+    s.isAdult() && s.hobby ? ['Hobby', HOBBIES[s.hobby].label] : null, s.status !== undefined && s.isAdult() ? ['Standing', STATUS_WORDS(s.status) + (wealthOf(s) >= 1 ? ' · means ' + (wealthOf(s) < 8 ? 'modest' : wealthOf(s) < 30 ? 'comfortable' : 'considerable') : '')] : null, (() => { const ps = propsOf(w, s); return ps.length ? ['Owns', ps.map(b => b.type === 'house' ? 'a home' : 'a field').join(' and ')] : null })(), (() => { const f = feudOf(w, s); return f ? ['Feud', `${f.ka.has(s.id) ? escapeHtml(f.nb) : escapeHtml(f.na)}'s kin, over ${escapeHtml(f.cause)} (${Math.round(f.heat * 100)}% hot)`] : null })(),
     s.output ? ['Work output', `${Math.round(s.output)} units gathered`] : null, ['Born', dateText(Math.max(0, Math.round(w.day - s.age)))]];
   return sec('Family &amp; life', `<div class="kvl">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><span>${v}</span></div>`).join('')}</div>`);
 }
@@ -506,13 +520,23 @@ function pick(sx, sy) {
 const mini = $('mini');
 function miniGo(e) { const r = mini.getBoundingClientRect(); R.cam.x = (e.clientX - r.left) / r.width * CFG.W * CFG.T; R.cam.y = (e.clientY - r.top) / r.height * CFG.H * CFG.T; follow = false; clampCam() }
 mini.addEventListener('pointerdown', e => { mini.setPointerCapture(e.pointerId); miniGo(e); mini._d = true }); mini.addEventListener('pointermove', e => { if (mini._d) miniGo(e) }); mini.addEventListener('pointerup', () => mini._d = false);
-function setSpeed(s) { speed = s; document.querySelectorAll('[data-sp]').forEach(b => b.classList.toggle('on', +b.dataset.sp === s)) }
+const SPEED_STEPS = [0.25, 0.5, 1, 3, 10, 30, 100]; let lastSpeed = 10, pendingTicks = 0;
+const speedText = s => s <= 0 ? 'Paused' : s >= 999 ? 'Max' : s === 0.25 ? '¼×' : s === 0.5 ? '½×' : s + '×';
+function setSpeed(s) {
+  speed = s; if (s > 0) lastSpeed = s;
+  document.querySelectorAll('[data-sp]').forEach(b => b.classList.toggle('on', +b.dataset.sp === s));
+  $('playBtn').textContent = s > 0 ? '⏸' : '▶'; $('playBtn').classList.toggle('paused', s === 0); $('spLabel').textContent = speedText(s);
+}
+const stepSpeed = dir => { const cur = speed > 0 ? speed : lastSpeed; let i = SPEED_STEPS.findIndex(x => x >= cur); if (i < 0) i = SPEED_STEPS.length - 1; if (dir > 0 && SPEED_STEPS[i] <= cur) i++; else if (dir < 0) i--; setSpeed(SPEED_STEPS[clamp(i, 0, SPEED_STEPS.length - 1)]) };
+const advance = big => { if (tt) return; pendingTicks += CFG.TPD * (big ? CFG.DPS : 1); if (speed > 0) { lastSpeed = speed; setSpeed(0) } };
 document.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => setSpeed(+b.dataset.sp));
+$('playBtn').onclick = () => setSpeed(speed > 0 ? 0 : lastSpeed || 10); $('spDown').onclick = () => stepSpeed(-1); $('spUp').onclick = () => stepSpeed(1); $('stepBtn').onclick = e => advance(e.shiftKey);
 $('zin').onclick = () => zoomAt(1.3, R.vw / 2, R.vh / 2); $('zout').onclick = () => zoomAt(1 / 1.3, R.vw / 2, R.vh / 2);
 $('fol').onclick = () => { follow = !follow && !!selected; $('fol').classList.toggle('on', follow) };
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return; keys[e.key.toLowerCase()] = true;
-  if (e.code === 'Space') { e.preventDefault(); setSpeed(speed === 0 ? 10 : 0) }
+  if (e.code === 'Space') { e.preventDefault(); setSpeed(speed === 0 ? lastSpeed || 10 : 0) }
+  if (e.key === '[') stepSpeed(-1); if (e.key === ']') stepSpeed(1); if (e.key === '.') advance(e.shiftKey); if (e.key === '>') advance(true);
   const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 999 }[e.key]; if (m) setSpeed(m);       // 5 is a hidden "as fast as it can go" for testing
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
   if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer();
@@ -594,6 +618,7 @@ function frame(now) {
   try {
     const dt = Math.min(100, now - last); last = now;
     if (tt) stepTimeTravel();
+    if (pendingTicks > 0 && !tt) { const t0 = performance.now(); try { while (pendingTicks > 0 && performance.now() - t0 < 30) { world.step(); pendingTicks-- } } catch (e) { dbgNote('step', e); dbgPersist(world); pendingTicks = 0 } }
     if (speed > 0) {
       acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now();
       const budget = speed >= 100 ? 45 : 14; try { while (n-- > 0) { world.step(); if (performance.now() - t0 > budget) { acc = 0; break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
@@ -616,9 +641,13 @@ setInterval(() => {
   DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick };
   if (++diagTimer % 10 === 0) world.profReset();
   try { updateDiag() } catch (e) { }
+  const drawn = frames - (wd.fr || 0); wd.fr = frames;
+  { const eff = DBG.tps / CFG.TPS; $('rate').textContent = speed > 0 && speed < 100 && eff < speed * 0.8 ? 'running at ' + (eff < 1 ? eff.toFixed(1) : Math.round(eff)) + '×' : pendingTicks > 0 ? 'stepping…' : '' }
   if (document.hidden) { wd.changedAt = nowT; wd.tick = world.tick; lastFrameAt = nowT; return }      // browsers pause hidden pages; that is not a freeze
-  if (nowT - lastFrameAt > 4000) {                                  // the drawing loop itself has stopped
-    DBG.restarts++; DBG.watchdog.push({ at: new Date().toISOString(), reason: 'frame loop stalled ' + Math.round(nowT - lastFrameAt) + ' ms' }); lastFrameAt = nowT; requestAnimationFrame(frame); return;
+  if (drawn === 0) {                                                // no frame was drawn this second
+    wd.changedAt = nowT; wd.tick = world.tick; wd.stage = 0;       // nothing can move without frames, so this is never counted as the village freezing (an unfocused or covered window is throttled by the system)
+    if (nowT - lastFrameAt > 4000) { lastFrameAt = nowT; if (document.hasFocus()) { DBG.restarts++; DBG.watchdog.push({ at: new Date().toISOString(), reason: 'frame loop stalled' }) } requestAnimationFrame(frame) }
+    return;
   }
   if (world.tick !== wd.tick) { wd.tick = world.tick; wd.changedAt = nowT; wd.stage = 0 }
   else if (speed > 0 && nowT - wd.changedAt > 8000) {               // frames are drawn but the village has not moved

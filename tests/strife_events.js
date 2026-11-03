@@ -1,6 +1,6 @@
 // Forces each strife event and checks it behaves: node tests/strife_events.js
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,regimeDay,strifeDay,shadowDay,respondShadow,startCivil,civilDay,secede,sectDay,strikeDay,respondStrike,secessionTalks,adultsOf,chiefOf,serializeWorld,deserializeWorld,projBuilt,projAvailable,rxFrom,rxBuildings,deliberate,ISSUES,PROJECTS,NEIGH_PROFILE});';
+const code=['config','animals','villager','town','society','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,vOf,regimeDay,strifeDay,shadowDay,respondShadow,startCivil,civilDay,secede,sectDay,strikeDay,respondStrike,secessionTalks,adultsOf,chiefOf,serializeWorld,deserializeWorld,projBuilt,projAvailable,rxFrom,rxBuildings,deliberate,ISSUES,PROJECTS,NEIGH_PROFILE});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let d=1;d<=90;d++){for(let t=0;t<1200;t++)w.step()}
 const log=[];w.listeners.push((t,txt)=>{if(t==='regime'||t==='diplomacy')log.push(`[${t}] ${txt}`)});
@@ -18,7 +18,7 @@ const pop0=w.vills.length;
 // 3 crushing it
 {S.lastShadow=-999;S.shadow={ids:C.g.members,op:C.g.op,name:C.g.name,leader:C.ms[0].id,leaderName:C.ms[0].name,since:w.day-5,days:5,asked:true};choose('crush');const p0=R.purges;ctx.respondShadow(w,S.shadow,C.g,C.ms[0],C.ms,ctx.chiefOf(w));restore();check('crushing it jails the leader',!S.shadow&&C.ms[0].stocksUntil>w.tick&&R.purges>p0)}
 // 4 strike
-{S.lastStrike=-999;S.strike=null;for(const v of C.ms){v.mood=15}const o=w.rng;w.rng=()=>0.0005;try{ctx.strikeDay(w,ad())}finally{w.rng=o}check('strike begins',!!S.strike&&S.strike.ids.length>=3&&C.ms[1].strikeUntil>w.tick,S.strike&&S.strike.issue);
+{S.lastStrike=-999;S.strike=null;w.regime.ax.auth=0.5;w.regime.ax.cohes=0.4;for(const v of C.ms){v.mood=15}const o=w.rng;w.rng=()=>0.0005;try{ctx.strikeDay(w,ad())}finally{w.rng=o}check('strike begins',!!S.strike&&S.strike.ids.length>=3&&ctx.vOf(w,S.strike.ids).every(v=>v.strikeUntil>w.tick),S.strike&&S.strike.issue);
   // a striker walks to the square and idles
   for(let t=0;t<1200*0.5;t++)w.step();const kinds=S.strike?S.strike.ids.map(i=>w.vills.find(v=>v.id===i)).filter(Boolean).map(v=>v.jobKind):[];check('strikers go idle',kinds.filter(k=>k==='strike').length>=1||!S.strike,kinds.join(','));
   if(S.strike){const issue=S.strike.issue,p0=w.gov.policy[issue],dir=S.strike.dir;choose('concede');ctx.respondStrike(w,S.strike);restore();check('conceding shifts policy and ends the strike',!S.strike&&Math.sign(w.gov.policy[issue]-p0)===dir||p0===w.gov.policy[issue],`${issue} ${p0.toFixed(2)} -> ${w.gov.policy[issue].toFixed(2)}`)}

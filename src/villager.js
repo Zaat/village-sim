@@ -54,7 +54,7 @@ class Villager {
     let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4; t += regimeMood(this);
     if (w.has('coinage')) t += clamp(((this.coins || 0) - 25) / 40, -3, 4);
     if (this.partner != null) t += 6; if (this.home == null && this.isAdult()) t -= 6; if (this.mournUntil > w.tick) t -= 18; if (this.desire && w.day - this.desire.since > 40) t -= 4;
-    this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
+    t += lifeMood(this); this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
   }
   chooseDesire() {
     const t = this.trait, w = this.w, o = [];
@@ -124,6 +124,7 @@ class Villager {
     if (st.type === 'go') {
       this.path = st.path || w.search(this.tx, this.ty, st.goal, st.maxCost); st.path = null;
       if (!this.path && !st.maxCost) this.path = w.search(this.tx, this.ty, st.goal, undefined, true);     // boxed in: hack through brush
+      if (!this.path && w.deferredSearch) { w.deferredSearch = false; this.path = []; this.abort(6); return false }       // the search budget for this tick is spent: try again shortly
       if (this.path && this.path.length > 2) this.path = w.smoothPath(this.tx, this.ty, this.path);
       if (!this.path && st.onFail) st.onFail();
       if (!this.path) { this.path = []; if (this.jobKind === 'eat') this.noEat = w.tick + 200;       // stores unreachable: do not re-flood the whole map every tick
@@ -206,6 +207,7 @@ class Villager {
     if (this.duty > w.tick && (this.planBuild() || this.planGather('wood'))) return;
     const pa = w.proj && w.proj.active;                       // backers of a great project lend their hands
     if (pa && this.energy > 35 && w.r() < (pa.backers.includes(this.group) ? 0.6 : 0.08) && this.planBuild()) return;
+    if (leisureWanted(w, this) && planLeisure(w, this)) return;
     if (this.social < 40 + 30 * this.trait.soc && this.planSocial()) return;
     if (this.social < 80 && w.r() < 0.3 && this.planMarket()) return;
     if (this.planWork()) return;
@@ -359,7 +361,7 @@ class Villager {
     const b = fb, harvest = b.state === 2; b.claim = this.id; this.claimB = b; this.jobKind = 'farm';
     const amt = Math.round(CFG.FARM_YIELD * (fb.fert ?? 1) * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1));
     this.steps = [go(null, path, 'To the field'), work(this.wt(harvest ? 55 : 40, 'farm'), harvest ? 'Harvesting' : 'Sowing seeds', () => {
-      if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; b.fert = Math.max(0.5, (b.fert ?? 1) - 0.035 * (w.has('rotation') ? 0.5 : 1)); recordOutput(w, b, amt); this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
+      if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; b.fert = Math.max(0.5, (b.fert ?? 1) - 0.035 * (w.has('rotation') ? 0.5 : 1)); recordOutput(w, b, amt); onHarvest(w, b, this, amt); this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
     })];
     if (harvest) { this.inb = { kind: 'food', amt }; w.inbound.food += amt; this.steps.push(...this.deliverSteps()) }
     return true;

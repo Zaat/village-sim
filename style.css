@@ -9,6 +9,10 @@ canvas#cv.drag{cursor:grabbing}
 #hudDate{font-weight:600;font-size:15px}#hudTime{color:var(--mut);font-variant-numeric:tabular-nums}
 #ctl{position:absolute;right:12px;top:12px;display:flex;gap:4px;align-items:center;background:rgba(16,21,26,.78);border:1px solid var(--line);border-radius:8px;padding:5px;backdrop-filter:blur(4px)}
 #ctl .sep{width:1px;height:20px;background:var(--line);margin:0 4px}
+#ctl{flex-wrap:nowrap;white-space:nowrap}#ctl button{min-width:30px}.stepper{display:inline-flex;align-items:center;gap:2px;background:var(--panel2);border:1px solid var(--line);border-radius:6px}.stepper button{border:0;background:transparent;padding:4px 7px}#spLabel{min-width:46px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}.presets{display:inline-flex;gap:3px}.rate{font-size:11px;color:var(--mut);min-width:0}
+#playBtn.paused{background:var(--acc);color:#0d1a0d;border-color:var(--acc)}
+#zoomCtl{position:absolute;left:12px;bottom:52px;display:flex;flex-direction:column;gap:4px}#zoomCtl button{width:32px;height:32px;padding:0;background:rgba(16,21,26,.78);backdrop-filter:blur(4px);font-size:16px}
+@container (max-width:1000px){#ctl .wide{display:none}}
 button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:4px 10px;font:inherit;cursor:pointer}
 button:hover{border-color:var(--mut)}button.on{background:var(--acc);color:#0d1a0d;border-color:var(--acc);font-weight:600}
 canvas#mini{position:absolute;right:12px;bottom:12px;width:224px;height:157px;border:2px solid rgba(255,255,255,.7);border-radius:6px;image-rendering:pixelated;cursor:pointer;background:#000}
@@ -77,7 +81,8 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 /* narrow windows: the control bar drops below the date HUD instead of covering it */
 #stage{container-type:inline-size}
 #hud{max-width:calc(100% - 24px);flex-wrap:wrap}
-@container (max-width:900px){#ctl{top:56px;right:auto;left:12px;max-width:calc(100% - 24px);flex-wrap:wrap}#drawer{top:104px;max-height:calc(100% - 300px)}}
+@container (max-width:900px){#hud{flex-wrap:nowrap;white-space:nowrap;padding:5px 9px;gap:6px}#hudTime{display:none}#hudDate{font-size:13px}#hudWarn{max-width:120px;overflow:hidden;text-overflow:ellipsis}#ctl{padding:3px;gap:3px}#ctl button{min-width:28px;padding:3px 6px}#ctl .sep{margin:0 1px}#spLabel{min-width:40px}.stepper button{padding:3px 5px}}
+@container (max-width:560px){#ctl{top:54px;right:auto;left:12px}#drawer{top:98px;max-height:calc(100% - 290px)}}
 @container (max-width:420px){#drawer{width:calc(100% - 24px)}}
 #chronCard{height:470px;overflow-y:auto}
 #ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
@@ -101,3 +106,6 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .nwchoices{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:4px}
 .nwchoices button{text-align:left;padding:7px 9px;display:block}.nwchoices button b{display:block}.nwchoices button span{display:block;font-size:11px;color:var(--mut);line-height:1.25;margin-top:2px}
 .nwchoices button.sel{border-color:var(--acc);background:rgba(120,200,120,.14)}
+
+.powbar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#222}.powbar i{display:block;height:100%}
+.powkey{display:flex;flex-wrap:wrap;gap:3px 10px;margin-top:4px;font-size:11px;color:var(--mut)}.powkey i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}

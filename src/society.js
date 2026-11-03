@@ -88,6 +88,7 @@ function pairUp(w, a, b) {
   a.mood = Math.min(100, a.mood + 15); b.mood = Math.min(100, b.mood + 15);
   a.story(`Fell in love with ${b.name}.`); b.story(`Fell in love with ${a.name}.`);
   w.say(`${a.name} and ${b.name} have become a couple.`);
+  try { feudMarriage(w, a, b) } catch (e) { }
 }
 
 /* ---------------------------------------------------------------- groups */
@@ -344,7 +345,7 @@ function theft(w, v) {
 }
 function assault(w, att, vic, a, b) {
   vic = vic || (att === a ? b : a); vic.health -= 15 + w.r() * 15; vic.cause = 'hunger'; w.crimeLog.push(w.day); att.story(`Struck ${vic.name} in anger.`); vic.story(`Was struck by ${att.name}.`);
-  w.say(`${att.name} struck ${vic.name} in a heated quarrel.`); const c = { type: 'assault', day: w.day, culprit: att.id, victim: vic.id, witnesses: [vic.id], solved: true }; trial(w, c);
+  w.say(`${att.name} struck ${vic.name} in a heated quarrel.`); const c = { type: 'assault', day: w.day, culprit: att.id, victim: vic.id, witnesses: [vic.id], solved: true }; try { feudFight(w, att, vic) } catch (e) { w.fault('feud', e) } trial(w, c);
 }
 function trial(w, c) {
   const culprit = memberOf(w, c.culprit); if (!culprit) return; const g = w.gov, law = g.policy.law, rep = culprit.record;
@@ -357,7 +358,7 @@ function trial(w, c) {
       culprit.record++; culprit.reputation = Math.max(0, culprit.reputation - 15); culprit.story(`Faced the council for ${c.type}: ${id}.`);
       if (id === 'duty') culprit.duty = w.tick + CFG.TPD * 2; if (id === 'stocks') culprit.stocksUntil = w.tick + CFG.TPD * 0.6; culprit.mood = Math.max(0, culprit.mood - 6 * sevOf[id]);
       const word = { warning: 'was given a public warning', duty: 'was sentenced to two days of community labor', stocks: 'was put in the stocks for a day', banish: 'was banished from the village' }[id];
-      if (id === 'banish') { w.vills.splice(w.vills.indexOf(culprit), 1); culprit.alive = false; culprit.endJob(); for (const h of w.houses()) { const i = h.occ.indexOf(culprit.id); if (i >= 0) h.occ.splice(i, 1) } w.banished.push(culprit.name); noteFlow(w, 'left') }
+      if (id === 'banish') { w.vills.splice(w.vills.indexOf(culprit), 1); culprit.alive = false; culprit.endJob(); for (const h of w.houses()) { const i = h.occ.indexOf(culprit.id); if (i >= 0) h.occ.splice(i, 1) } w.banished.push(culprit.name); noteFlow(w, 'left'); try { inheritFrom(w, culprit) } catch (e) { } }
       for (const v of adultsOf(w)) v.mood = clamp(v.mood + clamp(v.op.law * (sevOf[id] - 1) * 2, -3, 3), 0, 100);
       w.emit('crime', `${culprit.name} ${word}${c.type === 'theft' ? ' for stealing food' : ' for assault'}.${reason && src === 'claude' ? ' ' + reason : ''}`, { culprit, id, src });
       sp.slice(0, 2).forEach(s => w.say(`   ${s.who}: “${s.line}”`));

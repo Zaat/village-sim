@@ -1,4 +1,4 @@
-# Village Sim v0.21
+# Village Sim v0.22
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Lives, property and feuds (new in 0.22)
+- **Hobbies and errands:** every adult has a hobby (angling, wood-carving, gardening, stargazing, singing, storytelling or long walks) chosen from their character. After work, adults may pursue it or run an errand: visiting kin, taking a meal to a hungry relative, fetching water at the well. Hobbies lift mood and sometimes give a little food, knowledge, keepsakes or friendship. The more leisure the council's work-and-leisure policy allows, the more of this the village does (and the slower the work).
+- **Property:** homes and fields have owners (the first adult to settle a home or work a field). Field owners keep a share of the harvest as wealth (none in communal regimes). A villager's **standing** (overlooked to prominent) mixes wealth, reputation, office, property and family; it shows in the inspector and nudges mood and elections.
+- **Inheritance:** when an owner dies, the partner, a favoured or eldest child, or a sibling inherits homes, fields and wealth; with no heir the estate goes to the village. Someone passed over may feel bitter and start a feud.
+- **Feuds:** families fall out after a brawl, a disputed will, or an old grudge. Kin on both sides grow colder every day, fights become likely, and moods suffer. A hot feud goes to the council (mediate, side with one family, or stay out). Time, festivals, mediation and marriages across the divide cool it. The losing side of a feud is the first to feel aggrieved when a village starts to divide (rival councils, strikes).
+- **Policy and power:** policies now drift toward what the regime favours (an autocracy turns strict and watchful, a commune turns to heavy taxes and light law, an industrial town to work first and growth); council votes still move them. The council card has a **Who holds power** bar (chief, council, ruling circle, wealthy families, faith, the people). The Society tab has a **Families & feuds** card.
+- **Performance guard:** path searches are limited per tick (150,000 nodes); a villager whose search is refused simply waits a moment. Daily planning is not limited.
+- **Tools:** `tests/lives_events.js`, `tests/shot21.js`.
 
 ## Settlements, bridges and bigger worlds (new in 0.21)
 - **Outposts:** when the village feels cramped, short of timber, stone or food, or simply grows large and bold, the council can send settlers to found an **outpost**: a logging outpost, quarry, fishing station or farming hamlet. It weighs gain against cost and risk (settlers, supplies, a journey that can fail) with the same rule as trade; bold, open villages expand, wary or communal ones seldom do.

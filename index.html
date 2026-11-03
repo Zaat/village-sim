@@ -12,10 +12,15 @@
     <canvas id="cv"></canvas>
     <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span></div>
     <div id="ctl">
-      <button data-sp="0" title="Space">⏸</button><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button>
+      <button id="playBtn" title="Pause / play (Space)">⏸</button>
+      <span class="stepper"><button id="spDown" title="Slower ( [ )">◂</button><span id="spLabel" title="Simulation speed">10×</span><button id="spUp" title="Faster ( ] )">▸</button></span>
+      <span class="presets wide"><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button><button data-sp="100">100×</button></span>
+      <button id="stepBtn" title="Advance one day ( . ) · hold Shift for one season">⏭</button>
+      <span id="rate" class="rate wide"></span>
       <span class="sep"></span>
-      <button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button><button id="fol" title="Follow selected (F)">Follow</button><span class="sep"></span><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙ Settings</button>
+      <button id="fol" title="Follow selected (F)">◎<span class="wide"> Follow</span></button><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙<span class="wide"> Settings</span></button>
     </div>
+    <div id="zoomCtl"><button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button></div>
     <div id="drawer"><div class="drawerhead"><b>Settings &amp; tools</b><button id="drawerClose" title="Close (Esc)">✕</button></div>
     <div class="card"><h3>Settings</h3>
       <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
@@ -64,7 +69,7 @@
     </div></div>
     <canvas id="mini" title="Click to move the camera"></canvas>
     <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
-    <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause</div>
+    <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause · [ ] speed · . next day</div>
   </div>
   <aside id="side">
     <div class="tabbar" id="tabbar"><button data-tab="village" class="on">Village</button><button data-tab="society">Society</button><button data-tab="progress">Progress</button><button data-tab="world">World</button><button data-tab="events">Events</button></div>
@@ -77,6 +82,7 @@
     <section class="tab" id="tab_society">
     <div class="card"><h3>How the village is ruled</h3><div id="regimeCard"></div></div>
     <div class="card"><h3>Village council</h3><div id="councilCard"></div></div>
+    <div class="card"><h3>Families &amp; feuds</h3><div id="livesCard"></div></div>
     <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
     </section>
     <section class="tab" id="tab_progress">
@@ -109,6 +115,7 @@
 <script src="src/character.js"></script>
 <script src="src/regime.js"></script>
 <script src="src/strife.js"></script>
+<script src="src/lives.js"></script>
 <script src="src/outposts.js"></script>
 <script src="src/bridges.js"></script>
 <script src="src/places.js"></script>

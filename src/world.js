@@ -2,6 +2,7 @@
 /* ==========================================================================
    world.js — terrain generation, buildings, pathfinding, seasons, main step.
    ========================================================================== */
+const SEARCH_BUDGET = 150000;                       // path-search nodes allowed per tick (a full flood of the biggest map is about 80000)
 const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 class World {
   constructor(seed, settings = {}, dims) {
@@ -10,7 +11,7 @@ class World {
     this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0; this.visit = null; this.fortifyUntil = 0; this.dipDay = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this);
+    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this); initLives(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -160,7 +161,7 @@ class World {
     if (v.home != null) return;
     let best = null, bd = 1e9;
     for (const h of this.houses()) { if (h.occ.length >= bedsOf(h)) continue; const d = Math.abs(h.x - this.cx) + Math.abs(h.y - this.cy); if (d < bd) { bd = d; best = h } }
-    if (best) { best.occ.push(v.id); v.home = best.id }
+    if (best) { best.occ.push(v.id); v.home = best.id; claimHome(this, best, v) }
   }
   pending() { const p = { wood: 0, stone: 0 }; for (const b of this.bps) for (const t of ['wood', 'stone']) p[t] += Math.max(0, b.cost[t] - b.have[t] - b.inc[t]); return p }
   complete(bp) {
@@ -186,12 +187,13 @@ class World {
 
   /* ----- pathfinding: Dijkstra, roads cheap, sand/rock slightly dear ----- */
   search(sx, sy, goal, maxCost = 1e9, through = false) {
+    if (this._nodes > SEARCH_BUDGET) { this.deferredSearch = true; this.dbg.deferred = (this.dbg.deferred || 0) + 1; return null }       // too many map floods this tick: the caller waits and tries again
     const { W, H } = CFG, dist = this._d, prev = this._p, seen = this._seen, ds = this._ds, hk = this._hk, hv = this._hv, st = ++this._st;
     const s = sy * W + sx; dist[s] = 0; seen[s] = st; prev[s] = -1; let hs = 1; hk[0] = 0; hv[0] = s;
     while (hs > 0) {
       const u = hv[0]; hs--;
       if (hs > 0) { const lk = hk[hs], lv = hv[hs]; let i = 0; for (; ;) { let c = 2 * i + 1; if (c >= hs) break; if (c + 1 < hs && hk[c + 1] < hk[c]) c++; if (hk[c] >= lk) break; hk[i] = hk[c]; hv[i] = hv[c]; i = c } hk[i] = lk; hv[i] = lv }
-      if (ds[u] === st) continue; ds[u] = st; const ux = u % W, uy = (u / W) | 0;
+      if (ds[u] === st) continue; ds[u] = st; this._nodes++; const ux = u % W, uy = (u / W) | 0;
       if (goal(ux, uy, u)) { const path = []; let c = u; while (c !== s) { path.push(c); c = prev[c] } path.reverse(); return path }
       if (dist[u] > maxCost) continue;
       for (let k = 0; k < 4; k++) {
@@ -268,6 +270,7 @@ class World {
     if (v.partner != null) { const p = this.vills.find(x => x.id === v.partner); if (p) p.partner = null; grieve(v.partner, 25, 6, `Lost ${v.name}, their partner.`) }
     for (const id of v.kids) grieve(id, 15, 4, `Lost their parent ${v.name}.`);
     for (const id of v.parentIds) if (id != null) grieve(id, 20, 5, `Lost their child ${v.name}.`);
+    try { inheritFrom(this, v) } catch (e) { this.fault('inherit', e) }
     this.emit('death', `${v.name} ${v.family} ${why}.`, { v, why });
   }
   removeBuilding(b) {
@@ -310,6 +313,7 @@ class World {
     characterDay(this);
     regimeDay(this);
     strifeDay(this);
+    livesDay(this);
     projectDay(this);
     historyDay(this);
   }
@@ -378,8 +382,8 @@ class World {
     }
   }
   step() {
-    const t0 = nowMs(), d = this.dbg; this.tick++;
-    if (this.tick % CFG.TPD === 0) { this.section('calendar', () => this.onNewDay()); this.section('sanity', () => this.sanity()) }
+    const t0 = nowMs(), d = this.dbg; this.tick++; this._nodes = 0; this.deferredSearch = false;
+    if (this.tick % CFG.TPD === 0) { this._nodes = -1e9; this.section('calendar', () => this.onNewDay()); this._nodes = 0; this.section('sanity', () => this.sanity()) }       // daily planning is not rationed
     this.section('nature', () => this.nature());
     if (this.tick % 4 === 0) this.section('grid', () => this.rebuildGrid());
     this.section('animals', () => { for (const a of this.animals) if (a.alive) { try { a.update() } catch (e) { this.entityFault('animal', a, e) } } if (this.tick % 20 === 0) this.animals = this.animals.filter(a => a.alive) });

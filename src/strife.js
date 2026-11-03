@@ -53,7 +53,7 @@ function strifeDay(w) {
 function personalGrievance(w, v) {
   const a = w.regime.ax, st = styleOf(v), dist = (Math.abs(st.auth - a.auth) + Math.abs(st.comm - a.comm) + Math.abs(st.pious - a.pious)) / 3;
   const gap = ISSUES.reduce((s, k) => s + Math.abs(v.op[k] - w.gov.policy[k]), 0) / ISSUES.length;
-  return 0.4 * clamp((62 - v.mood) / 25, 0, 1) + 0.4 * clamp((dist - 0.1) / 0.2, 0, 1) + 0.3 * clamp((gap - 0.3) / 0.5, 0, 1);
+  return 0.4 * clamp((62 - v.mood) / 25, 0, 1) + 0.4 * clamp((dist - 0.1) / 0.2, 0, 1) + 0.3 * clamp((gap - 0.3) / 0.5, 0, 1) + feudGrievance(w, v);
 }
 /* the aggrieved of every circle make a bloc: those who might back a rival council or a strike */
 function aggrievedBloc(w, ad) {
