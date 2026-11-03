@@ -5,7 +5,7 @@
    ========================================================================== */
 function makeBp(w, type, x, y, extra) {
   const tb = type === 'upgrade' ? w.buildings.get(extra.target) : null, [bw, bh] = type === 'road' ? [1, 1] : tb ? [tb.w, tb.h] : CFG.SIZE[type];
-  const cost = type === 'upgrade' ? (extra.toStyle === 2 ? { wood: 4, stone: 8 } : { wood: 6, stone: 0 }) : CFG.COST[type];
+  const cost = type === 'upgrade' ? ([null, { wood: 6, stone: 0 }, { wood: 4, stone: 8 }, { wood: 3, stone: 10 }, { wood: 4, stone: 12 }, { wood: 4, stone: 16 }][extra.toStyle] || { wood: 6, stone: 0 }) : CFG.COST[type];
   const bp = { id: w.bpnext++, type, x, y, w: bw, h: bh, idx: y * CFG.W + x, cost, ...(extra || {}), have: { wood: 0, stone: 0 }, inc: { wood: 0, stone: 0 }, prog: 0, time: CFG.BUILD_TIME[type], workers: 0, alive: true, ready() { return this.have.wood >= this.cost.wood && this.have.stone >= this.cost.stone } };
   w.bps.push(bp); for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) w.bpAt.set((y + dy) * CFG.W + x + dx, bp);
   return bp;
@@ -201,7 +201,7 @@ function townNewDay(w) {
   }
   if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most
     let sick = 0;
-    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')); v.cause = 'fever'; sick++ }
+    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')) * (1 - Math.min(0.75, techFx(w, 'health'))); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
   const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4);       // packs return to where there is game

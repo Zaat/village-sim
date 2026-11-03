@@ -113,6 +113,12 @@ function drawFeature(g, w, x, y, now) {
 function roadTile(g, w, x, y) {
   const X = x * CFG.T, Y = y * CFG.T, h = hash2(x, y), s = w.season;
   const i = y * CFG.W + x;
+  if (w.road[i] >= 3) {                       // paved slabs (3) and tarmac (4)
+    const t4 = w.road[i] === 4; rc(g, s === 3 ? '#d8dcdf' : t4 ? '#4a4d52' : '#a2a6ab', X, Y, CFG.T, CFG.T);
+    if (t4) { if ((x + y) % 5 === 0) rc(g, s === 3 ? '#fff' : '#d9d27a', X + 7, Y + 7, 2, 2); rc(g, 'rgba(255,255,255,.07)', X + (h & 7), Y + ((h >> 4) & 7), 4, 1) }
+    else { for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) rc(g, s === 3 ? '#e9ecee' : (r + c) % 2 ? '#b6bbc0' : '#aab0b5', X + c * 8 + 1, Y + r * 8 + 1, 7, 7) }
+    if (!w.road[i - 1]) rc(g, 'rgba(0,0,0,.16)', X, Y, 1, CFG.T); if (!w.road[i + 1]) rc(g, 'rgba(0,0,0,.16)', X + CFG.T - 1, Y, 1, CFG.T); return;
+  }
   if (w.road[i] === 2) {                      // cobbled: set stones with mortar
     rc(g, s === 3 ? '#cfd3d6' : '#8f949a', X, Y, CFG.T, CFG.T);
     for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) { const ox = (r % 2) * 3 + c * 5, hh = hash2(x * 3 + c, y * 4 + r); rc(g, s === 3 ? '#e6e9eb' : ['#a9aeb3', '#9ea3a8', '#b4b9be'][hh % 3], X + ox, Y + r * 4, 4, 3) }
@@ -130,8 +136,34 @@ function farmArt(g, w, b) {
   rc(g, '#5a3d22', X, Y, 2, 3); rc(g, '#5a3d22', X + Wd - 2, Y, 2, 3); rc(g, '#5a3d22', X, Y + Ht - 3, 2, 3); rc(g, '#5a3d22', X + Wd - 2, Y + Ht - 3, 2, 3);
   if (s === 3) { rc(g, 'rgba(255,255,255,.6)', X, Y, Wd, Ht) }
 }
+function houseArtLate(g, w, b, night, now, st) {          // brick house, townhouse, apartment block
+  const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season, lit = b.occ.length > 0, win = lit && night ? '#ffd76a' : '#9fc4d8';
+  rc(g, 'rgba(0,0,0,.22)', X + 2, Y + 29, 30, 3);
+  if (st === 3) {                                // brick: warm red courses, orange tiles, a chimney
+    rc(g, '#a65a3e', X + 3, Y + 14, 26, 16); for (let r = 0; r < 5; r++) { rc(g, '#7d4230', X + 3, Y + 16 + r * 3, 26, 1); for (let c = 0; c < 6; c++) rc(g, '#7d4230', X + 3 + (r % 2 ? 2 : 0) + c * 4, Y + 14 + r * 3, 1, 3) }
+    for (let r = 0; r < 12; r++) { const l = Math.round(9 - r * 9 / 11); rc(g, r % 3 === 2 ? '#9a4a24' : '#c2652e', X + l, Y + 2 + r, 32 - 2 * l, 1) } rc(g, '#7a3a1c', X, Y + 13, 32, 1);
+    if (s === 3) for (let r = 0; r < 4; r++) { const l = Math.round(9 - r * 9 / 11); rc(g, '#fff', X + l, Y + 2 + r, 32 - 2 * l, 1) }
+    rc(g, '#7a4a3a', X + 22, Y, 5, 8); rc(g, '#5b2f22', X + 22, Y, 5, 1);
+    rc(g, '#4a2f1c', X + 13, Y + 21, 6, 9); rc(g, '#d8b56a', X + 17, Y + 25, 1, 1);
+    for (const wx of [5, 22]) { rc(g, '#e9dfc8', X + wx - 1, Y + 18, 7, 7); rc(g, win, X + wx, Y + 19, 5, 5); rc(g, '#e9dfc8', X + wx + 2, Y + 19, 1, 5); rc(g, '#3f6a4a', X + wx - 2, Y + 18, 1, 7); rc(g, '#3f6a4a', X + wx + 6, Y + 18, 1, 7) }
+  } else if (st === 4) {                         // townhouse: cream plaster, stone corners, slate mansard, dormer
+    rc(g, '#e6dcc0', X + 3, Y + 10, 26, 20); rc(g, '#b9ae92', X + 3, Y + 10, 3, 20); rc(g, '#b9ae92', X + 26, Y + 10, 3, 20); for (let r = 0; r < 4; r++) rc(g, '#d6cbab', X + 6, Y + 14 + r * 5, 20, 1);
+    for (let r = 0; r < 8; r++) { const l = Math.round(7 - r * 7 / 7); rc(g, r % 2 ? '#3f4b58' : '#4c5a69', X + l, Y + 2 + r, 32 - 2 * l, 1) } rc(g, '#2f3943', X + 1, Y + 9, 30, 2);
+    rc(g, '#4c5a69', X + 12, Y + 3, 8, 6); rc(g, win, X + 14, Y + 4, 4, 4); rc(g, '#e6dcc0', X + 13, Y + 3, 6, 1); if (s === 3) rc(g, '#fff', X + 5, Y + 2, 22, 2);
+    rc(g, '#5a3a22', X + 13, Y + 21, 6, 9); rc(g, '#cfc7ae', X + 12, Y + 19, 8, 2); rc(g, '#d8b56a', X + 17, Y + 25, 1, 1);
+    for (const wx of [6, 21]) for (const wy of [13, 22]) { if (wy === 22 && wx === 13) continue; rc(g, '#8a7f66', X + wx - 1, Y + wy - 1, 7, 7); rc(g, win, X + wx, Y + wy, 5, 5); rc(g, '#8a7f66', X + wx + 2, Y + wy, 1, 5) }
+    rc(g, '#6a6e72', X + 24, Y, 4, 5);
+  } else {                                       // apartment block: concrete, ribbon windows, flat roof with a stack
+    rc(g, '#a9adb1', X + 2, Y + 4, 28, 26); rc(g, '#8e9297', X + 2, Y + 4, 28, 2); rc(g, '#8e9297', X + 2, Y + 29, 28, 1);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { rc(g, '#5f656a', X + 4 + c * 6, Y + 8 + r * 7, 5, 5); rc(g, lit && night && ((c + r + b.id) % 3 !== 0) ? '#ffd76a' : '#9fc4d8', X + 5 + c * 6, Y + 9 + r * 7, 3, 3) }
+    rc(g, '#4a4f54', X + 12, Y + 23, 8, 7); rc(g, '#d8b56a', X + 18, Y + 26, 1, 1); rc(g, '#6f747a', X + 22, Y, 4, 5); rc(g, '#4a4f54', X + 22, Y, 4, 1); rc(g, '#7e8388', X + 6, Y + 2, 7, 3);
+    if (s === 3) rc(g, '#fff', X + 2, Y + 3, 28, 1);
+  }
+  if (lit && (night || s === 3 || w.tod > 0.55)) for (let k = 0; k < 3; k++) { const t = ((now / 700) + k / 3) % 1; g.fillStyle = `rgba(210,210,215,${0.5 * (1 - t)})`; g.fillRect(X + 23 + Math.sin(t * 5 + k) * 2, Y - t * 10, 3 + t * 3, 3 + t * 3) }
+}
 function houseArt(g, w, b, night, now) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season, lit = b.occ.length > 0, st = b.style || 0;
+  if (st >= 3) return houseArtLate(g, w, b, night, now, st);
   rc(g, 'rgba(0,0,0,.22)', X + 2, Y + 29, 30, 3);
   if (st === 0) { rc(g, '#b88a58', X + 3, Y + 15, 26, 15); for (let i = 0; i < 5; i++) rc(g, '#9c7346', X + 3, Y + 18 + i * 3, 26, 1); rc(g, '#7a5632', X + 3, Y + 15, 1, 15); rc(g, '#7a5632', X + 28, Y + 15, 1, 15) }
   else if (st === 1) {                           // timber frame: plaster panels between dark beams
@@ -155,7 +187,7 @@ function houseArt(g, w, b, night, now) {
 function storeArt(g, w, b, now) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season;
   rc(g, 'rgba(0,0,0,.22)', X + 1, Y + 29, 31, 3);
-  const st = b.style || 0, wallC = ['#a88a5a', '#c9b182', '#9ea4aa'][st], lineC = ['#8d7248', '#8a6a42', '#7b8186'][st], roofC = [['#6b5a4a', '#52463a'], ['#8b4a3a', '#6f3a2d'], ['#566472', '#43505c']][st];
+  const st = Math.min(2, b.style || 0), wallC = ['#a88a5a', '#c9b182', '#9ea4aa'][st], lineC = ['#8d7248', '#8a6a42', '#7b8186'][st], roofC = [['#6b5a4a', '#52463a'], ['#8b4a3a', '#6f3a2d'], ['#566472', '#43505c']][st];
   rc(g, wallC, X + 2, Y + 13, 28, 17); for (let i = 0; i < 6; i++) rc(g, lineC, X + 2, Y + 16 + i * 3, 28, 1); if (st === 1) { for (const px of [2, 15, 28]) rc(g, '#5a3a22', X + px, Y + 13, 2, 17); rc(g, '#d9c48a', X + 21, Y + 16, 5, 4); rc(g, '#5a3a22', X + 21, Y + 16, 5, 1) }
   for (let r = 0; r < 11; r++) { const l = Math.round(8 - r * 8 / 10); rc(g, r % 3 === 2 ? roofC[1] : roofC[0], X + l, Y + 3 + r, 32 - 2 * l, 1) } rc(g, roofC[1], X, Y + 14, 32, 1);
   if (s === 3) for (let r = 0; r < 4; r++) { const l = Math.round(8 - r * 0.8); rc(g, '#fff', X + l, Y + 3 + r, 32 - 2 * l, 1) }

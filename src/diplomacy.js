@@ -24,7 +24,7 @@ function initNeighbour(w, n, R) {
   n.temper = clamp(P.temper + (R() - 0.5) * 0.2, 0.05, 0.95); n.rel = Math.round(P.base + (R() * 16 - 8)); n.met = !!n.found; n.pact = 0; n.strength = Math.round(n.pop * (0.4 + n.temper));
   n.nextVisit = 0; n.nextAid = 0; n.nextTreaty = 0; n.nextLeader = 120 + ((R() * 100) | 0); n.raidCd = 0; n.nextDemand = 0; n.owes = 0; n.tribute = 0; n.tradeCount = 0; n.gifts = 0; n.raids = 0; n.taught = []; n.aidCd = 0; n.crisis = 0; n.hist = [];
   const ids = Object.keys(TECHS);
-  if (P.knows) n.knows = P.knows.filter(id => TECHS[id]); else { n.knows = []; for (let g = 0; g < 60 && n.knows.length < 9; g++) { const id = ids[(R() * ids.length) | 0]; if (!n.knows.includes(id)) n.knows.push(id) } }
+  if (P.knows) n.knows = P.knows.filter(id => TECHS[id]); else n.knows = ['tools', 'carpentry', 'oral', 'pottery'];
 }
 function dlog(w, n, text, kind) {
   n.hist.unshift(`D${w.day}: ${text}`); if (n.hist.length > 5) n.hist.pop();
@@ -41,7 +41,7 @@ const neighName = n => n.name;
 /* ----- how strong is the village if it is attacked? ----- */
 function defenseScore(w) {
   const ad = adultsOf(w), brave = ad.filter(v => v.trait.brave > 0.55 && v.age < 60 && !v.isElder()).length, friendRaiders = w.neigh && w.neigh.some(n => n.kind === 'raiders' && n.pact === 2);
-  return 1 + 2 * Math.max(0, w.gov.policy.defense) + (projBuilt(w, 'bastion') ? 2 : 0) + (w.has('watchtowers') ? 1 : 0) + (w.has('ironwork') ? 1 : 0) + 1.5 * lesson(w, 'raids') + Math.min(3, brave / 6) + (w.fortifyUntil > w.day ? 1.5 : 0) + (friendRaiders ? 1.5 : 0) + (w.rx ? w.rx.def : 0);
+  return 1 + 2 * Math.max(0, w.gov.policy.defense) + (projBuilt(w, 'bastion') ? 2 : 0) + (w.has('watchtowers') ? 1 : 0) + (w.has('ironwork') ? 1 : 0) + 1.5 * lesson(w, 'raids') + Math.min(3, brave / 6) + (w.fortifyUntil > w.day ? 1.5 : 0) + (friendRaiders ? 1.5 : 0) + (w.rx ? w.rx.def : 0) + 3 * techFx(w, 'defence');
 }
 
 /* ----- first contact ----- */

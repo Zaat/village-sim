@@ -1,4 +1,4 @@
-# Village Sim v0.23
+# Village Sim v0.24
 
 A watch-mostly village simulation: a 160×112 island you can pan and zoom, four seasons, wildlife, villagers with personalities and roles, and a town that plans and builds itself.
 
@@ -17,6 +17,16 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Technology and ages (new in 0.24)
+- **A tree of 109 technologies in 8 branches** (Land & food, Building, Craft & metal, Sea & trade, Learning & faith, Society & law, War & defence, Medicine) and **9 ages**: Stone, Bronze, Iron, Classical, Medieval, Renaissance, Gunpowder, Industrial and Modern. The original 18 technologies keep their names and ids, so old saves load.
+- **Ages:** an age is complete when 65% of its technologies are known; then the next age's technologies open (each still needs its own prerequisites, often from other branches, so no village can race ahead by studying one subject). The age shows in the date bar and in the Progress tab, which has a branch list (click a branch to see every technology, what it needs and what it costs).
+- **Effects:** newer technologies add to farm yields, work speed, building speed, knowledge growth, health, storage, trade, sea power, defence and contentment, on top of the original technologies' special effects. Houses and storehouses now go through six styles (log cabin, timber frame, stone, **brick house, townhouse, apartment block**), with new art, and roads go from dirt to cobbles to paving slabs to tarmac.
+- **Choosing what to study:** the council picks from the six most useful open technologies; a balanced village is nudged toward the branches it has explored least; the ruling circle, the council members' tastes and past lessons still count.
+- **Neighbours learn too:** scholars, merchants, farmers and clansfolk advance at different paces and in their own branches, and visiting scholars can teach the village what it is ready for.
+- **Knowledge can be lost:** when the population collapses to under about 45% of its peak, the newest, least-shared skills can be forgotten and must be learned again (counted in the statistics).
+- **Ladders for later steps:** terraforming (8 technologies from "Levelling plots" to "Heavy earthmoving"), exploration (11, from "Sky-watching" to "Sonar") and war (7) are marked in the tree.
+- **Tools:** `tests/tech_events.js` (in the release checks), `tests/shot25.js`, `tools/pace.js SEED MAP DAYS` (when each age began, techs per decade, speed).
 
 ## Statistics and insight (new in 0.23)
 - **Stats tab:** "A civilization in numbers" (age, population and peak, births and deaths, technologies, great works, peoples known, outposts, unrest) and an **Over time** chart. Pick a view (People, Wealth & mood, Regime, Policy, Growth) or add any of 38 measures (up to five), choose the last 5 years, 20 years or everything, and hover for exact values. Each line is scaled to its own range. Triangles along the bottom mark notable events (red for hard times such as coups, famines, fevers, strikes and secessions; green for outposts, bridges, great works and discoveries); dashed lines mark new ages.

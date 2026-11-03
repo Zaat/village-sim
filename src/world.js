@@ -151,7 +151,7 @@ class World {
   campNear(kind, x, y, r = 14) { const type = kind === 'wood' ? 'logcamp' : kind === 'stone' ? 'minecamp' : 'lodge'; for (const b of this.buildings.values()) if (b.type === type && Math.hypot(b.x + 1 - x, b.y + 1 - y) <= r) return b; return null }
   has(id) { return !!this.tech.known[id] }
   beds() { let n = 0; for (const b of this.buildings.values()) if (b.type === 'house') n += bedsOf(b); return n }
-  cap() { return 60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length + (projBuilt(this, 'granaryhall') ? 120 : 0) }
+  cap() { return Math.round((60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length + (projBuilt(this, 'granaryhall') ? 120 : 0)) * (1 + techFx(this, 'store'))) }
   passable(i) { const t = this.terr[i], f = this.feat[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.blk[i] === 0 && (f === FEAT.OAK || f === FEAT.PINE || f === FEAT.BUSH) }
   clearTile(i) { const f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) this.trees--; this.feat[i] = 0; this.res[i] = 0 }
   walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK || t === TERR.FORD || t === TERR.BRIDGE) && this.feat[i] === 0 && this.blk[i] === 0 }
@@ -167,7 +167,7 @@ class World {
   complete(bp) {
     bp.alive = false; this.bps.splice(this.bps.indexOf(bp), 1);
     for (let dy = 0; dy < bp.h; dy++) for (let dx = 0; dx < bp.w; dx++) this.bpAt.delete((bp.y + dy) * CFG.W + bp.x + dx);
-    if (bp.type === 'road') { this.road[bp.idx] = this.has('masonry') ? 2 : 1; return }
+    if (bp.type === 'road') { this.road[bp.idx] = this.has('concrete') ? 4 : this.has('roads') ? 3 : this.has('masonry') ? 2 : 1; return }
     if (bp.type === 'bridge') { bridgeTileDone(this, bp); return }
     if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
     const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' || bp.type === 'store' ? styleNow(this) : 0;
@@ -182,7 +182,7 @@ class World {
     if (bp.type === 'lodge') this.say('A hunting lodge is built near the game trails.');
     if (bp.type === 'house') this.say(`A new ${HOUSE_STYLES[b.style].toLowerCase()} is finished.`);
     if (bp.type === 'farm') this.say('A new field is ready for sowing.');
-    if (bp.type === 'store') this.say(b.style === 2 ? 'A stone granary is raised, so the village can keep more.' : 'A storehouse is raised, so the village can keep more.');
+    if (bp.type === 'store') this.say(b.style >= 2 ? 'A stone granary is raised, so the village can keep more.' : 'A storehouse is raised, so the village can keep more.');
   }
 
   /* ----- pathfinding: Dijkstra, roads cheap, sand/rock slightly dear ----- */
@@ -293,7 +293,7 @@ class World {
       this.emit('season', null, { season: s });
     }
     const stc = this.gov.council.find(c => c.title === 'Steward'), std = stc ? this.vills.find(v => v.id === stc.id) : null;
-    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1) * (this.has('granary') ? 0.7 : 1) * (projBuilt(this, 'granaryhall') ? 0.7 : 1)));
+    this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1) * (this.has('granary') ? 0.7 : 1) * (projBuilt(this, 'granaryhall') ? 0.7 : 1) * (1 - Math.min(0.5, techFx(this, 'store')))));
     if (s === 3) {
       const need = Math.ceil((this.vills.length * 0.3 + this.houses().length * 0.7 + 1) * (this.harsh ? 1.8 : 1) * (this.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(this)));
       if (this.stock.wood >= need) { this.stock.wood -= need; if (this.cold) this.say('Warm hearths again; the cold has eased.'); this.cold = false }

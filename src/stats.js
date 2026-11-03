@@ -20,10 +20,10 @@ const STAT_EVENTS = [
   ['election', 'Elections', 'Society'], ['decision', 'Council decisions', 'Society'], ['coup', 'Coups', 'Society'], ['uprising', 'Uprisings', 'Society'], ['purge', 'Purges', 'Society'], ['reform', 'Reforms', 'Society'], ['rival_council', 'Rival councils', 'Society'], ['strike', 'Strikes', 'Society'], ['civil_strife', 'Civil strife', 'Society'], ['secession', 'Secessions', 'Society'], ['sect', 'Sects founded', 'Society'],
   ['theft', 'Thefts', 'Society'], ['assault', 'Assaults', 'Society'], ['trial', 'Trials', 'Society'], ['banished', 'Banishments', 'Society'], ['feud', 'Feuds begun', 'Society'], ['feud_mended', 'Feuds mended', 'Society'], ['estate', 'Estates passed on', 'Society'], ['holiday', 'Holidays', 'Society'],
   ['deal', 'Market deals', 'Economy & expansion'], ['trip', 'Trading trips', 'Economy & expansion'], ['ship_built', 'Ships built', 'Economy & expansion'], ['harbour_upgrade', 'Harbour upgrades', 'Economy & expansion'], ['voyage', 'Peoples discovered', 'Economy & expansion'], ['outpost_founded', 'Outposts founded', 'Economy & expansion'], ['outpost_failed', 'Outposts failed', 'Economy & expansion'], ['outpost_free', 'Outposts broke away', 'Economy & expansion'], ['bridge', 'Bridges built', 'Economy & expansion'],
-  ['discovery', 'Discoveries', 'Knowledge'], ['era', 'New ages', 'Knowledge'], ['project', 'Great works finished', 'Knowledge'], ['lesson', 'Lessons learned', 'Knowledge']
+  ['discovery', 'Discoveries', 'Knowledge'], ['tech_lost', 'Knowledge lost', 'Knowledge'], ['era', 'New ages', 'Knowledge'], ['project', 'Great works finished', 'Knowledge'], ['lesson', 'Lessons learned', 'Knowledge']
 ].map(([key, label, group]) => ({ key, label, group }));
 const STAT_LABEL = Object.fromEntries(STAT_EVENTS.map(e => [e.key, e.label]));
-const MARKED = new Set(['coup', 'uprising', 'secession', 'civil_strife', 'famine', 'era', 'outpost_founded', 'outpost_free', 'bridge', 'sect', 'rival_council', 'project', 'voyage', 'fever', 'strike']);
+const MARKED = new Set(['tech_lost', 'coup', 'uprising', 'secession', 'civil_strife', 'famine', 'era', 'outpost_founded', 'outpost_free', 'bridge', 'sect', 'rival_council', 'project', 'voyage', 'fever', 'strike']);
 
 const STAT_SERIES = [
   { id: 'pop', label: 'Population', group: 'People', get: w => w.vills.length },
@@ -56,6 +56,8 @@ const STAT_SERIES = [
   { id: 'p_growth', label: 'Policy: growth', group: 'Policy', get: w => w.gov.policy.growth },
   { id: 'p_defense', label: 'Policy: watchfulness', group: 'Policy', get: w => w.gov.policy.defense },
   { id: 'techs', label: 'Technologies known', group: 'Knowledge', get: w => Object.keys(w.tech.known).length },
+  { id: 'tage', label: 'Technology age (0 = Stone)', group: 'Knowledge', get: w => villageAge(w) },
+  ...Object.keys(BRANCHES).map(b => ({ id: 'tb_' + b, label: 'Known: ' + BRANCHES[b].name, group: 'Knowledge', get: w => TECH_BY_BRANCH[b].filter(id => w.tech.known[id]).length })),
   { id: 'projects', label: 'Great works', group: 'Knowledge', get: w => Object.keys(w.proj.done).length },
   { id: 'buildings', label: 'Buildings', group: 'Knowledge', get: w => w.buildings.size },
   { id: 'houses', label: 'Homes', group: 'Knowledge', get: w => w.houses().length },
@@ -107,6 +109,7 @@ function statFromEmit(w, type, text, data) {
     case 'bridge': c('bridge'); break;
     case 'discovery': c('discovery'); break;
     case 'era': c('era'); break;
+    case 'techloss': c('tech_lost'); break;
     case 'project': if (d.done) c('project'); break;
     case 'lesson': c('lesson'); break;
   }

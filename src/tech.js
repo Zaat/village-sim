@@ -6,49 +6,56 @@
    knowledge is gathered the village makes a discovery and everything it affects
    (yields, speed, housing, architecture, boats) changes from then on.
    ========================================================================== */
-const TECHS = {
-  nets: { name: 'Fishing nets', tier: 1, cost: 100, req: [], desc: 'Woven nets: every catch is larger.' },
-  tools: { name: 'Better tools', tier: 1, cost: 100, req: [], desc: 'Hardened axes and picks: work goes about 10% faster.' },
-  granary: { name: 'Granaries', tier: 1, cost: 110, req: [], desc: 'Raised, ventilated stores: each storehouse holds more and food spoils less.' },
-  carpentry: { name: 'Carpentry', tier: 1, cost: 120, req: [], desc: 'Joinery and framing: new cabins are timber-framed and sleep one more person; old cabins can be upgraded.' },
-  forestry: { name: 'Forestry', tier: 2, cost: 240, req: ['tools'], desc: 'Organized timber work: logging camps beside the forest cut about a quarter more wood and shorten every trip.' },
-  mining: { name: 'Mining', tier: 2, cost: 260, req: ['tools', 'carpentry'], desc: 'Shafts and props: mining camps by the rock yield more stone, carry bigger loads and shorten every trip.' },
-  lodges: { name: 'Hunting lodges', tier: 2, cost: 240, req: ['tools'], desc: 'Smoking and drying meat: lodges near the game trails make hunts surer and shorten every trip.' },
-  trade: { name: 'Trade', tier: 2, cost: 260, req: ['carpentry'], desc: 'Markets and visiting merchants: surplus goods can be swapped for what the village lacks.' },
-  coinage: { name: 'Coinage', tier: 3, cost: 480, req: ['trade', 'masonry'], desc: 'Coins and a village treasury: trade earns money, the council sets taxes, and families can grow wealthy.' },
-  seatrade: { name: 'Sea trade', tier: 3, cost: 520, req: ['trade', 'navigation'], desc: 'Harbor trade: merchant ships call at the docks with larger cargoes.' },
-  boats: { name: 'Boat-building', tier: 2, cost: 260, req: ['nets', 'carpentry'], desc: 'Hulls and oars: docks and fishing boats can reach deep water.' },
-  rotation: { name: 'Crop rotation', tier: 2, cost: 260, req: ['granary'], desc: 'Resting and alternating fields: crops yield about a quarter more.' },
-  masonry: { name: 'Masonry', tier: 2, cost: 280, req: ['tools', 'carpentry'], desc: 'Cut stone: new homes are stone and sleep two more people; roads are cobbled.' },
-  medicine: { name: 'Herbal medicine', tier: 2, cost: 240, req: ['granary'], desc: 'Healers and remedies: fevers and wounds are far less deadly.' },
-  watchtowers: { name: 'Watchtowers', tier: 3, cost: 520, req: ['masonry'], desc: 'Lookouts see danger early: wolves are met sooner by more fighters.' },
-  ironwork: { name: 'Ironwork', tier: 3, cost: 540, req: ['tools', 'masonry'], desc: 'Iron edges: work speeds up again and hunters and fighters strike truer.' },
-  plow: { name: 'The heavy plow', tier: 3, cost: 520, req: ['rotation', 'ironwork'], desc: 'Deep furrows: fields yield another quarter more.' },
-  navigation: { name: 'Navigation', tier: 3, cost: 500, req: ['boats'], desc: 'Stars and landmarks: boats carry bigger catches and a second boat can work each dock.' },
-};
-const ERAS = ['Founding Age', 'Craft Age', 'Stone & Sail Age', 'Iron Age'];
-const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house'];
+const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house', 'Brick house', 'Townhouse', 'Apartment block'];
 
 function initTech(w) { w.tech = { known: {}, points: 0, focus: null, wait: 0, contrib: {}, log: [], feverSeen: 0 }; w.boats = [] }
 const hasTech = (w, id) => !!w.tech.known[id];
-const techEra = w => { const n = Object.keys(w.tech.known).length; return n < 3 ? 0 : n < 8 ? 1 : n < 13 ? 2 : 3 };
-const styleNow = w => hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
+const AGE_IDS = AGES.map((_, g) => Object.keys(TECHS).filter(id => TECHS[id].age === g));
+const ERA_CACHE = new WeakMap();
+/* the village's age: an age is complete when 65% of its technologies are known, and the next age begins */
+function villageAge(w) {
+  const k = w.tech.known, n = Object.keys(k).length, c = ERA_CACHE.get(w.tech); if (c && c.n === n) return c.age;
+  let a = 0; for (let g = 0; g < AGES.length - 1; g++) { let c2 = 0; for (const id of AGE_IDS[g]) if (k[id]) c2++; if (c2 >= AGE_NEED[g]) a = g + 1; else break }
+  ERA_CACHE.set(w.tech, { n, age: a }); return a;
+}
+const techEra = w => villageAge(w);
+const FX_CACHE = new WeakMap();
+/* the sum of one effect over every technology known (work, farm, learn, health, build, store, trade, sea, defence, mood) */
+function techFx(w, key) {
+  const t = w.tech, n = Object.keys(t.known).length; let c = FX_CACHE.get(t); if (!c || c.n !== n) { c = { n, v: {} }; for (const id in t.known) { const T = TECHS[id]; if (T) for (const k in T.fx) c.v[k] = (c.v[k] || 0) + T.fx[k] } FX_CACHE.set(t, c) }
+  return c.v[key] || 0;
+}
+const ladderLevel = (w, name) => (LADDERS[name] || []).filter(id => w.tech.known[id]).length;       // how far up a ladder (terra, explore, war) the village has climbed
+const styleNow = w => hasTech(w, 'concrete') ? 5 : hasTech(w, 'architecture') ? 4 : hasTech(w, 'brickwork') ? 3 : hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
 const bedsOf = b => CFG.HOUSE_CAP + (b.style || 0);
-const techAvailable = w => Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].req.every(r => w.tech.known[r]));
+const techAvailable = w => { const age = villageAge(w); return Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].age <= age && TECHS[id].req.every(r => w.tech.known[r])) };
 
 function addKnowledge(w, pts, v) {
   if (v && v.isElder && v.isElder()) pts *= 1.3;                       // elders pass on what they know
-  if (projBuilt(w, 'library')) pts *= 1.5; if (w.rx) pts *= w.rx.know;
+  if (projBuilt(w, 'library')) pts *= 1.5; if (w.rx) pts *= w.rx.know; pts *= 1 + techFx(w, 'learn');
   w.tech.points += pts; if (v) w.tech.contrib[v.id] = (w.tech.contrib[v.id] || 0) + pts;
 }
 /* how much does the village need this discovery right now? (rules-based default for the council) */
+/* techs added in v0.24 have no hand-made need: judge them by their branch and the village's state */
+function branchNeed(w, id) {
+  const T = TECHS[id], pop = Math.max(1, w.vills.length), food = w.stock.food / pop, fever = w.causes['succumbed to the fever'] || 0, wolf = w.causes['was killed by a wolf'] || 0;
+  const b = { food: 0.55 + (food < 4 ? 0.4 : 0), build: 0.5 + (w.beds() - pop < 3 ? 0.2 : 0), craft: 0.5, sea: (w.of('dock').length ? 0.5 : 0.2) + (w.neigh ? 0.2 : 0), mind: 0.6, law: 0.45, war: 0.25 + Math.min(0.4, wolf * 0.04 + 0.3 * lesson(w, 'raids')), health: 0.4 + Math.min(0.5, fever * 0.1) }[T.branch];
+  return b - 0.03 * T.age;
+}
+/* a balanced village studies all branches: the least-explored branch pulls harder */
+function breadthNeed(w, id) {
+  const T = TECHS[id], ids = TECH_BY_BRANCH[T.branch], known = ids.filter(x => w.tech.known[x]).length; return 0.3 * (1 - known / ids.length);
+}
 function techNeed(w, id) {
   const pop = w.vills.length, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
   const base = { nets: (w.fishOK ? 0.6 : 0.1) + (w.neigh ? 0.3 : 0), tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: (w.fishOK ? 0.9 : 0.1) + (w.neigh ? 0.35 : 0), rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4 + (w.neigh ? 0.2 : 0), forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0), trade: 0.55 + (food > 6 ? 0.3 : 0), coinage: 0.5, seatrade: 0.35 + (w.of('dock').length ? 0.3 : 0) };
-  return (base[id] || 0.5) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id) + regimeNeed(w, id);
+  return (base[id] !== undefined ? base[id] : branchNeed(w, id)) + breadthNeed(w, id) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id) + regimeNeed(w, id);
+}
+function branchPref(v, id) {
+  const t = v.trait; return ({ food: 0.3 * t.kind + 0.1, build: 0.3 * t.ind, craft: 0.3 * t.ind, sea: 0.3 * t.cur + 0.2 * t.brave, mind: 0.4 * t.cur, law: 0.3 * t.soc, war: 0.3 * t.brave + 0.1 * (1 - t.kind), health: 0.4 * t.kind })[TECHS[id].branch] || 0;
 }
 function techPref(v, id) {         // each council member's taste
-  const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4, trade: t.soc * 0.4 + t.cur * 0.2, coinage: t.ind * 0.3 + t.cur * 0.1, seatrade: t.cur * 0.3 + t.brave * 0.3 })[id] || 0;
+  const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4, trade: t.soc * 0.4 + t.cur * 0.2, coinage: t.ind * 0.3 + t.cur * 0.1, seatrade: t.cur * 0.3 + t.brave * 0.3 })[id] ?? branchPref(v, id);
 }
 function chooseResearch(w, id, source) {
   const t = w.tech; t.focus = id; t.wait = 0;
@@ -62,11 +69,12 @@ function discover(w) {
   if (by) { by.story(`Led the village to discover ${T.name.toLowerCase()}.`); by.mood = Math.min(100, by.mood + 15); by.reputation = Math.min(100, by.reputation + 10); if (by.desire && by.desire.kind === 'know') by.debates += 3 }
   for (const v of w.vills) v.mood = Math.min(100, v.mood + 4);
   w.emit('discovery', `Discovery! ${by ? by.name + ' and the villagers' : 'The villagers'} have learned ${T.name.toLowerCase()}. ${T.desc}`, { id, by });
-  if (techEra(w) > before) w.emit('era', `A new age dawns: the ${ERAS[techEra(w)]}.`, { era: techEra(w) });
-  if (id === 'carpentry' || id === 'masonry') w.say(`New homes and storehouses will now be built as ${id === 'masonry' ? 'stone buildings' : 'timber-framed buildings'}; old ones can be upgraded.`);
+  if (techEra(w) > before) w.emit('era', `A new age dawns: the ${AGES[techEra(w)]}.`, { era: techEra(w) });
+  if (id === 'carpentry' || id === 'masonry' || id === 'brickwork' || id === 'architecture' || id === 'concrete') w.say(`New homes and storehouses will now be built as ${({ carpentry: 'timber-framed buildings', masonry: 'stone buildings', brickwork: 'brick buildings', architecture: 'townhouses', concrete: 'apartment blocks' })[id]}; old ones can be upgraded.`);
 }
 function techDay(w) {
   const t = w.tech, adults = w.vills.filter(v => v.isAdult()).length; addKnowledge(w, adults * 0.06);
+  t.peak = Math.max(t.peak || 0, w.vills.length); if (w.day % 10 === 0) { try { techLossDay(w) } catch (e) { w.fault('techloss', e) } try { neighbourTechDay(w) } catch (e) { w.fault('neightech', e) } }
   const avail = techAvailable(w); if (!avail.length) return;
   if (!t.focus) {
     t.wait++;                                                           // the council normally chooses at a meeting; without one, the village drifts to the most useful idea
@@ -77,10 +85,11 @@ function techDay(w) {
 /* council agenda item: what should the village study next? */
 function researchAgenda(w, base, ms) {
   const avail = techAvailable(w), g = w.gov;
-  const options = avail.map(id => ({ id: 'r_' + id, text: `${TECHS[id].name} (${TECHS[id].cost} knowledge): ${TECHS[id].desc}` }));
   const rf = rulingFocus(w), score = id => techNeed(w, id) + ms.reduce((s, m) => s + techPref(m.v, id), 0) / ms.length + (rf && TECH_FOCUS[id] === rf ? 0.12 : 0);      // the ruling circle nudges the agenda
-  const def = 'r_' + avail.sort((a, b) => score(b) - score(a))[0];
-  deliberate(w, { ...base, kind: 'research', topic: `The village has gathered enough curiosity to pursue one new line of study. Era: ${ERAS[techEra(w)]}. Known: ${Object.keys(w.tech.known).map(id => TECHS[id].name).join(', ') || 'nothing yet'}. Which should the council direct everyone toward?`, options, default: def,
+  avail.sort((a, b) => score(b) - score(a)); avail.length = Math.min(avail.length, 6);
+  const options = avail.map(id => ({ id: 'r_' + id, text: `${TECHS[id].name} (${TECHS[id].cost} knowledge, ${BRANCHES[TECHS[id].branch].name.toLowerCase()}): ${TECHS[id].desc}` }));
+  const def = 'r_' + avail[0];
+  deliberate(w, { ...base, kind: 'research', topic: `The village has gathered enough curiosity to pursue one new line of study. Age: ${AGES[techEra(w)]}. Known: ${Object.keys(w.tech.known).map(id => TECHS[id].name).join(', ') || 'nothing yet'}. Which should the council direct everyone toward?`, options, default: def,
     apply: (id, sp, reason, src) => {
       const tid = id.slice(2), champ = ms.slice().sort((a, b) => techPref(b.v, tid) - techPref(a.v, tid))[0];
       chooseResearch(w, tid, src); recordDecision(w, `to study ${TECHS[tid].name.toLowerCase()} next. ${champ.v.name} argued for it.`, sp, src); g.nextMeeting = w.day + 4;
@@ -95,4 +104,22 @@ function planUpgrades(w) {
   const old = w.houses().filter(h => (h.style || 0) < target && !w.bpAt.has(h.y * CFG.W + h.x)).sort((a, b) => (a.style || 0) - (b.style || 0) || (Math.abs(a.x - w.cx) + Math.abs(a.y - w.cy)) - (Math.abs(b.x - w.cx) + Math.abs(b.y - w.cy)));
   if (!old.length) return;
   makeBp(w, 'upgrade', old[0].x, old[0].y, { target: old[0].id, toStyle: (old[0].style || 0) + 1 }); w.nextUpgrade = w.day + 3;
+}
+
+/* ----- knowledge can be lost: when a great part of the people are gone, the newest, least-shared skills go with them ----- */
+function techLossDay(w) {
+  const t = w.tech, peak = t.peak || 0, pop = w.vills.length; if (peak < 40 || pop > peak * 0.45 || w.r() > 0.3) return;
+  const known = Object.keys(t.known).filter(id => !Object.keys(t.known).some(o => TECHS[o] && TECHS[o].req.includes(id)));       // leaves: nothing known builds on them
+  known.sort((a, b) => TECHS[b].age - TECHS[a].age || t.known[b] - t.known[a]); const id = known[0]; if (!id || TECHS[id].age === 0) return;
+  delete t.known[id]; t.points = 0; t.lost = (t.lost || 0) + 1; t.peak = Math.max(pop * 1.6, peak * 0.8);
+  w.emit('techloss', `With so many gone, the village forgets how to ${TECHS[id].name.toLowerCase()}. What was learned must be learned again.`, { id });
+}
+/* ----- neighbours learn too, slowly; the more learned (and friendlier) ones become a source of knowledge ----- */
+const NEIGH_PACE = { scholars: 1.2, traders: 1.0, farmers: 0.85, raiders: 0.8 }, NEIGH_AFFINITY = { scholars: { mind: 1.5, health: 1.2 }, traders: { sea: 1.6, law: 1.2 }, farmers: { food: 1.8, health: 1.1 }, raiders: { war: 1.8, craft: 1.3 } };
+function neighbourTechDay(w) {
+  if (!w.neigh) return;
+  for (const n of w.neigh) {
+    if (!n.knows || n.colony) continue; const age = Math.min(AGES.length - 1, Math.floor(w.day * (NEIGH_PACE[n.kind] || 1) / 300)), aff = NEIGH_AFFINITY[n.kind] || {}; let added = 0;
+    for (const id of Object.keys(TECHS)) { const T = TECHS[id]; if (added >= 2) break; if (n.knows.includes(id) || T.age > age || !T.req.every(r => n.knows.includes(r))) continue; if (w.r() < 0.12 * (aff[T.branch] || 0.7)) { n.knows.push(id); added++ } }
+  }
 }

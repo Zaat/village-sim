@@ -197,7 +197,7 @@ function nameOf(id) { const v = world.vills.find(x => x.id === id); return v ? v
 function updateUI() {
   const w = world, hrs = (6 + w.tod * 24) % 24, hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60), s = w.season;
   $('hudDate').textContent = `Year ${w.year} · ${SEASONS[s]} · Day ${w.seasonDay}`;
-  $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''} · ${ERAS[techEra(w)]}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
+  $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''} · ${AGES[techEra(w)]}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
   const cap = w.cap(), an = {}; for (const a of w.animals) if (a.alive) an[a.kind] = (an[a.kind] || 0) + 1;
   const stg = {}; for (const v of w.vills) stg[v.stage()] = (stg[v.stage()] || 0) + 1;
   const roles = {}; for (const v of w.vills) if (v.age >= CFG.CHILD_DAYS && !v.isElder()) roles[v.role || 'forager'] = (roles[v.role || 'forager'] || 0) + 1;
@@ -213,16 +213,24 @@ function updateUI() {
   if (curTab === 'stats') renderStats(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
+let techOpen = null;                    // the branch whose list is open in the Ages panel
 function renderTech() {
-  const w = world, t = w.tech, el = $('techCard'), era = techEra(w), known = Object.keys(t.known), avail = techAvailable(w);
+  const w = world, t = w.tech, el = $('techCard'), era = techEra(w), known = Object.keys(t.known), avail = techAvailable(w), total = Object.keys(TECHS).length;
   const focus = t.focus ? TECHS[t.focus] : null, pct = focus ? Math.min(100, t.points / focus.cost * 100) : 0;
-  const locked = Object.keys(TECHS).filter(id => !t.known[id] && !avail.includes(id));
-  el.innerHTML = `<div class="era"><b>${ERAS[era]}</b><span class="hint">${known.length} of ${Object.keys(TECHS).length} discoveries</span></div>
-    ${focus ? `<div class="hint">Studying <b style="color:var(--ink)">${focus.name}</b> · ${Math.round(t.points)} / ${focus.cost}</div><div class="tprog"><i style="width:${pct}%"></i></div><div class="hint">${focus.desc}</div>` : avail.length ? `<div class="hint">The council will choose what to study next (${avail.length} option${avail.length === 1 ? '' : 's'} available).</div>` : '<div class="hint">Everything within reach has been learned.</div>'}
-    <div class="techchips">${known.map(id => `<span class="chip" title="${escapeHtml(TECHS[id].desc)}"><i style="background:#9cc4ff"></i>${TECHS[id].name}</span>`).join('')}</div>
-    ${t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('')}
-    ${locked.length ? `<div class="hint" style="margin-top:6px">Still ahead: ${locked.map(id => TECHS[id].name).join(', ')}</div>` : ''}`;
+  const nextAge = era < AGES.length - 1 ? era + 1 : null, have = AGE_IDS[era].filter(id => t.known[id]).length, need = AGE_NEED[era];
+  const ageBar = AGES.map((a, i) => `<i title="${a}" style="background:${i < era ? '#8fd18b' : i === era ? '#e0b070' : '#2b333b'}"></i>`).join('');
+  let h = `<div class="era"><b>${AGES[era]}</b><span class="hint">${known.length} of ${total} discoveries</span></div><div class="agebar">${ageBar}</div>
+    <div class="hint" style="margin:4px 0 6px">${nextAge !== null ? `${have} of the ${need} needed in the ${AGES[era]} to reach the ${AGES[nextAge]}.` : 'The last age. Everything else is still to be discovered.'}</div>`;
+  h += focus ? `<div class="hint">Studying <b style="color:var(--ink)">${focus.name}</b> <span style="color:${BRANCHES[focus.branch].col}">· ${BRANCHES[focus.branch].name.toLowerCase()}</span> · ${Math.round(t.points)} / ${focus.cost}</div><div class="tprog"><i style="width:${pct}%"></i></div><div class="hint">${focus.desc}</div>` : avail.length ? `<div class="hint">The council will choose what to study next.</div>` : `<div class="hint">Nothing to study until the next age begins.</div>`;
+  h += `<div class="hint" style="margin:8px 0 3px">Branches of knowledge</div>` + Object.keys(BRANCHES).map(b => {
+    const ids = TECH_BY_BRANCH[b], k = ids.filter(id => t.known[id]).length, nowOpen = techOpen === b, open = ids.filter(id => avail.includes(id));
+    return `<div class="brrow" data-br="${b}"><span class="brn" style="color:${BRANCHES[b].col}">${BRANCHES[b].name}</span><span class="brbar"><i style="width:${Math.round(100 * k / ids.length)}%;background:${BRANCHES[b].col}"></i></span><span class="hint brk">${k}/${ids.length}${open.length ? ' · ' + open.length + ' open' : ''}</span></div>${nowOpen ? `<div class="brlist">${ids.slice().sort((x, y) => TECHS[x].age - TECHS[y].age).map(id => { const T = TECHS[id], st = t.known[id] ? 'k' : avail.includes(id) ? 'a' : 'l'; return `<div class="bt ${st}" title="${escapeHtml(T.desc)}"><span>${T.name}</span><span class="hint">${AGES[T.age].replace(' Age', '')}${st === 'l' ? (() => { const m = T.req.filter(r => !t.known[r]).map(r => TECHS[r].name); return m.length ? ' · needs ' + m.join(', ') : ' · opens with the next age' })(): st === 'a' ? ' · ' + T.cost : ''}</span></div>` }).join('')}</div>` : ''}`;
+  }).join('');
+  h += t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('');
+  if (t.lost) h += `<div class="hint" style="margin-top:4px">Knowledge lost to hard times: ${t.lost}.</div>`;
+  el.innerHTML = h;
 }
+$('techCard').addEventListener('click', e => { const r = e.target.closest('[data-br]'); if (!r) return; techOpen = techOpen === r.dataset.br ? null : r.dataset.br; renderTech() });
 /* the harbour, the fleet and the trade the village runs for itself */
 function renderHarbour() {
   const w = world, el = $('harbourCard'), box = $('harbourBox'), t = w.trade2; const show = !!(t && w.neigh && w.has('trade') && (w.of('dock').length || w.neigh.some(n => n.reach === 'land' && n.found))); box.style.display = show ? '' : 'none'; if (!show) return;
@@ -388,7 +396,7 @@ const humanAge = days => `${ageYears(days)} (about ${humanYears(days)} in human 
 const ageYears = days => { const y = days / (CFG.DPS * 4); return y < 1 ? `${Math.round(days)} days` : `${y.toFixed(1)} years` };
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
 const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
-const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][s.style || 0] : BUILDING_NAMES[s.type] || s.type;
+const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][Math.min(2, s.style || 0)] : BUILDING_NAMES[s.type] || s.type;
 const OUTPUT = { logcamp: 'firewood', minecamp: 'stone', lodge: 'food', farm: 'food', dock: 'food' };
 const VENUES = { monument: 'sightseers', temple: 'visitors', library: 'readers', lighthouse: 'sightseers', bastion: 'sightseers', citadel: 'sightseers', foundry: 'sightseers', granaryhall: 'sightseers', plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
 function buildingPanel(w, s, extra) {
@@ -396,7 +404,7 @@ function buildingPanel(w, s, extra) {
   const near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - cx, v.y - cy) < Math.max(s.w, s.h) + 2.5);
   const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.', campfire: 'The first gathering place. Evenings and talk start here.' }[s.type] || '';
   const mat = (BLD_MATERIAL[s.type] || (() => '-'))(s.type === 'plaza' || s.type === 'tavern' ? w : s.style), wr = (BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0];
-  const facts = kvs([['Age', ageText(w, s)], ['Built', dateText(s.built ?? w.day)], ['Built in', ERAS[s.builtEra !== undefined ? s.builtEra : (s.era || 0)]], s.upgraded !== undefined ? ['Rebuilt', dateText(s.upgraded) + ` (${ERAS[s.era || 0]})`] : null, ['Material', escapeHtml(mat)], ['Size', `${s.w} x ${s.h} tiles`], ['Repairs', s.repairs || 0], ['Wear', wr * 100 > 0 ? (wr * 3200).toFixed(1) + '% a year' : '-']]);
+  const facts = kvs([['Age', ageText(w, s)], ['Built', dateText(s.built ?? w.day)], ['Built in', AGES[s.builtEra !== undefined ? s.builtEra : (s.era || 0)]], s.upgraded !== undefined ? ['Rebuilt', dateText(s.upgraded) + ` (${ERAS[s.era || 0]})`] : null, ['Material', escapeHtml(mat)], ['Size', `${s.w} x ${s.h} tiles`], ['Repairs', s.repairs || 0], ['Wear', wr * 100 > 0 ? (wr * 3200).toFixed(1) + '% a year' : '-']]);
   let people = '', use = '';
   if (s.type === 'house') {
     const res = s.occ.map(id => w.vills.find(v => v.id === id)).filter(Boolean), beds = bedsOf(s);

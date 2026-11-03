@@ -54,7 +54,7 @@ class Villager {
     let al = 0; for (const k of ISSUES) al += this.op[k] * w.gov.policy[k]; t += al * 4; t += regimeMood(this);
     if (w.has('coinage')) t += clamp(((this.coins || 0) - 25) / 40, -3, 4);
     if (this.partner != null) t += 6; if (this.home == null && this.isAdult()) t -= 6; if (this.mournUntil > w.tick) t -= 18; if (this.desire && w.day - this.desire.since > 40) t -= 4;
-    t += lifeMood(this); this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
+    t += lifeMood(this) + 20 * techFx(w, 'mood'); this.mood += (clamp(t, 0, 100) - this.mood) * 0.25;
   }
   chooseDesire() {
     const t = this.trait, w = this.w, o = [];
@@ -79,7 +79,7 @@ class Villager {
   isChild() { return this.age < CFG.CHILD_DAYS }
   wt(base, key) {
     const w = this.w, st = this.isElder() ? 1.3 : this.stage() === 'youth' ? 1.35 : 1;
-    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1)));
+    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1) / (1 + techFx(w, 'work') + (key === 'build' ? techFx(w, 'build') : 0))));
   }
   gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)); addKnowledge(this.w, 0.13, this) }
   traitWords() { const o = []; for (const t of TRAITS) { if (this.trait[t] > 0.66) o.push(TRAIT_WORDS[t][1]); else if (this.trait[t] < 0.34) o.push(TRAIT_WORDS[t][0]) } return o }
@@ -92,8 +92,8 @@ class Villager {
     this.age += 1 / CFG.TPD;
     const stg = this.stage(); if (stg !== this._st) { this._st = stg; this.onStage(stg) }
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
-    else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0));
-    if (w.cold) { this.health -= 0.012; this.cause = 'cold' }
+    else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0) + 0.04 * techFx(w, 'health'));
+    if (w.cold) { this.health -= 0.012 * (1 - Math.min(0.7, techFx(w, 'health'))); this.cause = 'cold' }
     if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : this.cause === 'strife' ? 'was killed in the unrest' : 'starved'); return }
     if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
@@ -359,7 +359,7 @@ class Villager {
     }, 90);
     if (!path || !fb) return false;
     const b = fb, harvest = b.state === 2; b.claim = this.id; this.claimB = b; this.jobKind = 'farm';
-    const amt = Math.round(CFG.FARM_YIELD * (fb.fert ?? 1) * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1));
+    const amt = Math.round(CFG.FARM_YIELD * (fb.fert ?? 1) * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1) * (1 + techFx(w, 'farm')));
     this.steps = [go(null, path, 'To the field'), work(this.wt(harvest ? 55 : 40, 'farm'), harvest ? 'Harvesting' : 'Sowing seeds', () => {
       if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; b.fert = Math.max(0.5, (b.fert ?? 1) - 0.035 * (w.has('rotation') ? 0.5 : 1)); recordOutput(w, b, amt); onHarvest(w, b, this, amt); this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
     })];
@@ -385,7 +385,7 @@ class Villager {
     }, 80);
     if ((!path || spot < 0) && w.stock.food < w.vills.length * 4) { spot = -1; path = w.search(this.tx, this.ty, (x, y, i) => { if (w.claim[i] >= 0) return false; for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false }, 130, true) }      // the only shore may lie behind thick woods: cut a way through
     if (!path || spot < 0) return false;
-    w.claim[spot] = this.id; this.claim = spot; this.jobKind = 'fish'; const amt = 2 + (this.skill.fish > 0.6 ? 1 : 0) + (w.has('nets') ? 1 : 0); this.inb = { kind: 'food', amt }; w.inbound.food += amt;
+    w.claim[spot] = this.id; this.claim = spot; this.jobKind = 'fish'; const amt = 2 + (this.skill.fish > 0.6 ? 1 : 0) + (w.has('nets') ? 1 : 0) + Math.round(2 * techFx(w, 'sea')); this.inb = { kind: 'food', amt }; w.inbound.food += amt;
     this.steps = [go(null, path, 'To the shore'), work(this.wt(100, 'fish'), 'Fishing', () => { if (w.fish[wt] > 0) { w.fish[wt]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }), ...this.deliverSteps()];
     return true;
   }

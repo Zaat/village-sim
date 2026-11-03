@@ -57,7 +57,7 @@ function landTripPath(w, n) {
 function routeEval(w, n, ship) {
   const E = w.econ, coin = money(w), pr = coin ? E.prices : BASE_PRICE, mode = ship ? 'sea' : 'land';
   const path = ship ? seaTripPath(w, ship, n) : landTripPath(w, n); if (!path) return null;
-  const S = ship ? shipOf(ship) : { name: 'wagon', cap: 36, speed: 0.09, upkeep: 1 }, cap = S.cap, c = { from: n.id, cap };
+  const S = ship ? shipOf(ship) : { name: 'wagon', cap: 36, speed: 0.09, upkeep: 1 }, cap = ship ? Math.round(S.cap * (1 + techFx(w, 'sea'))) : S.cap, c = { from: n.id, cap };
   const d = dealPreview(w, 'trip', c), tot = o => Object.values(o).reduce((a, b) => a + b, 0), shrink = (o, f) => { for (const k of Object.keys(o)) { o[k] = Math.floor(o[k] * f); if (o[k] < 1) delete o[k] } };
   const capped = tot(d.sell) > cap || tot(d.buy) > cap; if (tot(d.sell) > cap) shrink(d.sell, cap / tot(d.sell)); if (tot(d.buy) > cap) shrink(d.buy, cap / tot(d.buy));
   const val = (o, f, side) => TRADE_KEYS.reduce((s, k) => s + (o[k] || 0) * pr[k] * f * tradeMod(w, c, side, k), 0);
@@ -65,7 +65,7 @@ function routeEval(w, n, ship) {
   if (!coin) { if (!rev || !cost) { d.sell = {}; d.buy = {}; rev = cost = 0 } else if (rev > cost) { shrink(d.sell, cost / rev); rev = val(d.sell, 0.9, 'sell') } else { shrink(d.buy, rev / cost); cost = val(d.buy, 1.1, 'buy') } }
   if (!tot(d.sell) && !tot(d.buy)) return null;
   const net = coin ? rev - cost : 0, shortage = TRADE_KEYS.reduce((s, k) => s + (d.buy[k] || 0) * pr[k] * 0.4, 0);
-  const gain = coin ? net + shortage : (cost + shortage) - rev * 0.9;                   // barter: goods in (shortages count extra) against goods out
+  const gain = (coin ? net + shortage : (cost + shortage) - rev * 0.9) * (1 + techFx(w, 'trade'));                   // barter: goods in (shortages count extra) against goods out
   const len = path.length, ticks = Math.ceil(len / S.speed) * (ship ? 1 : 1.2), days = Math.max(1, (2 * ticks + 120) / CFG.TPD);
   const hostile = isHostile(n), risk = clamp((ship ? 0.03 + 0.0004 * len : 0.015 + 0.0002 * len) * (hostile ? 2.5 : 1) * (w.settings.disasters ? 1 : 0.4), 0, 0.5);
   const cb = costBenefit(w, { gain, cost: S.upkeep, risk, stake: rev + cost, days, crew: 1 });

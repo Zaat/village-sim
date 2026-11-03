@@ -68,7 +68,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .tr.up{color:#e07a6a}.tr.down{color:#8fd18b}
 
 /* fixed-size live panels so nothing shifts while the simulation redraws them */
-#statCard{height:280px;overflow:hidden}#sel{height:560px;overflow-y:auto}#techCard{height:250px;overflow-y:auto}#econCard{height:236px;overflow-y:auto}#councilCard{height:430px;overflow-y:auto}#groupCard{height:150px;overflow-y:auto}
+#statCard{height:280px;overflow:hidden}#sel{height:560px;overflow-y:auto}#techCard{height:460px;overflow-y:auto}#econCard{height:236px;overflow-y:auto}#councilCard{height:430px;overflow-y:auto}#groupCard{height:150px;overflow-y:auto}
 #log{height:230px;max-height:none}#chart{height:84px}
 /* settings drawer: lives over the map, outside the scrolling side panel, so it never moves */
 #drawer{position:absolute;right:12px;top:62px;width:350px;max-height:calc(100% - 262px);overflow-y:auto;background:rgba(16,21,26,.97);border:1px solid var(--line);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:6;box-shadow:0 10px 34px rgba(0,0,0,.55)}
@@ -116,3 +116,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .evrow{display:flex;gap:8px;align-items:center;font-size:12px;padding:1px 0}.evrow>span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.evn{font-weight:600;min-width:34px;text-align:right}.evr{min-width:62px;text-align:right}.up{color:#e0a070}.dn{color:#7ad07a}
 
 .statwin{display:flex;gap:4px;margin-top:6px}.statwin button{flex:1}.statlegend{flex-direction:column}
+
+.agebar{display:flex;gap:3px;margin-top:5px}.agebar i{flex:1;height:5px;border-radius:2px}
+.brrow{display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 0;cursor:pointer}.brrow:hover .brn{text-decoration:underline}.brn{width:112px;flex:none}.brbar{flex:1;height:6px;background:#222a31;border-radius:3px;overflow:hidden}.brbar i{display:block;height:100%}.brk{min-width:70px;text-align:right}
+.brlist{margin:2px 0 6px 8px;border-left:2px solid var(--line);padding-left:8px}.bt{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:1px 0}.bt.k{color:#8fd18b}.bt.a{color:var(--ink)}.bt.l{color:#6d7780}
