@@ -132,7 +132,7 @@ const DESIRE_ROLE = { wood: 'woodcutter', stone: 'miner', farm: 'farmer', build:
 const HEAVY = new Set(['builder', 'hunter', 'miner', 'woodcutter']);
 const aff = (r, v) => AFFINITY[r](v) + (v.desire && v.desire.kind === 'master' && DESIRE_ROLE[v.desire.key] === r ? 0.5 : 0);
 function assignRoles(w) {
-  const adults = w.vills.filter(v => !v.isChild()), n = adults.length; if (!n) return;
+  const adults = w.vills.filter(v => !v.isChild() && !v.trade), n = adults.length; if (!n) return;       // people with a trade of their own are not conscripted into the heavy roles
   const winter = w.season === 3, wolves = w.animals.some(a => a.kind === 'wolf' && a.alive);
   const farms = w.of('farm').length, building = w.bps.length, watch = Math.max(0, w.gov.policy.defense);
   const q = {
@@ -207,7 +207,7 @@ function townNewDay(w) {
     for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')) * (1 - Math.min(0.75, techFx(w, 'health'))); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
-  const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4);       // packs return to where there is game
+  const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4) * (1 - (w.liv ? w.liv.fx.guard : 0));       // packs return to where there is game
   if (pop >= 6 && w.r() < wolfChance && !w.animals.some(a => a.kind === 'wolf' && a.alive)) {
     const sp = ringSpot(w, 24, 32), n = 2 + ((w.r() * 3) | 0);
     if (sp) { for (let k = 0; k < n; k++) w.animals.push(new Animal(w, 'wolf', sp.x, sp.y)); w.emit('event', `A pack of ${n} wolves has been spotted near the village!`, { kind: 'wolves' }) }

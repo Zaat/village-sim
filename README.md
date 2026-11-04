@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.24.2a · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.25 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -33,7 +33,18 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
 
-## Concerns now track what you did about them (new in 0.24.2a)
+## Livelihoods: everyone finds a way to make a living (new in 0.25)
+Beyond the six heavy roles there are now about 35 trades: odd jobs and care from the very start (childminder, helper, porter, water carrier, mender, kitchen gardener, launderer), crafts unlocked by technology (potter, weaver, tailor, smith, carpenter, baker, brewer, jeweller, glassblower ...) and services (healer, midwife, teacher, scribe, scholar, innkeeper, musician, watchman, shopkeeper, merchant, banker ...). Each has real **demand** for the village's size and needs, a price and a small real effect: tools speed up work, cloth keeps people warm, pots and fine goods bring comfort, bread feeds, healers heal, teachers teach, musicians and innkeepers cheer, watchmen keep wolves away. A market full of a good wants no more of it.
+
+- **Money:** crafts create value, services move coins (or barter wealth before coinage) from customers to workers. Customers can only pay what they hold, so a poor village supports few trades.
+- **Finding work:** adults without a role take a trade where demand is unmet; people with a role take side jobs when short of cash or out of work in winter; a richer village lets some people leave heavy labour for a trade. Oversupplied trades shed workers.
+- **Invented jobs:** idle, curious people try ideas (lantern maker, dyer, honey keeper, rat catcher, bone carver ...). Each has a hidden market: some catch on and become trades, others fail and their maker moves on a little wiser.
+- **Overtime:** when food or firewood runs short, a free council gets volunteers working longer hours; a strict one orders it, at a cost to mood, health and unity.
+- **Dreams:** adults aspire to a shop of their own, mastery of their craft, scholarship, a council seat, a large family, a fortune or a sea voyage, and pursue it when life is comfortable. Shown in the villager panel and the chronicle.
+- **On screen:** craftspeople wear an apron colour for their trade, carry a small tool at work and stand at a little workbench. The Progress tab has a Livelihoods card; the villager panel shows livelihood and dream.
+- Tests: `tests/livelihoods_events.js` (22). New scripts: `tools/check.sh quick|full`, `tools/probe_liv.js SEED MAP DAYS`.
+
+## Concerns now track what you did about them (0.24.2a)
 Each concern card shows a state: **Needs your attention**, **Responding** (a countdown bar for each running response, "council deciding" for nudges), **Easing**, or **Didn't work** (a response ended or was declined and the trouble remains). A severity bar with a worsening/steady/easing arrow shows how bad it is. Resolved concerns stay visible for 16 days with what was tried. The badge turns calm blue when everything is being handled.
 
 ## Concerns: the village watches itself (0.24.1)

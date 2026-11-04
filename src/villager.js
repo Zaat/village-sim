@@ -79,7 +79,7 @@ class Villager {
   isChild() { return this.age < CFG.CHILD_DAYS }
   wt(base, key) {
     const w = this.w, st = this.isElder() ? 1.3 : this.stage() === 'youth' ? 1.35 : 1;
-    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1) / (1 + techFx(w, 'work') + (key === 'build' ? techFx(w, 'build') : 0))));
+    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1) / (1 + (w.liv ? w.liv.fx.work : 0)) / (1 + techFx(w, 'work') + (key === 'build' ? techFx(w, 'build') : 0))));
   }
   gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)); addKnowledge(this.w, 0.13, this) }
   traitWords() { const o = []; for (const t of TRAITS) { if (this.trait[t] > 0.66) o.push(TRAIT_WORDS[t][1]); else if (this.trait[t] < 0.34) o.push(TRAIT_WORDS[t][0]) } return o }
@@ -93,7 +93,7 @@ class Villager {
     const stg = this.stage(); if (stg !== this._st) { this._st = stg; this.onStage(stg) }
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0) + 0.04 * techFx(w, 'health'));
-    if (w.cold) { this.health -= 0.012 * (1 - Math.min(0.7, techFx(w, 'health'))); this.cause = 'cold' }
+    if (w.cold) { this.health -= 0.012 * Math.max(0.15, 1 - Math.min(0.7, techFx(w, 'health')) - (w.liv ? w.liv.fx.warm : 0)); this.cause = 'cold' }
     if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : this.cause === 'strife' ? 'was killed in the unrest' : 'starved'); return }
     if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
@@ -210,7 +210,10 @@ class Villager {
     if (leisureWanted(w, this) && planLeisure(w, this)) return;
     if (this.social < 40 + 30 * this.trait.soc && this.planSocial()) return;
     if (this.social < 80 && w.r() < 0.3 && this.planMarket()) return;
+    const lw = livelihoodWanted(w, this), first = !this.role ? this.trade : this.side;
+    if (lw && first && w.stock.food >= w.vills.length * 1.5 && w.r() < (overtimeMode(w) ? 0.95 : !this.role ? 0.85 : 0.3) * tradeSlack(w) && planLivelihood(w, this, !!this.role)) return;
     if (this.planWork()) return;
+    if (lw && planLivelihood(w, this, !this.trade)) return;
     if (this.social < 90 && this.planSocial()) return;
     this.planWander(6, false);
   }

@@ -1,6 +1,6 @@
 // v0.21 bridges: crossings found, built tile by tile, walkable, kept by saves, docks stay open
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,serializeWorld,deserializeWorld,findCrossings,bankReachable,bridgeValue,seaStaysOpen,BR,nextTile,landRegions});';
+const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,serializeWorld,deserializeWorld,findCrossings,bankReachable,bridgeValue,seaStaysOpen,BR,nextTile,landRegions});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 let found=null;

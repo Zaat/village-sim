@@ -146,3 +146,4 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .cnact{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:4px}.cnact span{min-width:120px}.cnact.off{opacity:.55}.cnact .cnbar{height:5px}
 .cnfail{font-size:12px;color:#ffb27a;margin-top:4px}.cnmore{margin-top:6px}
 #hudConcern.calm{animation:none;background:#1d3a52;border-color:#3d6f99;color:#cfe6fa}
+#livCard .prices td{white-space:nowrap}#livCard .prices td:first-child{white-space:normal}

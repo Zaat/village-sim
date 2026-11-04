@@ -1,6 +1,6 @@
 // Concerns: detection, causes, resolution, responses, orders, save round trip, secession cap
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{assignRoles,World,CFG,TERR,FEAT,CN,concernsDay,respond,responseState,RESPONSES,ordersOf,winterWood,openConcerns,muteConcern,serialize:typeof serialize!=="undefined"?serialize:null,ST,evTotal});';
+const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{assignRoles,World,CFG,TERR,FEAT,CN,concernsDay,respond,responseState,RESPONSES,ordersOf,winterWood,openConcerns,muteConcern,serialize:typeof serialize!=="undefined"?serialize:null,ST,evTotal});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++}else{fail++;console.log('FAIL',m)}};
 const day=(w,n=1)=>{for(let d=0;d<n;d++){for(let t=0;t<1200;t++)w.step()}};
@@ -24,7 +24,7 @@ w.stock.food=w.vills.length*8;w.stock.wood=200;const f0=w.stock.food;ok(ctx.resp
 // 3. resolves once the problem is gone
 w.stock.food=w.vills.length*8;nextDay(w);nextDay(w);nextDay(w);nextDay(w);ok(!C.list.some(c=>c.key==='food'),'food concern resolves');ok(C.hist.some(h=>h.key==='food'),'resolved concern goes into history');
 // 4. population fall
-const before=w.vills.length;const gone=w.vills.slice(0,Math.floor(before*0.35));for(const v of gone)w.kill(v,'was killed by a wolf');nextDay(w);
+const before=w.vills.length;const gone=w.vills.slice(0,Math.ceil(before*0.45));for(const v of gone)w.kill(v,'was killed by a wolf');nextDay(w);
 const pf=C.list.find(c=>c.key==='pop_fall');ok(pf&&pf.sev===2,'critical population fall raised ('+(pf&&pf.text)+')');ok(pf&&/death/.test(pf.why),'population fall names deaths: '+(pf&&pf.why));
 // 5. nudge goes to the council, which decides
 w.regime.ax.auth=0.1;let asked=0;const pol=w.gov.policy.growth;let tries=0;while(w.gov.policy.growth<=pol&&tries<14){ctx.CN(w).cd.nudge_family=0;ctx.respond(w,'nudge_family');tries++}

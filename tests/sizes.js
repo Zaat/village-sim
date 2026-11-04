@@ -1,6 +1,6 @@
 // every map type at every allowed size: generates, starts on land, runs without errors, reports speed
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,serializeWorld,deserializeWorld});';
+const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,serializeWorld,deserializeWorld});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const SIZES={compact:[200,140],standard:[260,180],large:[340,236]};const DAYS=+process.argv[2]||60;
 let bad=0;

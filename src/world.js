@@ -316,6 +316,7 @@ class World {
     livesDay(this);
     projectDay(this);
     historyDay(this);
+    livelihoodsDay(this);
     concernsDay(this);
     statsDay(this);
   }

@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -210,7 +210,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'stats') renderStats(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -327,6 +327,16 @@ function renderEcon() {
     <div class="hint">${w.of('market').length ? (c ? `${escapeHtml(c.name)} ${c.sea ? '(by ship) ' : ''}stay until day ${c.leaves}.` : `Next merchants expected around day ${E.nextCaravan}.`) : 'Build a market and merchants will come.'}</div>
     ${E.trades.slice(0, 3).map(t => `<div class="techrow">${escapeHtml(t.text)}<span class="hint">day ${t.day}</span></div>`).join('')}
     ${coin ? `<div class="hint" style="margin-top:6px">Wealth: median ${cs.length ? cs[cs.length >> 1] : 0} coins · richest ${rich.map(v => escapeHtml(v.name) + ' ' + (v.coins || 0)).join(', ') || '–'}</div>` : ''}`;
+}
+function renderLiv() {
+  const w = world, el = $('livCard'); if (!el) return; const S = livelihoodSummary(w), L = LIV(w);
+  if (w.vills.length < 6 || !S.adults) { el.innerHTML = '<div class="hint">Too few people for trades yet.</div>'; return }
+  const work = S.roles + S.trades, pct = Math.round(100 * work / S.adults), goods = Object.entries(S.goods).filter(([, x]) => x >= 1).map(([k, x]) => k + ' ' + Math.round(x)).join(' · ');
+  el.innerHTML = `<div class="era"><b>${pct}% of adults have work</b><span class="hint">${S.roles} in the heavy roles · ${S.trades} in trades · ${S.idle} without</span></div>
+    ${S.ot ? `<div class="cnorders">${S.ot === 1 ? 'Volunteers are working longer hours.' : 'Longer hours have been ordered.'}</div>` : ''}
+    <table class="prices">${S.rows.slice(0, 9).map(r => `<tr><td>${escapeHtml(r.name)}${L.inv.some(i => i.id === r.id && !i.ok) ? ' <span class="hint">(new idea)</span>' : ''}</td><td>${r.w} ${r.w === 1 ? 'worker' : 'workers'}</td><td class="tr ${r.J < r.D * 0.6 ? 'up' : r.J > r.D * 1.3 ? 'down' : ''}">${r.J < r.D * 0.6 ? 'in demand' : r.J > r.D * 1.3 ? 'crowded' : 'steady'}</td></tr>`).join('')}</table>
+    ${goods ? `<div class="hint" style="margin-top:4px">Goods in the village: ${goods}</div>` : ''}
+    <div class="hint">Dreams achieved: ${S.stats.dreams} · jobs invented: ${S.stats.invented}${S.stats.failed ? ' (' + S.stats.failed + ' failed)' : ''}</div>`;
 }
 function renderRegime() {
   const w = world, R = w.regime, el = $('regimeCard'); if (!R) return;
@@ -448,6 +458,7 @@ function familyBlock(w, s, home) {
   const fav = Object.entries(s.fav || {}).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, n]) => `${(BUILDING_NAMES[t] || t).toLowerCase()} ×${n}`).join(', ');
   const rows = [['Partner', ptn ? vlink(ptn) : 'none'], par.length ? ['Parents', par.map(v => vlink(v)).join(', ')] : null, ['Children', kids.length ? kids.slice(0, 6).map(v => vlink(v)).join(', ') + (kids.length > 6 ? '…' : '') : 'none'],
     ['Home', home ? `<a class="lnk" data-bid="${home.id}">cabin at ${home.x},${home.y}</a>${mates.length ? ' with ' + mates.map(v => vlink(v)).join(', ') : ''}` : 'none'], fav ? ['Often found at', escapeHtml(fav)] : null,
+    s.isAdult() && (s.trade || s.side) ? ['Livelihood', escapeHtml(tradeName(w, s.trade || s.side)) + (s.trade ? '' : ' (side job)') + (s.shop ? ' · own shop' : '')] : null, s.isAdult() && dreamText(s) ? ['Dream', escapeHtml(dreamText(s))] : null,
     s.isAdult() && s.hobby ? ['Hobby', HOBBIES[s.hobby].label] : null, s.status !== undefined && s.isAdult() ? ['Standing', STATUS_WORDS(s.status) + (wealthOf(s) >= 1 ? ' · means ' + (wealthOf(s) < 8 ? 'modest' : wealthOf(s) < 30 ? 'comfortable' : 'considerable') : '')] : null, (() => { const ps = propsOf(w, s); return ps.length ? ['Owns', ps.map(b => b.type === 'house' ? 'a home' : 'a field').join(' and ')] : null })(), (() => { const f = feudOf(w, s); return f ? ['Feud', `${f.ka.has(s.id) ? escapeHtml(f.nb) : escapeHtml(f.na)}'s kin, over ${escapeHtml(f.cause)} (${Math.round(f.heat * 100)}% hot)`] : null })(),
     s.output ? ['Work output', `${Math.round(s.output)} units gathered`] : null, ['Born', dateText(Math.max(0, Math.round(w.day - s.age)))]];
   return sec('Family &amp; life', `<div class="kvl">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><span>${v}</span></div>`).join('')}</div>`);
