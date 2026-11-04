@@ -27,6 +27,10 @@
     <div class="card"><h3>Settings</h3>
       <div class="hint" style="margin-bottom:4px">Hardship <span class="hint">how forgiving the world is: births, newcomers, wolves, fevers, winters</span></div>
       <select id="set_hardship" style="width:100%;margin-bottom:8px"><option value="0">Gentle</option><option value="1">Normal</option><option value="2">Harsh</option></select>
+      <div class="hint" style="margin-bottom:4px">Philosophy <span class="hint">what the village tends to study first</span></div>
+      <select id="set_philosophy" style="width:100%;margin-bottom:8px"></select>
+      <div class="hint" style="margin-bottom:4px">Open knowledge <span class="hint">sandbox: lifts the limits on research (the world is marked as a sandbox)</span></div>
+      <select id="set_open" style="width:100%;margin-bottom:8px"><option value="0">Off</option><option value="1">Relaxed</option><option value="2">Unlimited</option></select>
       <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
@@ -68,12 +72,15 @@
       <div class="hint" id="mapnow"></div>
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
+    <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
     <div id="nw" style="display:none"><div class="nwbox">
       <h3>New world</h3>
       <div class="nwrow"><span class="hint">Seed</span><input id="nw_seed" inputmode="numeric"><button id="nw_dice" title="Pick a random seed" aria-label="Random seed">🎲</button></div>
       <div class="hint" style="margin-top:10px">Map type</div><div id="nw_types" class="nwchoices"></div>
       <div class="hint" style="margin-top:10px">Map size</div><div id="nw_sizes" class="nwchoices"></div>
-      <div class="hint" style="margin-top:10px">Hardship <span class="hint">Hardship <span class="hint">you can change it later in Settings</span>middot; you can change it later in Settings</span></div><div id="nw_hard" class="nwchoices"></div>
+      <div class="hint" style="margin-top:10px">Hardship <span class="hint">· you can change it later in Settings</span></div><div id="nw_hard" class="nwchoices"></div>
+      <div class="hint" style="margin-top:10px">Philosophy <span class="hint">· what the village tends to study first</span></div><div id="nw_phil" class="nwchoices"></div>
+      <div class="hint" style="margin-top:10px">Open knowledge <span class="hint">· a sandbox option; marks the world as a sandbox</span></div><div id="nw_open" class="nwchoices"></div>
       <div class="hint" id="nw_note" style="margin-top:8px"></div>
       <div class="btnrow" style="margin-top:12px"><button id="nw_go" class="on">Start</button><button id="nw_cancel">Cancel</button></div>
     </div></div>
@@ -96,7 +103,7 @@
     <div class="card"><h3>Social circles</h3><div id="groupCard"></div></div>
     </section>
     <section class="tab" id="tab_progress">
-    <div class="card"><h3>Knowledge &amp; discoveries</h3><div id="techCard"></div></div>
+    <div class="card"><h3>Knowledge &amp; discoveries</h3><div id="techCard"></div><div class="btnrow" style="margin-top:6px"><button id="treeBtn">Tree of knowledge…</button></div></div>
     <div class="card"><h3>Trade &amp; treasury</h3><div id="econCard"></div></div>
     <div class="card"><h3>Livelihoods</h3><div id="livCard"></div></div>
     <div class="card" id="harbourBox"><h3>Harbour &amp; trade abroad</h3><div id="harbourCard"></div></div>
@@ -132,6 +139,7 @@
 <script src="src/town.js"></script>
 <script src="src/society.js"></script>
 <script src="src/techtree.js"></script>
+<script src="src/unlocks.js"></script>
 <script src="src/tech.js"></script>
 <script src="src/water.js"></script>
 <script src="src/trade.js"></script>
@@ -147,6 +155,7 @@
 <script src="src/concerns.js"></script>
 <script src="src/outposts.js"></script>
 <script src="src/bridges.js"></script>
+<script src="src/terraform.js"></script>
 <script src="src/places.js"></script>
 <script src="src/neighbours.js"></script>
 <script src="src/mapgen.js"></script>
@@ -159,5 +168,6 @@
 <script src="src/statsui.js"></script>
 <script src="src/concernsui.js"></script>
 <script src="src/ui.js"></script>
+<script src="src/treeui.js"></script>
 </body>
 </html>

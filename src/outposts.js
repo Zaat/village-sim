@@ -158,8 +158,9 @@ function sendSettlers(w, p) {
   const food = Math.min(p.food, Math.max(0, w.stock.food - w.vills.length)), wood = Math.min(p.wood, Math.max(0, w.stock.wood - 8)); w.stock.food -= food; w.stock.wood -= wood; S.sent.food += food; S.sent.wood += wood;
   const names = folk.map(v => v.name); for (const v of folk) { v.story(`${firstName(v.name)} set out with the settlers to found a new outpost.`); departVillager(w, v) }
   let nm = '', g = 0; do nm = OUT_NAMES[(w.r() * OUT_NAMES.length) | 0] + OUT_TAILS[(w.r() * OUT_TAILS.length) | 0]; while (S.list.some(o => o.name === nm) && g++ < 20);
+  const lt = leader && leader.trait ? leader.trait : null, temper = clamp((lt ? 0.35 * (lt.soc - 0.5) - 0.3 * (lt.ind - 0.5) : 0) + (w.r() - 0.5) * 0.24, -0.2, 0.2);       // each settlement has its own temper: its leader's character and the luck of the founding
   const o = { id: S.next++, name: nm, x: p.x, y: p.y, role: p.role, mode: p.mode, rich: Math.round(p.rich * 100) / 100, state: 'travelling', day: w.day, arrive: w.day + p.days, days: p.days, pop: folk.length, founders: names.slice(0, 6), leader: leader.name, fl: folk.length,
-    food: food, wood: 0, stone: 0, loyalty: 0.8, trib: 0, aid: 0, stage: 0, cap: Math.round(8 + p.rich * 10 + (p.read ? p.read.land / 20 : 0)), nextHaul: 0, cargo: [], made: 0, sentHome: 0, hungry: 0, lowDays: 0, supplied: { food, wood }, log: [] };
+    food: food, wood: 0, stone: 0, loyalty: clamp(0.8 + temper, 0.5, 1), temper, trib: 0, aid: 0, stage: 0, cap: Math.round(8 + p.rich * 10 + (p.read ? p.read.land / 20 : 0)), nextHaul: 0, cargo: [], made: 0, sentHome: 0, hungry: 0, lowDays: 0, supplied: { food, wood }, log: [] };
   S.list.push(o); o._route = p.route; S.founded++; S.last = { day: w.day, name: nm };
   w.emit('outpost', `${leader.name} leads ${folk.length} settlers ${p.mode === 'sea' ? 'aboard a ship' : 'on the road'} to found ${nm}, a ${OUT_ROLES[p.role].label} ${Math.round(outFar(w, p.x, p.y))} tiles to the ${compass(w, p.x, p.y)}.`, { o });
   for (const v of w.vills) if (!v.isChild()) v.mood = Math.max(0, v.mood - 1);
@@ -191,7 +192,7 @@ function outTend(w, o) {
   const st = OUT_STAGE_POP.filter(x => o.pop >= x).length - 1; if (st > o.stage) { o.stage = st; w.emit('outpost', `${o.name} has grown into a ${OUT_STAGES[st]}: ${o.pop} souls.`, { o }); outLog(w, `${o.name} became a ${OUT_STAGES[st]}.`) } else if (st < o.stage - 0) o.stage = Math.max(0, st);
   if (o.pop <= 2) { o.state = 'gone'; o.fate = 'failed'; S.failed++; outLog(w, `${o.name} died out.`); return w.emit('outpost', `${o.name} has died out; its fields and huts are empty.`, { o }) }
   // loyalty drifts toward what the outpost experiences
-  const share = outShare(w, o), target = clamp(0.64 - 1.1 * (share - 0.42) - outFar(w, o.x, o.y) / 520 - (o.hungry > 2 ? 0.25 : 0) - 0.18 * Math.min(1.2, o.pop / Math.max(12, w.vills.length)) - Math.min(0.15, (w.day - o.day) / 1200) + o.aid + (w.rx ? -0.12 * w.rx.A + 0.08 * w.rx.C : 0) + (o.stage >= 2 ? -0.05 : 0), 0, 1);
+  const share = outShare(w, o), target = clamp(0.64 - 1.1 * (share - 0.42) - outFar(w, o.x, o.y) / 520 - (o.hungry > 2 ? 0.25 : 0) - 0.18 * Math.min(1.2, o.pop / Math.max(12, w.vills.length)) - Math.min(0.15, (w.day - o.day) / 1200) + o.aid + (w.rx ? -0.12 * w.rx.A + 0.08 * w.rx.C : 0) + (o.stage >= 2 ? -0.05 : 0) + (o.temper || 0) + 0.04 * Math.sin((w.day + o.id * 37) / 23), 0, 1);
   o.loyalty += (target - o.loyalty) * 0.05; o.aid *= 0.985;
   if (w.day >= o.nextHaul) haul(w, o, share);
   const rest = []; for (const c of o.cargo) { if (w.day < c.at) { rest.push(c); continue } if (c.lost) { outLog(w, `A load from ${o.name} was lost on the way.`); continue } for (const k of ['wood', 'stone', 'food']) if (c[k]) { w.stock[k] = Math.min(w.stock[k] + c[k], w.cap() + 40); S.back[k] += c[k] } o.sentHome += (c.wood || 0) + (c.stone || 0) + (c.food || 0) } o.cargo = rest;

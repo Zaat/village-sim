@@ -97,6 +97,17 @@ $('set_hardship').addEventListener('change', e => {            // live change: n
   world.emit('event', `The council notes that life feels ${['gentler', 'as it was', 'harsher'][v]} now (hardship set to ${HARDSHIP[v].name}).`, { kind: 'hardship' });
 });
 
+const OPEN_LEVELS = [{ name: 'Off', note: 'Research has limits: scholars, rising costs, and the inputs a technology needs.' }, { name: 'Relaxed', note: 'No input gates, twice the scholar capacity, slower cost growth.' }, { name: 'Unlimited', note: 'Every technology is open at once, cheap and fast; grant any at will.' }];
+$('set_philosophy').innerHTML = Object.keys(PHILOSOPHIES).map(k => `<option value="${k}">${PHILOSOPHIES[k].name}</option>`).join('');
+$('set_philosophy').addEventListener('change', e => {
+  const v = e.target.value; if (v === world.settings.philosophy) return; world.settings.philosophy = v; saveSettings(); lsSet('villagesim.phil', v);
+  world.emit('event', `The council turns its mind to a ${PHILOSOPHIES[v].name.toLowerCase()} way of learning. ${PHILOSOPHIES[v].hint}`, { kind: 'philosophy' });
+});
+$('set_open').addEventListener('change', e => {            // a sandbox switch: always noted in the chronicle and in the records
+  const v = +e.target.value; if (v === (world.settings.openKnowledge || 0)) return; world.settings.openKnowledge = v; if (v) world.sandbox = true; saveSettings(); lsSet('villagesim.open', String(v));
+  world.emit('event', v ? `Sandbox: knowledge is now ${OPEN_LEVELS[v].name.toLowerCase()}. ${OPEN_LEVELS[v].note}` : 'Knowledge is bound by its limits again.', { kind: 'open' }); renderTech();
+});
+
 /* ---------- world lifecycle ---------- */
 function adoptWorld(w) {
   try { $('mapnow').textContent = MAP_TYPES[w.arch].label + ' · ' + CFG.W + '×' + CFG.H + ' · seed ' + w.seed + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
@@ -104,7 +115,7 @@ function adoptWorld(w) {
   world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
   world.dbg.onFault = () => dbgPersist(world); world.profReset();
-  for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k]; $('set_hardship').value = String(world.settings.hardship == null ? 1 : world.settings.hardship);
+  for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k]; $('set_hardship').value = String(world.settings.hardship == null ? 1 : world.settings.hardship); $('set_philosophy').value = world.settings.philosophy || 'balanced'; $('set_open').value = String(world.settings.openKnowledge || 0);
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); concernsReset(); updateUI();
 }
 const MAP_SIZES = { compact: { dims: [200, 140], label: 'Compact', note: '200 × 140: quick and close' }, standard: { dims: [260, 180], label: 'Standard', note: '260 × 180: the usual world' }, large: { dims: [340, 236], label: 'Large', note: '340 × 236: room for far settlements' } };
@@ -115,24 +126,28 @@ function sizeChoice() { const m = lsGet('villagesim.mapsize', 'standard'); retur
 function sizeFor(type, size) { return (size === 'compact' && (type === 'island' || type === 'archipelago')) ? 'standard' : size }
 function newWorld(seed, opts) {
   seed = seed >>> 0; const mc = (opts && opts.type) || mapChoice(), type = mc === 'auto' ? pickMapType(seed) : mc, size = sizeFor(type, (opts && opts.size) || sizeChoice());
-  adoptWorld(new World(seed, { ...loadSettings(), hardship: (opts && opts.hardship != null) ? opts.hardship : +lsGet('villagesim.hardship', '1'), fade: true, map: type }, MAP_SIZES[size].dims));
+  adoptWorld(new World(seed, { ...loadSettings(), hardship: (opts && opts.hardship != null) ? opts.hardship : +lsGet('villagesim.hardship', '1'), philosophy: (opts && opts.phil) || lsGet('villagesim.phil', 'balanced'), openKnowledge: (opts && opts.open != null) ? opts.open : +lsGet('villagesim.open', '0'), fade: true, map: type }, MAP_SIZES[size].dims));
 }
 /* ---- the new-world dialog ---- */
-let nwType = 'auto', nwSize = 'standard', nwHard = 1;
+let nwType = 'auto', nwSize = 'standard', nwHard = 1, nwPhil = 'balanced', nwOpen_ = 0;
 function nwRender() {
   $('nw_types').innerHTML = [['auto', 'Auto', 'Chosen by the seed'], ...Object.keys(MAP_TYPES).map(k => [k, MAP_TYPES[k].label, MAP_TYPES[k].blurb])].map(([k, l, b]) => `<button data-t="${k}" class="${nwType === k ? 'sel' : ''}"><b>${l}</b><span>${b}</span></button>`).join('');
   $('nw_sizes').innerHTML = Object.keys(MAP_SIZES).map(k => `<button data-s="${k}" class="${nwSize === k ? 'sel' : ''}"><b>${MAP_SIZES[k].label}</b><span>${MAP_SIZES[k].note}</span></button>`).join('');
   $('nw_hard').innerHTML = HARDSHIP.map((h, i) => `<button data-h="${i}" class="${nwHard === i ? 'sel' : ''}"><b>${h.name}</b><span>${h.note}</span></button>`).join('');
+  $('nw_phil').innerHTML = Object.keys(PHILOSOPHIES).map(k => `<button data-p="${k}" class="${nwPhil === k ? 'sel' : ''}"><b>${PHILOSOPHIES[k].name}</b><span>${PHILOSOPHIES[k].hint}</span></button>`).join('');
+  $('nw_open').innerHTML = OPEN_LEVELS.map((h, i) => `<button data-o="${i}" class="${nwOpen_ === i ? 'sel' : ''}"><b>${h.name}</b><span>${h.note}</span></button>`).join('');
   const eff = sizeFor(nwType === 'auto' ? 'x' : nwType, nwSize); $('nw_note').textContent = eff !== nwSize ? 'Island and archipelago worlds need sea around them, so they use the Standard size.' : nwSize === 'large' ? 'Large maps take more memory and a little more time per step; they suit settlements and long games.' : '';
 }
-function nwOpen() { if (drawerOpen()) toggleDrawer(false); nwType = mapChoice(); nwSize = sizeChoice(); nwHard = +lsGet('villagesim.hardship', '1'); $('nw_seed').value = (Math.random() * 1e9) | 0; nwRender(); $('nw').style.display = 'flex'; $('nw_seed').focus(); $('nw_seed').select() }
+function nwOpen() { if (drawerOpen()) toggleDrawer(false); nwType = mapChoice(); nwSize = sizeChoice(); nwHard = +lsGet('villagesim.hardship', '1'); nwPhil = lsGet('villagesim.phil', 'balanced'); nwOpen_ = +lsGet('villagesim.open', '0'); $('nw_seed').value = (Math.random() * 1e9) | 0; nwRender(); $('nw').style.display = 'flex'; $('nw_seed').focus(); $('nw_seed').select() }
 function nwClose() { $('nw').style.display = 'none' }
-$('restart').onclick = nwOpen; $('nw_cancel').onclick = nwClose; $('nw').addEventListener('pointerdown', e => { if (e.target === $('nw')) nwClose() });
+$('restart').onclick = nwOpen; $('treeBtn').onclick = () => treeOpen(); $('nw_cancel').onclick = nwClose; $('nw').addEventListener('pointerdown', e => { if (e.target === $('nw')) nwClose() });
 $('nw_dice').onclick = () => { $('nw_seed').value = (Math.random() * 1e9) | 0; $('nw_seed').focus(); $('nw_seed').select() };
 $('nw_types').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwType = b.dataset.t; nwRender() } });
 $('nw_hard').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwHard = +b.dataset.h; nwRender() } });
+$('nw_phil').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwPhil = b.dataset.p; nwRender() } });
+$('nw_open').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwOpen_ = +b.dataset.o; nwRender() } });
 $('nw_sizes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwSize = b.dataset.s; nwRender() } });
-$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); lsSet('villagesim.hardship', String(nwHard)); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize, hardship: nwHard }) };
+$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); lsSet('villagesim.hardship', String(nwHard)); lsSet('villagesim.phil', nwPhil); lsSet('villagesim.open', String(nwOpen_)); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize, hardship: nwHard, phil: nwPhil, open: nwOpen_ }) };
 $('nw_seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('nw_go').click(); e.stopPropagation() });
 
 /* ---------- save & load ----------
@@ -220,24 +235,34 @@ function updateUI() {
   if (curTab === 'stats') renderStats(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
+function techRowHtml(w, id, avail) {
+  const t = w.tech, T = TECHS[id], U = unlocksOf(id), open = openLevel(w), gaps = techGaps(w, id), raw = techAvailableRaw(w).includes(id);
+  const st = t.known[id] ? 'k' : avail.includes(id) ? 'a' : raw ? 'b' : 'l';
+  let tail = AGES[T.age].replace(' Age', '');
+  if (st === 'a') tail += ' · ' + techCost(w, id); else if (st === 'b') tail += ' · waiting for ' + gaps.map(g => GATES[g].name).join(', ');
+  else if (st === 'l') { const m = T.req.filter(r => !t.known[r]).map(r => TECHS[r].name); tail += m.length ? ' · needs ' + m.join(', ') : ' · opens with the next age' }
+  const gv = `<div class="hint btg">${st === 'k' || st === 'a' ? 'Gives: ' : 'Would give: '}${U.gives.map(escapeHtml).join(' · ')}${U.needs.length ? '<br>Needs: ' + U.needs.map(g => (GATES[g].ok(w) ? '✓ ' : '✗ ') + GATES[g].name).join(', ') : ''}</div>`;
+  const grant = open && !t.known[id] ? ` <button class="grant" data-grant="${id}" title="Sandbox: learn this now">Grant</button>` : '';
+  return `<div class="bt ${st}" title="${escapeHtml(T.desc)}"><span>${T.name}${grant}</span><span class="hint">${tail}</span></div>${gv}`;
+}
 let techOpen = null;                    // the branch whose list is open in the Ages panel
 function renderTech() {
   const w = world, t = w.tech, el = $('techCard'), era = techEra(w), known = Object.keys(t.known), avail = techAvailable(w), total = Object.keys(TECHS).length;
-  const focus = t.focus ? TECHS[t.focus] : null, pct = focus ? Math.min(100, t.points / focus.cost * 100) : 0;
+  const focus = t.focus ? TECHS[t.focus] : null, pct = focus ? Math.min(100, t.points / techCost(w, t.focus) * 100) : 0;
   const nextAge = era < AGES.length - 1 ? era + 1 : null, have = AGE_IDS[era].filter(id => t.known[id]).length, need = AGE_NEED[era];
   const ageBar = AGES.map((a, i) => `<i title="${a}" style="background:${i < era ? '#8fd18b' : i === era ? '#e0b070' : '#2b333b'}"></i>`).join('');
   let h = `<div class="era"><b>${AGES[era]}</b><span class="hint">${known.length} of ${total} discoveries</span></div><div class="agebar">${ageBar}</div>
     <div class="hint" style="margin:4px 0 6px">${nextAge !== null ? `${have} of the ${need} needed in the ${AGES[era]} to reach the ${AGES[nextAge]}.` : 'The last age. Everything else is still to be discovered.'}</div>`;
-  h += focus ? `<div class="hint">Studying <b style="color:var(--ink)">${focus.name}</b> <span style="color:${BRANCHES[focus.branch].col}">· ${BRANCHES[focus.branch].name.toLowerCase()}</span> · ${Math.round(t.points)} / ${focus.cost}</div><div class="tprog"><i style="width:${pct}%"></i></div><div class="hint">${focus.desc}</div>` : avail.length ? `<div class="hint">The council will choose what to study next.</div>` : `<div class="hint">Nothing to study until the next age begins.</div>`;
+  h += focus ? `<div class="hint">Studying <b style="color:var(--ink)">${focus.name}</b> <span style="color:${BRANCHES[focus.branch].col}">· ${BRANCHES[focus.branch].name.toLowerCase()}</span> · ${Math.round(t.points)} / ${techCost(w, t.focus)}</div><div class="tprog"><i style="width:${pct}%"></i></div><div class="hint">${focus.desc}</div>` : avail.length ? `<div class="hint">The council will choose what to study next.</div>` : `<div class="hint">Nothing to study until the next age begins.</div>`;
   h += `<div class="hint" style="margin:8px 0 3px">Branches of knowledge</div>` + Object.keys(BRANCHES).map(b => {
     const ids = TECH_BY_BRANCH[b], k = ids.filter(id => t.known[id]).length, nowOpen = techOpen === b, open = ids.filter(id => avail.includes(id));
-    return `<div class="brrow" data-br="${b}"><span class="brn" style="color:${BRANCHES[b].col}">${BRANCHES[b].name}</span><span class="brbar"><i style="width:${Math.round(100 * k / ids.length)}%;background:${BRANCHES[b].col}"></i></span><span class="hint brk">${k}/${ids.length}${open.length ? ' · ' + open.length + ' open' : ''}</span></div>${nowOpen ? `<div class="brlist">${ids.slice().sort((x, y) => TECHS[x].age - TECHS[y].age).map(id => { const T = TECHS[id], st = t.known[id] ? 'k' : avail.includes(id) ? 'a' : 'l'; return `<div class="bt ${st}" title="${escapeHtml(T.desc)}"><span>${T.name}</span><span class="hint">${AGES[T.age].replace(' Age', '')}${st === 'l' ? (() => { const m = T.req.filter(r => !t.known[r]).map(r => TECHS[r].name); return m.length ? ' · needs ' + m.join(', ') : ' · opens with the next age' })(): st === 'a' ? ' · ' + T.cost : ''}</span></div>` }).join('')}</div>` : ''}`;
+    return `<div class="brrow" data-br="${b}"><span class="brn" style="color:${BRANCHES[b].col}">${BRANCHES[b].name}</span><span class="brbar"><i style="width:${Math.round(100 * k / ids.length)}%;background:${BRANCHES[b].col}"></i></span><span class="hint brk">${k}/${ids.length}${open.length ? ' · ' + open.length + ' open' : ''}</span></div>${nowOpen ? `<div class="brlist">${ids.slice().sort((x, y) => TECHS[x].age - TECHS[y].age).map(id => techRowHtml(w, id, avail)).join('')}</div>` : ''}`;
   }).join('');
   h += t.log.slice(0, 3).map(l => `<div class="techrow"><b>${TECHS[l.id].name}</b> <span class="hint">day ${l.day}${l.by ? ' · led by ' + escapeHtml(l.by) : ''}</span></div>`).join('');
   if (t.lost) h += `<div class="hint" style="margin-top:4px">Knowledge lost to hard times: ${t.lost}.</div>`;
   el.innerHTML = h;
 }
-$('techCard').addEventListener('click', e => { const r = e.target.closest('[data-br]'); if (!r) return; techOpen = techOpen === r.dataset.br ? null : r.dataset.br; renderTech() });
+$('techCard').addEventListener('click', e => { const gb = e.target.closest('[data-grant]'); if (gb) { grantTech(world, gb.dataset.grant); renderTech(); return } const r = e.target.closest('[data-br]'); if (!r) return; techOpen = techOpen === r.dataset.br ? null : r.dataset.br; renderTech() });
 /* the harbour, the fleet and the trade the village runs for itself */
 function renderHarbour() {
   const w = world, el = $('harbourCard'), box = $('harbourBox'), t = w.trade2; const show = !!(t && w.neigh && w.has('trade') && (w.of('dock').length || w.neigh.some(n => n.reach === 'land' && n.found))); box.style.display = show ? '' : 'none'; if (!show) return;

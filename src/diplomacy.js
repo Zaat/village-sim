@@ -110,10 +110,10 @@ function migrantVisit(w, n) {
   dlog(w, n, `${names.join(', ')} ${byLand(n) ? 'walk' : 'sail'} from ${n.name} to settle here.`, 'migrants'); return true;
 }
 function teachVisit(w, n) {
-  const avail = techAvailable(w).filter(id => n.knows.includes(id)).sort((a, b) => TECHS[a].cost - TECHS[b].cost); if (!avail.length) return false;
+  const avail = techAvailableRaw(w).filter(id => n.knows.includes(id)).sort((a, b) => TECHS[a].cost - TECHS[b].cost); if (!avail.length) return false;
   if (w.stock.food < 25 || w.stock.wood < 15) return false;
   startVisit(w, n, 'teach', 3); const id = avail[0], T = TECHS[id], t = w.tech; give(w, 'food', 20); give(w, 'wood', 10);
-  if (T.tier <= 2) { const f0 = t.focus, p0 = t.points; t.focus = id; t.points = T.cost + p0; discover(w); t.focus = f0 === id ? null : f0; t.points = p0 }
+  if (T.tier <= 2) { const f0 = t.focus, p0 = t.points; t.focus = id; t.points = techCost(w, id) + p0; discover(w); t.focus = f0 === id ? null : f0; t.points = p0 }
   else { t.points += T.cost * 0.6 }
   n.taught.push(id); n.rel += 3;
   dlog(w, n, `Scholars from ${n.name} share their knowledge of ${T.name.toLowerCase()}${T.tier <= 2 ? '' : ' (a long step closer)'}, in return for food and firewood.`, 'teach'); return true;

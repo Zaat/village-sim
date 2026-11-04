@@ -108,7 +108,7 @@ function prosperityDay(w) {
 const fertilityMult = w => clamp(w.prosp == null ? 1 : w.prosp, 0.5, 1.6);
 function planTown(w) {
   const pop = w.vills.length, count = t => w.bps.filter(b => b.type === t).length;
-  const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = w.beds() + count('house') * (CFG.HOUSE_CAP + styleNow(w));
+  const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = w.beds() + count('house') * bedsOf({ style: styleNow(w) });
   const structBps = w.bps.filter(b => b.type !== 'road').length;
   const drive = ordersOf(w).build;
   if (structBps < 2 + Math.floor(pop / 8) + (drive ? 4 : 0)) {

@@ -153,13 +153,19 @@ function houseArtLate(g, w, b, night, now, st) {          // brick house, townho
     rc(g, '#5a3a22', X + 13, Y + 21, 6, 9); rc(g, '#cfc7ae', X + 12, Y + 19, 8, 2); rc(g, '#d8b56a', X + 17, Y + 25, 1, 1);
     for (const wx of [6, 21]) for (const wy of [13, 22]) { if (wy === 22 && wx === 13) continue; rc(g, '#8a7f66', X + wx - 1, Y + wy - 1, 7, 7); rc(g, win, X + wx, Y + wy, 5, 5); rc(g, '#8a7f66', X + wx + 2, Y + wy, 1, 5) }
     rc(g, '#6a6e72', X + 24, Y, 4, 5);
+  } else if (st === 6) {                         // tower block: a tall slab of steel and glass rising above the tile
+    const H = 40, top = Y + 30 - H; rc(g, 'rgba(0,0,0,.28)', X + 2, Y + 29, 30, 3);
+    rc(g, '#6f7a85', X + 5, top, 22, H); rc(g, '#8b97a3', X + 5, top, 22, 2); rc(g, '#59636d', X + 25, top, 2, H); rc(g, '#59636d', X + 5, Y + 29, 22, 1);
+    for (let r = 0; r < 7; r++) for (let c = 0; c < 4; c++) rc(g, lit && night && ((c * 3 + r + b.id) % 4 !== 0) ? '#ffd76a' : '#a9d0e6', X + 7 + c * 5, top + 4 + r * 5, 3, 3);
+    rc(g, '#3d454d', X + 12, Y + 23, 8, 7); rc(g, '#d8b56a', X + 18, Y + 26, 1, 1); rc(g, '#4a525a', X + 14, top - 5, 2, 5); rc(g, '#cc5544', X + 14, top - 5, 2, 1);
+    if (s === 3) rc(g, '#fff', X + 5, top - 1, 22, 2);
   } else {                                       // apartment block: concrete, ribbon windows, flat roof with a stack
     rc(g, '#a9adb1', X + 2, Y + 4, 28, 26); rc(g, '#8e9297', X + 2, Y + 4, 28, 2); rc(g, '#8e9297', X + 2, Y + 29, 28, 1);
     for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { rc(g, '#5f656a', X + 4 + c * 6, Y + 8 + r * 7, 5, 5); rc(g, lit && night && ((c + r + b.id) % 3 !== 0) ? '#ffd76a' : '#9fc4d8', X + 5 + c * 6, Y + 9 + r * 7, 3, 3) }
     rc(g, '#4a4f54', X + 12, Y + 23, 8, 7); rc(g, '#d8b56a', X + 18, Y + 26, 1, 1); rc(g, '#6f747a', X + 22, Y, 4, 5); rc(g, '#4a4f54', X + 22, Y, 4, 1); rc(g, '#7e8388', X + 6, Y + 2, 7, 3);
     if (s === 3) rc(g, '#fff', X + 2, Y + 3, 28, 1);
   }
-  if (lit && (night || s === 3 || w.tod > 0.55)) for (let k = 0; k < 3; k++) { const t = ((now / 700) + k / 3) % 1; g.fillStyle = `rgba(210,210,215,${0.5 * (1 - t)})`; g.fillRect(X + 23 + Math.sin(t * 5 + k) * 2, Y - t * 10, 3 + t * 3, 3 + t * 3) }
+  if (st !== 6 && lit && (night || s === 3 || w.tod > 0.55)) for (let k = 0; k < 3; k++) { const t = ((now / 700) + k / 3) % 1; g.fillStyle = `rgba(210,210,215,${0.5 * (1 - t)})`; g.fillRect(X + 23 + Math.sin(t * 5 + k) * 2, Y - t * 10, 3 + t * 3, 3 + t * 3) }
 }
 function houseArt(g, w, b, night, now) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, s = w.season, lit = b.occ.length > 0, st = b.style || 0;

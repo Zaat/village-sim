@@ -147,3 +147,5 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .cnfail{font-size:12px;color:#ffb27a;margin-top:4px}.cnmore{margin-top:6px}
 #hudConcern.calm{animation:none;background:#1d3a52;border-color:#3d6f99;color:#cfe6fa}
 #livCard .prices td{white-space:nowrap}#livCard .prices td:first-child{white-space:normal}
+.bt.b{color:#c9a46a}.btg{margin:0 0 4px 6px;font-size:10px;line-height:1.35}.grant{font-size:10px;padding:0 6px;margin-left:4px;border-radius:8px}
+#tree{position:absolute;inset:0;background:rgba(5,8,11,.7);align-items:center;justify-content:center;z-index:31}.treebox{width:min(1180px,96vw);height:min(760px,94vh);display:flex;flex-direction:column;background:rgba(18,24,30,.99);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.55)}.treescroll{flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#11171c}.treeinfo{min-height:74px;padding-top:8px}

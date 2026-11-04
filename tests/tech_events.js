@@ -1,6 +1,6 @@
 // v0.24 technology and ages: table, ages, availability, effects, house styles, loss, neighbours, save/load
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','techtree','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS,AGES,AGE_COUNT,AGE_NEED,AGE_IDS,BRANCHES,LADDERS,villageAge,techAvailable,techFx,techLossDay,neighbourTechDay,ladderLevel,styleNow,serializeWorld,deserializeWorld,ST});';
+const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS,AGES,AGE_COUNT,AGE_NEED,AGE_IDS,BRANCHES,LADDERS,villageAge,techAvailable,techFx,techLossDay,neighbourTechDay,ladderLevel,styleNow,serializeWorld,deserializeWorld,ST});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 const T=ctx.TECHS,ids=Object.keys(T);
@@ -18,7 +18,7 @@ w.tech.known[stone[ctx.AGE_NEED[0]-1]]=1;ok(ctx.villageAge(w)===1,'the age turns
 // effects add up
 const w2=new ctx.World(32,{});for(const id of ids)w2.tech.known[id]=1;
 ok(ctx.villageAge(w2)===8,'all known = last age');ok(ctx.techFx(w2,'farm')>0.9&&ctx.techFx(w2,'learn')>1.5&&ctx.techFx(w2,'work')>0.8,'effects accumulate: farm '+ctx.techFx(w2,'farm').toFixed(2)+' learn '+ctx.techFx(w2,'learn').toFixed(2)+' work '+ctx.techFx(w2,'work').toFixed(2));
-ok(ctx.styleNow(w2)===5&&ctx.ladderLevel(w2,'terra')===ctx.LADDERS.terra.length,'house style and ladders');
+ok(ctx.styleNow(w2)===6&&ctx.ladderLevel(w2,'terra')===ctx.LADDERS.terra.length,'house style and ladders');
 // a world with everything known runs, builds better houses, keeps working
 for(let t=0;t<1200*70;t++)w2.step();
 const styles=[...w2.buildings.values()].filter(b=>b.type==='house').map(b=>b.style||0);ok(Math.max(...styles)>=3,'late house styles appear: '+[0,1,2,3,4,5].map(s=>styles.filter(x=>x===s).length).join('/'));

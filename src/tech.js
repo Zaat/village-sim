@@ -6,7 +6,7 @@
    knowledge is gathered the village makes a discovery and everything it affects
    (yields, speed, housing, architecture, boats) changes from then on.
    ========================================================================== */
-const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house', 'Brick house', 'Townhouse', 'Apartment block'];
+const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house', 'Brick house', 'Townhouse', 'Apartment block', 'Tower block'];
 
 function initTech(w) { w.tech = { known: {}, points: 0, focus: null, wait: 0, contrib: {}, log: [], feverSeen: 0 }; w.boats = [] }
 const hasTech = (w, id) => !!w.tech.known[id];
@@ -26,14 +26,30 @@ function techFx(w, key) {
   return c.v[key] || 0;
 }
 const ladderLevel = (w, name) => (LADDERS[name] || []).filter(id => w.tech.known[id]).length;       // how far up a ladder (terra, explore, war) the village has climbed
-const styleNow = w => hasTech(w, 'concrete') ? 5 : hasTech(w, 'architecture') ? 4 : hasTech(w, 'brickwork') ? 3 : hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
-const bedsOf = b => b.cabin ? 2 : CFG.HOUSE_CAP + (b.style || 0);
-const techAvailable = w => { const age = villageAge(w); return Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].age <= age && TECHS[id].req.every(r => w.tech.known[r])) };
+const styleNow = w => hasTech(w, 'skyscrapers') ? 6 : hasTech(w, 'concrete') ? 5 : hasTech(w, 'architecture') ? 4 : hasTech(w, 'brickwork') ? 3 : hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
+const bedsOf = b => b.cabin ? 2 : b.style === 6 ? CFG.HOUSE_CAP + 12 : CFG.HOUSE_CAP + (b.style || 0);       // a tower block sleeps 16
+/* v0.27 research limits. Open knowledge (a sandbox setting): 0 off, 1 relaxed (no material gates, twice the scholar capacity, half the cost growth), 2 unlimited (everything is open at once, cheap, no cap) */
+const openLevel = w => (w.settings && w.settings.openKnowledge) || 0;
+const techAvailableRaw = w => { const age = villageAge(w); return Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].age <= age && TECHS[id].req.every(r => w.tech.known[r])) };
+const techAvailable = w => {
+  const o = openLevel(w); if (o >= 2) return Object.keys(TECHS).filter(id => !w.tech.known[id]);
+  const raw = techAvailableRaw(w); return o ? raw : raw.filter(id => !techGaps(w, id).length);
+};
+/* what is open in principle but held back by a missing input (shown as "waiting for ...") */
+const techBlocked = w => openLevel(w) ? [] : techAvailableRaw(w).filter(id => techGaps(w, id).length);
+/* cost rises with everything already learned: the further up the tree, the harder each step */
+const techCost = (w, id) => {
+  const o = openLevel(w), n = Object.keys(w.tech.known).length, T = TECHS[id]; if (o >= 2) return Math.round(T.cost * 0.12);
+  return Math.round(T.cost * (1 + (o ? 0.006 : 0.012) * n));
+};
+/* scholars: only so much can be learned in a day; beyond the daily capacity extra effort is mostly wasted */
+const scholarCap = w => { const ad = w.vills.filter(v => v.isAdult()).length; return (3 + 0.13 * ad) * (1 + 0.5 * techFx(w, 'learn')) * (projBuilt(w, 'library') ? 1.3 : 1) * (openLevel(w) ? 2 : 1) };
 
 function addKnowledge(w, pts, v) {
   if (v && v.isElder && v.isElder()) pts *= 1.3;                       // elders pass on what they know
   if (projBuilt(w, 'library')) pts *= 1.5; if (w.rx) pts *= w.rx.know; pts *= 1 + techFx(w, 'learn');
-  w.tech.points += pts; if (v) w.tech.contrib[v.id] = (w.tech.contrib[v.id] || 0) + pts;
+  const t = w.tech; if (openLevel(w) < 2) { const room = Math.max(0, scholarCap(w) - (t.today || 0)); const over = Math.max(0, pts - room); pts = Math.min(pts, room) + over * 0.15; t.capHit = (t.capHit || 0) + (over > 0 ? 1 : 0) }
+  t.today = (t.today || 0) + pts; t.points += pts; if (v) t.contrib[v.id] = (t.contrib[v.id] || 0) + pts;
 }
 /* how much does the village need this discovery right now? (rules-based default for the council) */
 /* techs added in v0.24 have no hand-made need: judge them by their branch and the village's state */
@@ -46,10 +62,24 @@ function branchNeed(w, id) {
 function breadthNeed(w, id) {
   const T = TECHS[id], ids = TECH_BY_BRANCH[T.branch], known = ids.filter(x => w.tech.known[x]).length; return 0.3 * (1 - known / ids.length);
 }
+/* v0.27 who decides what is studied: the circles of the village pull the agenda toward their platform, in proportion to their numbers; the ruling circle counts double, and the harder the regime the less the others are heard. The philosophy picked at the start tilts whole branches. */
+const PHILOSOPHIES = {
+  balanced: { name: 'Balanced', tilt: {}, hint: 'No branch is favoured; the village follows need.' },
+  practical: { name: 'Practical', tilt: { food: 0.18, build: 0.18, craft: 0.18 }, hint: 'Farms, buildings and tools come first.' },
+  scholarly: { name: 'Scholarly', tilt: { mind: 0.25, health: 0.1, law: 0.05 }, hint: 'Learning, medicine and law come first.' },
+  martial: { name: 'Martial', tilt: { war: 0.3, craft: 0.06 }, hint: 'Arms, walls and discipline come first.' },
+  mercantile: { name: 'Mercantile', tilt: { sea: 0.22, law: 0.1, craft: 0.06 }, hint: 'Ships, markets and money come first.' }
+};
+function voiceNeed(w, id) {
+  const T = TECHS[id], ph = PHILOSOPHIES[(w.settings && w.settings.philosophy) || 'balanced'] || PHILOSOPHIES.balanced; let r = ph.tilt[T.branch] || 0;
+  const pop = Math.max(1, w.vills.length), foc = TECH_FOCUS[id], rg = w.gov && w.gov.ruling ? w.gov.ruling.gid : null, auth = w.rx ? Math.min(1, w.rx.A || 0) : 0.3;
+  for (const g of w.groups) { if (g.members.length < 4 || !g.platform) continue; const share = g.members.length / pop, weight = g.id === rg ? 2 : (1 - 0.6 * auth); if (g.platform.focus === foc) r += 0.5 * share * weight }
+  return r;
+}
 function techNeed(w, id) {
   const pop = w.vills.length, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
   const base = { nets: (w.fishOK ? 0.6 : 0.1) + (w.neigh ? 0.3 : 0), tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: (w.fishOK ? 0.9 : 0.1) + (w.neigh ? 0.35 : 0), rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4 + (w.neigh ? 0.2 : 0), forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0), trade: 0.55 + (food > 6 ? 0.3 : 0), coinage: 0.5, seatrade: 0.35 + (w.of('dock').length ? 0.3 : 0) };
-  return (base[id] !== undefined ? base[id] : branchNeed(w, id)) + breadthNeed(w, id) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id) + regimeNeed(w, id);
+  return (base[id] !== undefined ? base[id] : branchNeed(w, id)) + breadthNeed(w, id) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id) + regimeNeed(w, id) + voiceNeed(w, id);
 }
 function branchPref(v, id) {
   const t = v.trait; return ({ food: 0.3 * t.kind + 0.1, build: 0.3 * t.ind, craft: 0.3 * t.ind, sea: 0.3 * t.cur + 0.2 * t.brave, mind: 0.4 * t.cur, law: 0.3 * t.soc, war: 0.3 * t.brave + 0.1 * (1 - t.kind), health: 0.4 * t.kind })[TECHS[id].branch] || 0;
@@ -61,10 +91,17 @@ function chooseResearch(w, id, source) {
   const t = w.tech; t.focus = id; t.wait = 0;
   w.say(`The village sets its mind to ${TECHS[id].name.toLowerCase()}${source === 'claude' ? ' (council deliberated with Claude)' : ''}.`);
 }
+/* sandbox: learn a technology at once (only with Open knowledge on); what it builds on is granted with it */
+function grantTech(w, id) {
+  if (!openLevel(w) || !TECHS[id] || w.tech.known[id]) return false; const todo = [];
+  const need = x => { if (w.tech.known[x] || todo.includes(x)) return; for (const r of TECHS[x].req) need(r); todo.push(x) }; need(id);
+  for (const x of todo) { const t = w.tech; t.focus = x; t.points = techCost(w, x) + t.points; discover(w) }
+  return true;
+}
 function discover(w) {
   const t = w.tech, id = t.focus, T = TECHS[id], before = techEra(w);
   const top = Object.entries(t.contrib).map(([vid, pts]) => ({ v: w.vills.find(x => x.id === +vid), pts })).filter(x => x.v).sort((a, b) => b.pts - a.pts)[0];
-  t.known[id] = w.day; t.points = Math.max(0, t.points - T.cost) * 0.5; t.focus = null; t.wait = 0; t.contrib = {};
+  t.known[id] = w.day; t.points = Math.max(0, t.points - techCost(w, id)) * 0.5; t.focus = null; t.wait = 0; t.contrib = {};
   const by = top ? top.v : null; t.log.unshift({ id, day: w.day, by: by ? by.name : null }); if (t.log.length > 20) t.log.pop();
   if (by) { by.story(`Led the village to discover ${T.name.toLowerCase()}.`); by.mood = Math.min(100, by.mood + 15); by.reputation = Math.min(100, by.reputation + 10); if (by.desire && by.desire.kind === 'know') by.debates += 3 }
   for (const v of w.vills) v.mood = Math.min(100, v.mood + 4);
@@ -73,21 +110,22 @@ function discover(w) {
   if (id === 'carpentry' || id === 'masonry' || id === 'brickwork' || id === 'architecture' || id === 'concrete') w.say(`New homes and storehouses will now be built as ${({ carpentry: 'timber-framed buildings', masonry: 'stone buildings', brickwork: 'brick buildings', architecture: 'townhouses', concrete: 'apartment blocks' })[id]}; old ones can be upgraded.`);
 }
 function techDay(w) {
-  const t = w.tech, adults = w.vills.filter(v => v.isAdult()).length; addKnowledge(w, adults * 0.06);
+  const t = w.tech, adults = w.vills.filter(v => v.isAdult()).length; t.today = 0; addKnowledge(w, adults * 0.06);
   t.peak = Math.max(t.peak || 0, w.vills.length); if (w.day % 10 === 0) { try { techLossDay(w) } catch (e) { w.fault('techloss', e) } try { neighbourTechDay(w) } catch (e) { w.fault('neightech', e) } }
   const avail = techAvailable(w); if (!avail.length) return;
   if (!t.focus) {
     t.wait++;                                                           // the council normally chooses at a meeting; without one, the village drifts to the most useful idea
     if (!w.gov.council.length || t.wait >= 9) chooseResearch(w, avail.map(id => ({ id, s: techNeed(w, id) + Math.random() * 0 })).sort((a, b) => b.s - a.s)[0].id, 'rules');
   }
-  if (t.focus && t.points >= TECHS[t.focus].cost) discover(w);
+  if (t.focus && !avail.includes(t.focus) && !techAvailableRaw(w).includes(t.focus)) t.focus = null;        // no longer possible
+  if (t.focus && avail.includes(t.focus) && t.points >= techCost(w, t.focus)) discover(w);           // a missing input pauses the study
 }
 /* council agenda item: what should the village study next? */
 function researchAgenda(w, base, ms) {
   const avail = techAvailable(w), g = w.gov;
   const rf = rulingFocus(w), score = id => techNeed(w, id) + ms.reduce((s, m) => s + techPref(m.v, id), 0) / ms.length + (rf && TECH_FOCUS[id] === rf ? 0.12 : 0);      // the ruling circle nudges the agenda
   avail.sort((a, b) => score(b) - score(a)); avail.length = Math.min(avail.length, 6);
-  const options = avail.map(id => ({ id: 'r_' + id, text: `${TECHS[id].name} (${TECHS[id].cost} knowledge, ${BRANCHES[TECHS[id].branch].name.toLowerCase()}): ${TECHS[id].desc}` }));
+  const options = avail.map(id => ({ id: 'r_' + id, text: `${TECHS[id].name} (${techCost(w, id)} knowledge, ${BRANCHES[TECHS[id].branch].name.toLowerCase()}): ${TECHS[id].desc}` }));
   const def = 'r_' + avail[0];
   deliberate(w, { ...base, kind: 'research', topic: `The village has gathered enough curiosity to pursue one new line of study. Age: ${AGES[techEra(w)]}. Known: ${Object.keys(w.tech.known).map(id => TECHS[id].name).join(', ') || 'nothing yet'}. Which should the council direct everyone toward?`, options, default: def,
     apply: (id, sp, reason, src) => {
