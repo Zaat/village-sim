@@ -27,7 +27,7 @@ function techFx(w, key) {
 }
 const ladderLevel = (w, name) => (LADDERS[name] || []).filter(id => w.tech.known[id]).length;       // how far up a ladder (terra, explore, war) the village has climbed
 const styleNow = w => hasTech(w, 'concrete') ? 5 : hasTech(w, 'architecture') ? 4 : hasTech(w, 'brickwork') ? 3 : hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
-const bedsOf = b => CFG.HOUSE_CAP + (b.style || 0);
+const bedsOf = b => b.cabin ? 2 : CFG.HOUSE_CAP + (b.style || 0);
 const techAvailable = w => { const age = villageAge(w); return Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].age <= age && TECHS[id].req.every(r => w.tech.known[r])) };
 
 function addKnowledge(w, pts, v) {

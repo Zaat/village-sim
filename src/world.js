@@ -11,7 +11,7 @@ class World {
     this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0; this.visit = null; this.fortifyUntil = 0; this.dipDay = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, raids: false, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this); initLives(this); initStats(this); initConcerns(this);
+    this.settings = { survival: false, disasters: true, crime: true, raids: false, hardship: 1, ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initBridges(this); initLives(this); initStats(this); initConcerns(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -159,8 +159,13 @@ class World {
   nearRect(x, y, b) { const dx = x < b.x ? b.x - x : x >= b.x + b.w ? x - (b.x + b.w - 1) : 0, dy = y < b.y ? b.y - y : y >= b.y + b.h ? y - (b.y + b.h - 1) : 0; return dx + dy <= 1 }
   assignHome(v) {
     if (v.home != null) return;
-    let best = null, bd = 1e9;
-    for (const h of this.houses()) { if (h.occ.length >= bedsOf(h)) continue; const d = Math.abs(h.x - this.cx) + Math.abs(h.y - this.cy); if (d < bd) { bd = d; best = h } }
+    let best = null, bd = 1e9; const pv = privOf(v);
+    for (const h of this.houses()) {
+      if (h.occ.length >= bedsOf(h)) continue;
+      if (h.cabin && h.owner != null && h.owner !== v.id && !(v.partner != null && h.owner === v.partner)) continue;      // a cabin belongs to the one who built it (and their partner)
+      const n = h.occ.length, d = Math.abs(h.x - this.cx) + Math.abs(h.y - this.cy) - (n === 0 ? 14 * pv : 5 * pv * n) - (n > 0 ? (1 - pv) * 2.5 * Math.min(n, 2) : 0);      // private people look for empty houses, sociable ones for company
+      if (d < bd) { bd = d; best = h }
+    }
     if (best) { best.occ.push(v.id); v.home = best.id; claimHome(this, best, v) }
   }
   pending() { const p = { wood: 0, stone: 0 }; for (const b of this.bps) for (const t of ['wood', 'stone']) p[t] += Math.max(0, b.cost[t] - b.have[t] - b.inc[t]); return p }
@@ -180,6 +185,7 @@ class World {
     if (bp.type === 'logcamp') this.say('A logging camp is raised beside the forest.');
     if (bp.type === 'minecamp') this.say('A mining camp opens at the rockface.');
     if (bp.type === 'lodge') this.say('A hunting lodge is built near the game trails.');
+    if (bp.type === 'house' && bp.cabin) { cabinDone(this, b, bp); return }
     if (bp.type === 'house') this.say(`A new ${HOUSE_STYLES[b.style].toLowerCase()} is finished.`);
     if (bp.type === 'farm') this.say('A new field is ready for sowing.');
     if (bp.type === 'store') this.say(b.style >= 2 ? 'A stone granary is raised, so the village can keep more.' : 'A storehouse is raised, so the village can keep more.');
@@ -250,10 +256,10 @@ class World {
   }
   tryConceive(f, m) {
     if (!f.isAdult() || !m.isAdult() || f.partner !== m.id) return;
-    if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX) return;
+    if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX * (this.lifeScale || 1)) return;
     if (this.vills.length + 1 > this.beds()) return;
     const gp = this.gov.policy.growth; if (this.stock.food < this.vills.length * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
-    if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
+    if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
   }
   birth(f) {
     const dad = this.vills.find(v => v.id === f.father), c = new Villager(this, this.r() < 0.5 ? 'f' : 'm', 0, f.tx, f.ty, null, [f, dad]);

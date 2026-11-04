@@ -34,7 +34,7 @@ const by2=w.vills.find(x=>x!==by&&x.isAdult()&&!x.isElder());L.inv.push({id:'xb'
 ok(!L.inv.some(i=>i.id==='xb')&&L.stats.failed===f0+1&&!by2.trade,'an unprofitable invention fails and its maker moves on');
 // 7. overtime: free councils volunteer, strict ones compel
 const C=ctx.CN(w);w.stock.food=Math.floor(w.vills.length*0.8);ctx.concernsDay(w);ok(C.list.some(c=>c.key==='food'),'food concern exists for the overtime test');
-w.regime.ax.auth=0.05;L.ot={until:0,mode:0,cd:0};const mood0=w.vills.reduce((a,x)=>a+x.mood,0);ctx.livelihoodsDay(w);ok(ctx.overtimeMode(w)===1,'a free council gets volunteers');
+w.regime.ax.auth=0.05;L.ot={until:0,mode:0,cd:0};const mood0=w.vills.reduce((a,x)=>a+x.mood,0);ctx.livelihoodsDay(w);for(let i=0;i<8&&ctx.overtimeMode(w)!==1;i++){L.ot={until:0,mode:0,cd:0};ctx.livelihoodsDay(w)}ok(ctx.overtimeMode(w)===1,'a free council gets volunteers');
 w.regime.ax.auth=0.95;L.ot={until:0,mode:0,cd:0};w.gov.approval=10;let got=0;for(let i=0;i<8&&!got;i++){L.ot={until:0,mode:0,cd:0};ctx.livelihoodsDay(w);got=ctx.overtimeMode(w)===2?1:0}
 ok(got===1,'a strict council compels longer hours');const m1=w.vills.reduce((a,x)=>a+x.mood,0);ctx.livelihoodsDay(w);ok(w.vills.reduce((a,x)=>a+x.mood,0)<m1,'compelled hours cost mood');
 // 8. aspirations

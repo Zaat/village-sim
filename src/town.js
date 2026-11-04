@@ -90,16 +90,33 @@ function planRoads(w) {
     return;
   }
 }
+/* ---------- growth: how forgiving the world is, and how well life is going ---------- */
+const HARDSHIP = [
+  { name: 'Gentle', fert: 1.25, imm: 1.4, wolf: 0.6, sick: 0.7, cold: 0.7, note: 'more births and newcomers, fewer wolves, fevers and hard winters' },
+  { name: 'Normal', fert: 1, imm: 1, wolf: 1, sick: 1, cold: 1, note: 'the usual balance' },
+  { name: 'Harsh', fert: 0.8, imm: 0.7, wolf: 1.4, sick: 1.3, cold: 1.3, note: 'fewer births and newcomers, more wolves, fevers and hard winters' },
+];
+const hardOf = w => HARDSHIP[w.settings.hardship == null ? 1 : w.settings.hardship] || HARDSHIP[1];
+/* prosperity 0.3..1.8, refreshed daily: food in store, spare beds, mood and health. It nudges births, newcomers and how far ahead builders plan. */
+function prosperityDay(w) {
+  const pop = Math.max(1, w.vills.length), food = clamp(w.stock.food / pop / 6, 0, 1.5), room = clamp((w.beds() - pop) / (pop * 0.15 + 2), 0, 1);
+  let mood = 0, hp = 0; for (const v of w.vills) { mood += v.mood; hp += v.health } mood /= pop * 100; hp /= pop * 100;
+  const fa = w.vills.filter(v => v.isAdult() && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)); w.pairNeed = fa.length >= 6 ? clamp(1 - (fa.filter(v => v.partner != null).length / fa.length) / 0.55, 0, 1) : 0;       // few couples among the fertile: people are readier to settle down
+  w.lifeScale = 1 + 0.5 * Math.min(0.75, techFx(w, 'health'));       // medicine, nutrition and sanitation stretch a life by up to about 37%
+  w.prosp = clamp(0.4 + 0.35 * food + 0.35 * room + 0.5 * (mood - 0.5) + 0.3 * (hp - 0.7), 0.3, 1.8);
+}
+const fertilityMult = w => clamp(w.prosp == null ? 1 : w.prosp, 0.5, 1.6);
 function planTown(w) {
   const pop = w.vills.length, count = t => w.bps.filter(b => b.type === t).length;
   const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = w.beds() + count('house') * (CFG.HOUSE_CAP + styleNow(w));
   const structBps = w.bps.filter(b => b.type !== 'road').length;
-  if (structBps < 2 + Math.floor(pop / 8)) {
+  const drive = ordersOf(w).build;
+  if (structBps < 2 + Math.floor(pop / 8) + (drive ? 4 : 0)) {
     const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
     if (cap < pop + 1) placeBuilding(w, 'house');
     else if (farms < Math.min(30, Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
     else if (full && stores < 10) placeBuilding(w, 'store');
-    else if (cap < pop + 4 && w.stock.food > pop * 4 && w.stock.wood >= 10) placeBuilding(w, 'house');
+    else if (cap < pop * (1.1 + 0.2 * clamp((w.prosp || 1) - 0.8, 0, 1) + (drive ? 0.3 : 0)) + 3 && w.stock.food > pop * 3 && w.stock.wood >= 10) placeBuilding(w, 'house');       // build ahead when life is good
   }
   if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(3, 1 + Math.floor(pop / 40)) && w.stock.wood > 30) placeDock(w);
   if (w.has('trade') && pop >= 20 && w.of('market').length + count('market') < Math.min(3, 1 + Math.floor(pop / 70)) && w.stock.wood > 30) placeBuilding(w, 'market');
@@ -136,7 +153,7 @@ function assignRoles(w) {
   const winter = w.season === 3, wolves = w.animals.some(a => a.kind === 'wolf' && a.alive);
   const farms = w.of('farm').length, building = w.bps.length, watch = Math.max(0, w.gov.policy.defense);
   const q = {
-    builder: n >= 3 ? clamp(Math.round(n * 0.14) + (building > 3 ? 1 : 0), 1, 6) : 0,
+    builder: n >= 3 ? clamp(Math.round(n * 0.14) + (building > 3 ? 1 : 0) + (ordersOf(w).build ? Math.ceil(n * 0.1) : 0), 1, ordersOf(w).build ? 10 : 6) : 0,
     farmer: winter ? 0 : Math.min(farms, Math.round(n * 0.3)),
     hunter: n >= 5 ? clamp(Math.round(n * 0.1) + (wolves ? 2 : 0) + Math.round(watch * 2), 1, 7) : 0,
     fisher: w.fishOK && n >= 6 ? clamp(Math.round(n * 0.09), 1, 5) : 0,
@@ -187,27 +204,28 @@ function storm(w) {
   else if (roofs) w.emit('event', `A storm batters ${roofs} roofs and fences.`, { kind: 'storm' });
 }
 function townNewDay(w) {
-  const pop = w.vills.length, s = w.season, d = w.day, sv = w.settings.survival ? 2 : 1, dis = w.settings.disasters;
+  prosperityDay(w);
+  const pop = w.vills.length, s = w.season, d = w.day, sv = w.settings.survival ? 2 : 1, dis = w.settings.disasters, hd = hardOf(w);
   if (w.seasonDay === 1 && dis) {
-    if (s === 3 && w.r() < 0.3 * sv) { w.harsh = true; w.emit('event', 'A bitter winter sets in. The cold will be harsh this year.', { kind: 'harsh' }) }
+    if (s === 3 && w.r() < 0.3 * sv * hd.cold) { w.harsh = true; w.emit('event', 'A bitter winter sets in. The cold will be harsh this year.', { kind: 'harsh' }) }
     if (s === 1 && w.r() < 0.25 * sv) { w.drought = true; w.emit('event', 'The summer is dry. The crops grow slowly.', { kind: 'drought' }) }
   }
   if (d < 4) return;
   if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1) * (1 - 0.5 * lesson(w, 'fire'))) fire(w); if (w.r() < 0.02 * sv * (1 - 0.4 * lesson(w, 'storm'))) storm(w) }
   const cap = w.beds(), gp = w.gov.policy.growth;
-  if (pop < 70 && cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1)) {            // travelers seek a home
+  if (cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1) * hardOf(w).imm * clamp(((w.prosp == null ? 1 : w.prosp) - 0.5) * 1.3, 0, 1.4) * (pop < 70 ? 1 : 120 / (120 + pop - 70))) {            // travelers seek a home
     const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * 3) | 0);
     if (sp) {
       const names = []; for (let k = 0; k < n; k++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 12 + w.r() * 20, sp.x, sp.y); v.hunger = 85; v.story('Arrived at the village as a traveler seeking shelter.'); w.vills.push(v); names.push(v.name) }
       noteFlow(w, 'arrived', n); w.emit('event', `${names.join(', ')} arrive${n === 1 ? 's' : ''} seeking shelter, and ${n === 1 ? 'is' : 'are'} welcomed.`, { kind: 'newcomers', names });
     }
   }
-  if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most
+  if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * hd.sick * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most
     let sick = 0;
     for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')) * (1 - Math.min(0.75, techFx(w, 'health'))); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
-  const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4) * (1 - (w.liv ? w.liv.fx.guard : 0));       // packs return to where there is game
+  const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * hd.wolf * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4) * (1 - (w.liv ? w.liv.fx.guard : 0));       // packs return to where there is game
   if (pop >= 6 && w.r() < wolfChance && !w.animals.some(a => a.kind === 'wolf' && a.alive)) {
     const sp = ringSpot(w, 24, 32), n = 2 + ((w.r() * 3) | 0);
     if (sp) { for (let k = 0; k < n; k++) w.animals.push(new Animal(w, 'wolf', sp.x, sp.y)); w.emit('event', `A pack of ${n} wolves has been spotted near the village!`, { kind: 'wolves' }) }

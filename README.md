@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.25 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.26 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,18 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Growth and housing: a village that responds to how well life is going (new in 0.26)
+Long runs showed the village stalling at 80&ndash;150 people with a third of its beds empty and plenty of food. The cause was not housing or food (0 conceptions were ever blocked for lack of a bed or food over 30 years on two seeds): births were a flat chance, immigration stopped at 70 people, and houses were only built when beds ran out.
+- **Prosperity:** a daily 0.3&ndash;1.8 index from food in store, spare beds, mood and health. It scales births, how easily people pair up, how many newcomers arrive (no fixed cap any more, tapering as the town grows) and how far ahead builders plan.
+- **Pairing and lifespan:** on some seeds singles never became friends, so no couples formed for years. People are now readier to settle down when few of the fertile are partnered, and health technology (medicine, nutrition) lengthens life by up to about 37%.
+- **Result (6 island seeds, 12 years, v0.25 against v0.26):** mean population 70 &rarr; 114 at year 4 and 90 &rarr; 141 at year 12, couples 14 &rarr; 22, beds 123 &rarr; 208, with no errors and no more starvation.
+- **Hardship (Gentle / Normal / Harsh):** how forgiving the world is: births, newcomers, wolves, fevers and hard winters. Pick it in the new-world dialog; change it any time in Settings (a live change is written to the chronicle so it never passes silently).
+- **Privacy and personal space:** each person's wish for privacy is the opposite of their sociability. Private people choose empty houses and lose mood when strangers share their roof; sociable people look for company and are lonelier alone. A very private adult may build a **cabin** out in the trees (a few at most, two beds, kept for its builder and partner). Sleeping outside costs mood, and in winter health (less so before carpentry).
+- **Housing concern:** when people have no bed of their own, or many are crowded against their nature, a *Not enough homes* concern appears with a **Building drive** response (20 days: more builders, homes built well ahead of need).
+- **Statistics:** new series for Prosperity, Beds, Sleeping outside and Crowded against their nature; new event Cabins built.
+- **Fixes:** old saves no longer lose their statistics (series added in later versions are filled in on load); the diagnostics report shows the real version.
+- Tests: `tests/privacy_events.js` (24), `tests/stats_legacy.js` (4), `tests/ui_growth.js` (page test and screenshots). New script: `tools/probe_growth.js SEED MAP YEARS` (conception outcomes, beds, food, couples; `SRC=dir` runs another version's source).
 
 ## Livelihoods: everyone finds a way to make a living (new in 0.25)
 Beyond the six heavy roles there are now about 35 trades: odd jobs and care from the very start (childminder, helper, porter, water carrier, mender, kitchen gardener, launderer), crafts unlocked by technology (potter, weaver, tailor, smith, carpenter, baker, brewer, jeweller, glassblower ...) and services (healer, midwife, teacher, scribe, scholar, innkeeper, musician, watchman, shopkeeper, merchant, banker ...). Each has real **demand** for the village's size and needs, a price and a small real effect: tools speed up work, cloth keeps people warm, pots and fine goods bring comfort, bread feeds, healers heal, teachers teach, musicians and innkeepers cheer, watchmen keep wolves away. A market full of a good wants no more of it.

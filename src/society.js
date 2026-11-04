@@ -78,7 +78,7 @@ function socialInteract(w, a, b) {
   a.social = Math.min(100, a.social + 45); b.social = Math.min(100, b.social + 30);
   if (prev < 50 && r >= 50) { w.say(`${a.name} and ${b.name} became friends.`); a.story(`Became friends with ${b.name}.`); b.story(`Became friends with ${a.name}.`) }
   if (prev > -40 && r <= -40) { w.say(`${a.name} and ${b.name} have fallen out.`); a.story(`Fell out with ${b.name}.`); b.story(`Fell out with ${a.name}.`) }
-  if (a.sex !== b.sex && a.isAdult() && b.isAdult() && r >= 50 && a.partner == null && b.partner == null && w.r() < 0.5) pairUp(w, a, b);
+  if (a.sex !== b.sex && a.isAdult() && b.isAdult() && r >= 50 - 12 * clamp(fertilityMult(w) - 1, 0, 0.6) - 22 * (w.pairNeed || 0) && a.partner == null && b.partner == null && w.r() < 0.5 * hardOf(w).fert * fertilityMult(w)) pairUp(w, a, b);       // good times and gentle worlds make it easier to settle down
   if (a.partner === b.id && a.sex !== b.sex) w.tryConceive(a.sex === 'f' ? a : b, a.sex === 'f' ? b : a);
 }
 function pairUp(w, a, b) {

@@ -206,8 +206,59 @@ function lifeMood(v) {
 }
 
 /* ================= daily ================= */
+/* ---------- privacy and personal space ----------
+   Some people want a house to themselves, some want company. The preference is the opposite of sociability (trait soc). Private people pick
+   empty houses, suffer when strangers share their roof, and the most private build a cabin away from the village. Sleeping outside is hard on
+   everyone, worst in winter (and less bothersome before carpentry, when nobody has a proper roof). */
+const privOf = v => clamp(1 - v.trait.soc, 0, 1);
+const isKin = (v, id) => v.partner === id || (v.kids && v.kids.includes(id)) || (v.parentIds && v.parentIds.includes(id));
+function privacyDay(w) {
+  const early = w.has('carpentry') ? 1 : 0.4, pen = [0.3, 0.1, 0.6, 1.8][w.season] * early, P = w.priv = { out: 0, crowd: 0, lonely: 0 };
+  for (const v of w.vills) {
+    if (v.isChild()) continue;
+    const h = v.home != null ? w.buildings.get(v.home) : null;
+    if (!h) { if (w.houses().length) { P.out++; v.mood = Math.max(0, v.mood - 1.2 * pen); if (w.season === 3 && early === 1) v.health = Math.max(1, v.health - 1.2) } continue }
+    const pv = privOf(v), others = h.occ.filter(id => id !== v.id && !isKin(v, id)).length, over = Math.max(0, others - Math.round((1 - pv) * (bedsOf(h) - 1)));
+    if (over) { P.crowd++; v.mood = Math.max(0, v.mood - 0.35 * over * (0.4 + pv)) }
+    else if (pv < 0.25 && h.occ.length === 1 && v.partner == null) { P.lonely++; v.mood = Math.max(0, v.mood - 0.25) }
+  }
+  cabinDay(w);
+}
+/* a very private adult builds a cabin out in the trees (a few at most) */
+function cabinDay(w) {
+  const pop = w.vills.length; if (pop < 20 || w.day < 40 || !w.has('carpentry')) return;
+  const have = [...w.buildings.values()].filter(b => b.cabin).length + w.bps.filter(b => b.cabin).length;
+  if (have >= Math.floor(pop / 30) || w.stock.wood < 40 || w.stock.stone < 8 || w.r() > 0.25) return;
+  const c = w.vills.filter(v => v.isAdult() && v.home != null && privOf(v) >= 0.72 && !propsOf(w, v).some(b => b.cabin) && !w.bps.some(b => b.forId === v.id));
+  if (!c.length) return;
+  const v = c[(w.r() * c.length) | 0], sp = cabinSpot(w);
+  if (sp) { makeBp(w, 'house', sp.x, sp.y, { cabin: true, forId: v.id }); w.emit('event', `${v.name} wants more peace and quiet, and starts a cabin out in the trees.`, { kind: 'cabin', v }) }
+}
+function cabinSpot(w) {
+  const [bw, bh] = CFG.SIZE.house, { W, H } = CFG, cands = [];
+  for (let y = w.cy - 30; y <= w.cy + 30; y += 2) for (let x = w.cx - 38; x <= w.cx + 38; x += 2) {
+    if (x < 3 || y < 3 || x + bw >= W - 3 || y + bh >= H - 3) continue;
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 11 || d > 28) continue;
+    let ok = true;
+    for (let dy = -1; dy <= bh && ok; dy++) for (let dx = -1; dx <= bw; dx++) { const i = (y + dy) * W + x + dx, inside = dy >= 0 && dy < bh && dx >= 0 && dx < bw; if (w.terr[i] === TERR.WATER || w.bmap[i] || w.bpAt.has(i) || w.claim[i] >= 0 || (inside && (w.terr[i] !== TERR.GRASS || w.feat[i] || w.road[i]))) { ok = false; break } }
+    if (!ok) continue;
+    let near = 0; for (const b of w.buildings.values()) if (Math.abs(b.x - x) < 7 && Math.abs(b.y - y) < 7) near++; if (near) continue;
+    const trees = countFeat(w, x + 1, y + 1, 4, f => f === FEAT.OAK || f === FEAT.PINE); if (trees < 3) continue;
+    cands.push({ x, y, score: Math.abs(d - 18) - trees * 0.25 + w.r() * 2 });
+  }
+  cands.sort((a, b) => a.score - b.score);
+  for (const c of cands.slice(0, 6)) if (w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: bw, h: bh }), 220)) return c;
+  return null;
+}
+function cabinDone(w, b, bp) {
+  b.cabin = true; const o = vById(w, bp.forId); if (!o) return;
+  const leave = v => { const old = v.home != null ? w.buildings.get(v.home) : null; if (old) { const k = old.occ.indexOf(v.id); if (k >= 0) old.occ.splice(k, 1); if (old.owner === v.id) old.owner = null } b.occ.push(v.id); v.home = b.id };
+  leave(o); b.owner = o.id; const p = o.partner != null ? vById(w, o.partner) : null; if (p && p.isAdult()) leave(p);
+  o.mood = Math.min(100, o.mood + 12); o.story('Built a cabin in the trees, with room to breathe.');
+  w.say(`${o.name} moves into a new cabin out in the trees${p ? ', with ' + p.name : ''}.`); statCount(w, 'cabin');
+}
 function livesDay(w) {
-  const L = LV(w); policyPushDay(w); statusDay(w); feudDay(w);
+  const L = LV(w); policyPushDay(w); statusDay(w); feudDay(w); privacyDay(w);
   for (const v of w.vills) if (v.isAdult() && !v.hobby) ensureHobby(w, v);
   for (const b of w.buildings.values()) if (b.owner && !vById(w, b.owner)) b.owner = null;
 }

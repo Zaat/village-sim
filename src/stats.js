@@ -14,7 +14,7 @@
 const STAT_EVERY = 4, STAT_CAP = 2400;
 const STAT_GROUPS = ['People', 'Hardship', 'Society', 'Economy & expansion', 'Knowledge'];
 const STAT_EVENTS = [
-  ['born', 'Births', 'People'], ['arrivals', 'Newcomers arrive', 'People'], ['couples', 'Couples formed', 'People'], ['died', 'Deaths (all)', 'People'],
+  ['born', 'Births', 'People'], ['cabin', 'Cabins built', 'People'], ['arrivals', 'Newcomers arrive', 'People'], ['couples', 'Couples formed', 'People'], ['died', 'Deaths (all)', 'People'],
   ['died_age', 'Died of old age', 'People'], ['died_hunger', 'Starved', 'People'], ['died_cold', 'Froze', 'People'], ['died_fever', 'Died of fever', 'People'], ['died_wolf', 'Killed by wolves', 'People'], ['died_sea', 'Lost at sea', 'People'], ['died_violence', 'Killed in raids or strife', 'People'],
   ['fire', 'Fires', 'Hardship'], ['storm', 'Storms', 'Hardship'], ['drought', 'Droughts', 'Hardship'], ['harsh_winter', 'Harsh winters', 'Hardship'], ['fever', 'Fever outbreaks', 'Hardship'], ['wolves', 'Wolf attacks', 'Hardship'], ['famine', 'Famines', 'Hardship'], ['collapse', 'Buildings collapsed', 'Hardship'], ['cargo_lost', 'Cargoes lost', 'Hardship'],
   ['election', 'Elections', 'Society'], ['decision', 'Council decisions', 'Society'], ['coup', 'Coups', 'Society'], ['uprising', 'Uprisings', 'Society'], ['purge', 'Purges', 'Society'], ['reform', 'Reforms', 'Society'], ['rival_council', 'Rival councils', 'Society'], ['strike', 'Strikes', 'Society'], ['civil_strife', 'Civil strife', 'Society'], ['secession', 'Secessions', 'Society'], ['sect', 'Sects founded', 'Society'],
@@ -27,6 +27,10 @@ const MARKED = new Set(['concern_critical', 'tech_lost', 'coup', 'uprising', 'se
 
 const STAT_SERIES = [
   { id: 'pop', label: 'Population', group: 'People', get: w => w.vills.length },
+  { id: 'prosp', label: 'Prosperity index (fertility and newcomers)', group: 'People', get: w => w.prosp == null ? 1 : w.prosp },
+  { id: 'beds', label: 'Beds', group: 'People', get: w => w.beds() },
+  { id: 'outside', label: 'Sleeping outside', group: 'People', get: w => w.priv ? w.priv.out : 0 },
+  { id: 'crowded', label: 'Crowded against their nature', group: 'People', get: w => w.priv ? w.priv.crowd : 0 },
   { id: 'adults', label: 'Adults', group: 'People', get: w => w.vills.filter(v => v.isAdult() && !v.isElder()).length },
   { id: 'elders', label: 'Elders', group: 'People', get: w => w.vills.filter(v => v.isElder()).length },
   { id: 'young', label: 'Children and youths', group: 'People', get: w => w.vills.filter(v => !v.isAdult()).length },
@@ -76,6 +80,11 @@ function initStats(w) {
   w.stats = { v: 1, every: STAT_EVERY, days: [], s: {}, ev: {}, prev: {}, firsts: {}, marks: [], eras: [], startDay: w.day };
   for (const s of STAT_SERIES) w.stats.s[s.id] = [];
 }
+/* old saves: add any series the file lacks and pad short ones, so every series lines up with `days` */
+function statsEnsure(S) {
+  const n = S.days.length;
+  for (const s of STAT_SERIES) { const a = S.s[s.id] || (S.s[s.id] = []); while (a.length < n) a.push(0); if (a.length > n) a.length = n }
+}
 const ST = w => w.stats || (initStats(w), w.stats);
 /* one thing happened: count it in the total and in this year's column */
 function statCount(w, key, n = 1, text) {
@@ -119,6 +128,7 @@ function statFromEmit(w, type, text, data) {
 }
 function statsDay(w) {
   const S = ST(w); if (w.day % STAT_EVERY !== 0) return;
+  if (!S.fixed) { statsEnsure(S); S.fixed = true }
   S.days.push(w.day);
   for (const s of STAT_SERIES) {
     let v;

@@ -92,6 +92,10 @@ const SETTING_DEFAULTS = { survival: false, disasters: true, crime: true, raids:
 function loadSettings() { let s = {}; try { s = JSON.parse(localStorage.getItem('villagesim.settings') || '{}') } catch (e) { } return { ...SETTING_DEFAULTS, ...s } }
 function saveSettings() { try { localStorage.setItem('villagesim.settings', JSON.stringify(world.settings)) } catch (e) { } }
 for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('change', e => { world.settings[k] = e.target.checked; saveSettings() });
+$('set_hardship').addEventListener('change', e => {            // live change: noted in the chronicle so it never passes silently
+  const v = +e.target.value; if (v === world.settings.hardship) return; world.settings.hardship = v; saveSettings(); lsSet('villagesim.hardship', String(v));
+  world.emit('event', `The council notes that life feels ${['gentler', 'as it was', 'harsher'][v]} now (hardship set to ${HARDSHIP[v].name}).`, { kind: 'hardship' });
+});
 
 /* ---------- world lifecycle ---------- */
 function adoptWorld(w) {
@@ -100,7 +104,7 @@ function adoptWorld(w) {
   world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
   world.dbg.onFault = () => dbgPersist(world); world.profReset();
-  for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k];
+  for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k]; $('set_hardship').value = String(world.settings.hardship == null ? 1 : world.settings.hardship);
   R.cam.x = (world.cx + 1) * CFG.T; R.cam.y = (world.cy + 1) * CFG.T; R.cam.z = Math.max(1.4, Math.min(3, R.vw / 420)); clampCam(); concernsReset(); updateUI();
 }
 const MAP_SIZES = { compact: { dims: [200, 140], label: 'Compact', note: '200 × 140: quick and close' }, standard: { dims: [260, 180], label: 'Standard', note: '260 × 180: the usual world' }, large: { dims: [340, 236], label: 'Large', note: '340 × 236: room for far settlements' } };
@@ -111,22 +115,24 @@ function sizeChoice() { const m = lsGet('villagesim.mapsize', 'standard'); retur
 function sizeFor(type, size) { return (size === 'compact' && (type === 'island' || type === 'archipelago')) ? 'standard' : size }
 function newWorld(seed, opts) {
   seed = seed >>> 0; const mc = (opts && opts.type) || mapChoice(), type = mc === 'auto' ? pickMapType(seed) : mc, size = sizeFor(type, (opts && opts.size) || sizeChoice());
-  adoptWorld(new World(seed, { ...loadSettings(), fade: true, map: type }, MAP_SIZES[size].dims));
+  adoptWorld(new World(seed, { ...loadSettings(), hardship: (opts && opts.hardship != null) ? opts.hardship : +lsGet('villagesim.hardship', '1'), fade: true, map: type }, MAP_SIZES[size].dims));
 }
 /* ---- the new-world dialog ---- */
-let nwType = 'auto', nwSize = 'standard';
+let nwType = 'auto', nwSize = 'standard', nwHard = 1;
 function nwRender() {
   $('nw_types').innerHTML = [['auto', 'Auto', 'Chosen by the seed'], ...Object.keys(MAP_TYPES).map(k => [k, MAP_TYPES[k].label, MAP_TYPES[k].blurb])].map(([k, l, b]) => `<button data-t="${k}" class="${nwType === k ? 'sel' : ''}"><b>${l}</b><span>${b}</span></button>`).join('');
   $('nw_sizes').innerHTML = Object.keys(MAP_SIZES).map(k => `<button data-s="${k}" class="${nwSize === k ? 'sel' : ''}"><b>${MAP_SIZES[k].label}</b><span>${MAP_SIZES[k].note}</span></button>`).join('');
+  $('nw_hard').innerHTML = HARDSHIP.map((h, i) => `<button data-h="${i}" class="${nwHard === i ? 'sel' : ''}"><b>${h.name}</b><span>${h.note}</span></button>`).join('');
   const eff = sizeFor(nwType === 'auto' ? 'x' : nwType, nwSize); $('nw_note').textContent = eff !== nwSize ? 'Island and archipelago worlds need sea around them, so they use the Standard size.' : nwSize === 'large' ? 'Large maps take more memory and a little more time per step; they suit settlements and long games.' : '';
 }
-function nwOpen() { if (drawerOpen()) toggleDrawer(false); nwType = mapChoice(); nwSize = sizeChoice(); $('nw_seed').value = (Math.random() * 1e9) | 0; nwRender(); $('nw').style.display = 'flex'; $('nw_seed').focus(); $('nw_seed').select() }
+function nwOpen() { if (drawerOpen()) toggleDrawer(false); nwType = mapChoice(); nwSize = sizeChoice(); nwHard = +lsGet('villagesim.hardship', '1'); $('nw_seed').value = (Math.random() * 1e9) | 0; nwRender(); $('nw').style.display = 'flex'; $('nw_seed').focus(); $('nw_seed').select() }
 function nwClose() { $('nw').style.display = 'none' }
 $('restart').onclick = nwOpen; $('nw_cancel').onclick = nwClose; $('nw').addEventListener('pointerdown', e => { if (e.target === $('nw')) nwClose() });
 $('nw_dice').onclick = () => { $('nw_seed').value = (Math.random() * 1e9) | 0; $('nw_seed').focus(); $('nw_seed').select() };
 $('nw_types').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwType = b.dataset.t; nwRender() } });
+$('nw_hard').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwHard = +b.dataset.h; nwRender() } });
 $('nw_sizes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwSize = b.dataset.s; nwRender() } });
-$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize }) };
+$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); lsSet('villagesim.hardship', String(nwHard)); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize, hardship: nwHard }) };
 $('nw_seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('nw_go').click(); e.stopPropagation() });
 
 /* ---------- save & load ----------

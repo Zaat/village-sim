@@ -18,6 +18,7 @@ const CONCERN_KINDS = {
   pop_slide: 'A long decline',
   food: 'Food is running low',
   fuel: 'Not enough firewood for winter',
+  housing: 'Not enough homes',
   unity: 'The village is divided',
   faction: 'A rival faction',
   outpost: 'An outpost is slipping away',
@@ -36,9 +37,9 @@ function winterWood(w) {
 /* which standing orders are in force right now */
 function ordersOf(w) {
   const O = w.concerns ? w.concerns.orders : null; if (!O) return NO_ORDERS;
-  return { ration: (O.ration || 0) > w.day, food: (O.food || 0) > w.day, fuel: (O.fuel || 0) > w.day, allhands: (O.allhands || 0) > w.day };
+  return { ration: (O.ration || 0) > w.day, food: (O.food || 0) > w.day, fuel: (O.fuel || 0) > w.day, allhands: (O.allhands || 0) > w.day, build: (O.build || 0) > w.day };
 }
-const NO_ORDERS = { ration: false, food: false, fuel: false, allhands: false };
+const NO_ORDERS = { ration: false, food: false, fuel: false, allhands: false, build: false };
 
 /* ----- the ledger: what happened to the population in the last weeks ----- */
 function ledgerSince(w, C, days) {
@@ -90,6 +91,13 @@ function fuelRules(w, C, found) {
   const sev = w.season === 2 && have < need ? 2 : have < need * (w.season === 2 ? 1.5 : 1.3) ? 1 : 0; if (!sev) return;
   found.push({ key: 'fuel', sev, text: `${have} firewood is stored and winter will take about ${need}.`, why: `${w.vills.filter(v => v.role === 'woodcutter').length} woodcutters at work; ${w.houses().length} homes to heat for ${w.vills.length} people.`, m: { v: have, ok: need * (w.season === 2 ? 1.5 : 1.3), bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] });
 }
+function housingRules(w, C, found) {
+  const P = w.priv; if (!P || !w.houses().length) return;
+  const ad = Math.max(1, w.vills.filter(v => v.isAdult()).length), out = P.out, crowd = P.crowd, winter = w.season === 3;
+  const sev = out >= Math.max(4, ad * 0.12) && winter ? 2 : out >= Math.max(3, ad * 0.08) || crowd >= ad * 0.3 ? 1 : 0; if (!sev) return;
+  found.push({ key: 'housing', sev, text: out >= 3 ? `${out} people have no bed of their own${winter ? ' and are sleeping in the cold' : ''}.` : `${crowd} people are sharing a roof against their nature.`,
+    why: `${w.beds()} beds for ${w.vills.length} people${crowd ? '; ' + crowd + ' are crowded in with people they would rather not live with' : ''}${w.bps.some(b => b.type === 'house') ? '; new homes are being built' : ''}.`, m: { v: ad - out, ok: ad, bad: ad * 0.8 }, fix: ['hands_build', 'allhands'] });
+}
 function unityRules(w, C, found) {
   const R = w.regime, S = w.strife; if (!R || w.vills.length < 14) return;
   const u = R.ax.cohes; C.lowUnity = u < 0.25 ? C.lowUnity + 1 : 0;
@@ -114,7 +122,7 @@ function concernsDay(w) {
   C.pop.push(pop); if (C.pop.length > 192) C.pop.shift();
   if (w.day % 4 === 0) { C.snap.push({ d: w.day, c: { ...w.causes } }); if (C.snap.length > 12) C.snap.shift() }
   if (w.day < 12) return;
-  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found);
+  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found);
   const seen = new Set();
   for (const f of found) {
     seen.add(f.key); let c = C.list.find(x => x.key === f.key);
@@ -180,6 +188,10 @@ const RESPONSES = {
     dur: 16, label: 'More hands on firewood', cd: 48, blurb: 'For 16 days many more people cut wood.',
     can: w => ordersOf(w).fuel ? 'Already in force' : '',
     run: w => { CN(w).orders.fuel = w.day + 16; w.emit('council', 'Axes are handed out; every spare pair of hands goes to the woodpile.', {}) } },
+  hands_build: {
+    dur: 20, label: 'Building drive', cd: 48, blurb: 'For 20 days more builders are put on housing and the town builds well ahead of its needs.',
+    can: w => ordersOf(w).build ? 'Already in force' : w.stock.wood < 20 ? 'Not enough wood' : '',
+    run: w => { CN(w).orders.build = w.day + 20; w.emit('council', 'A building drive is called: more hands go to raising homes.', {}) } },
   allhands: {
     dur: 10, label: 'All hands', cd: 64, blurb: 'For 10 days nobody idles: farming, hunting, fishing and wood all get the most hands. Costs mood.',
     can: w => ordersOf(w).allhands ? 'Already in force' : '',

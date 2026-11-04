@@ -37,8 +37,8 @@ class Villager {
     this._st = this.stage();
   }
   isAdult() { return this.age >= CFG.ADULT_DAYS }
-  isElder() { return this.age >= CFG.ELDER_DAYS }
-  stage() { const a = this.age; return a < CFG.INFANT_DAYS ? 'infant' : a < CFG.CHILD_DAYS ? 'child' : a < CFG.ADULT_DAYS ? 'youth' : a < CFG.ELDER_DAYS ? 'adult' : 'elder' }
+  isElder() { return this.age >= CFG.ELDER_DAYS * (this.w.lifeScale || 1) }
+  stage() { const a = this.age; return a < CFG.INFANT_DAYS ? 'infant' : a < CFG.CHILD_DAYS ? 'child' : a < CFG.ADULT_DAYS ? 'youth' : !this.isElder() ? 'adult' : 'elder' }
   story(text) { this.bio.push({ day: this.w.day, text }); if (this.bio.length > 16) this.bio.shift() }
   charisma() { const t = this.trait; return clamp(0.4 * t.soc + 0.25 * t.cur + 0.2 * t.kind + 0.15 * t.ind + (this.isElder() ? 0.12 : 0) + 0.1 * (this.reputation - 50) / 50, 0, 1) }
   onStage(st) {
@@ -95,7 +95,7 @@ class Villager {
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0) + 0.04 * techFx(w, 'health'));
     if (w.cold) { this.health -= 0.012 * Math.max(0.15, 1 - Math.min(0.7, techFx(w, 'health')) - (w.liv ? w.liv.fx.warm : 0)); this.cause = 'cold' }
     if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : this.cause === 'strife' ? 'was killed in the unrest' : 'starved'); return }
-    if (this.age > CFG.OLD_DAYS && w.r() < ((this.age - CFG.OLD_DAYS) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
+    const old = CFG.OLD_DAYS * (w.lifeScale || 1); if (this.age > old && w.r() < ((this.age - old) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
     if ((w.tick + this.id) % 10 === 0 && !this.sleeping && this.checkDanger()) return;
     if (this.hunger < 18 && w.stock.food > 0 && w.tick >= (this.noEat || 0) && this.jobKind !== 'eat' && this.jobKind !== 'flee' && !this.carry && !this.sleeping) { this.abort(0); this.planEat() }

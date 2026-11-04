@@ -25,6 +25,8 @@
     <div id="zoomCtl"><button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button></div>
     <div id="drawer"><div class="drawerhead"><b>Settings &amp; tools</b><button id="drawerClose" title="Close (Esc)">✕</button></div>
     <div class="card"><h3>Settings</h3>
+      <div class="hint" style="margin-bottom:4px">Hardship <span class="hint">how forgiving the world is: births, newcomers, wolves, fevers, winters</span></div>
+      <select id="set_hardship" style="width:100%;margin-bottom:8px"><option value="0">Gentle</option><option value="1">Normal</option><option value="2">Harsh</option></select>
       <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
@@ -71,6 +73,7 @@
       <div class="nwrow"><span class="hint">Seed</span><input id="nw_seed" inputmode="numeric"><button id="nw_dice" title="Pick a random seed" aria-label="Random seed">🎲</button></div>
       <div class="hint" style="margin-top:10px">Map type</div><div id="nw_types" class="nwchoices"></div>
       <div class="hint" style="margin-top:10px">Map size</div><div id="nw_sizes" class="nwchoices"></div>
+      <div class="hint" style="margin-top:10px">Hardship <span class="hint">Hardship <span class="hint">you can change it later in Settings</span>middot; you can change it later in Settings</span></div><div id="nw_hard" class="nwchoices"></div>
       <div class="hint" id="nw_note" style="margin-top:8px"></div>
       <div class="btnrow" style="margin-top:12px"><button id="nw_go" class="on">Start</button><button id="nw_cancel">Cancel</button></div>
     </div></div>
