@@ -54,7 +54,7 @@ list = [...list.filter(s => first.includes(s)).sort((a, b) => first.indexOf(a) -
 if (!list.length) process.exit(0);
 
 const results = {}; let next = 0, running = 0, failed = 0; const T0 = Date.now(); const procs = new Set();
-const fmt = n => n >= 60 ? Math.floor(n / 60) + 'm' + String(Math.round(n % 60)).padStart(2, '0') + 's' : n.toFixed(0) + 's';
+const fmt = n => { n = Math.round(n); return n >= 60 ? Math.floor(n / 60) + 'm' + String(n % 60).padStart(2, '0') + 's' : n + 's' };
 function done() {
   const wall = (Date.now() - T0) / 1000, sum = Object.values(results).reduce((a, r) => a + r.sec, 0);
   console.log('\n suite                     time   result');

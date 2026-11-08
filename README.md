@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.29.1 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.29.2 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,11 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Varied bubbles and quicker tests (new in 0.29.2)
+- **Bubbles:** every thought now carries other wordings for the same subject (about 35 new lines for hunger, tiredness, loneliness, cold, contentment, low spirits, housing, privacy, drought, winter and the season). A bubble picks a wording that has not been on screen in the last 90 seconds, and no more than two bubbles on the same subject show at once. Choosing is display-only: the simulation is identical to v0.29.
+- **Emote box:** the small white box with a symbol over a villager now shows only for the selected villager (fights and fleeing alarms still show for all); bubbles carry the rest.
+- **Tests:** the `living` wolf check stops once a pack has returned (9 minutes to about 1) and the performance gate simulates 6 years and times the last 2. Reloaded worlds do not continue exactly like the original, so shared world snapshots were rejected for the suites.
 
 ## Tests and releases (new in 0.29.1)
 Tools only, no change to the game. `tools/check.sh` is a runner (`tools/run.js`) that prints each result as it finishes and keeps suite timings in `tests/timings.json`.

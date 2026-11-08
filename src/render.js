@@ -367,6 +367,7 @@ function drawVillager(g, v, w, now, sel) {
   if (st === 'elder') rc(g, '#8a6a4a', 4, -8, 1, 8);
   g.restore();
   let em = v.emote; if (v.fighting) em = '!'; else if (/Chat|Talk|Feast/.test(v.label)) em = '…'; else if (w.cold && s === 3) em = '*'; else if (v.hunger < 20) em = '?';
+  if (em && em !== '!' && sel !== v) em = null;          // the small emote box is for the selected villager (bubbles say the rest); alarms stay for all
   if (em && !(R.vo && R.vo.prev.has(v.id))) { const hy = y - 18 * k - 2; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x - 4, hy - 6, 8, 8); g.fillStyle = em === '!' ? '#d33' : em === '*' ? '#4a90d9' : '#333'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText(em, x, hy + 1); g.textAlign = 'left' }
 }
 
@@ -664,8 +665,16 @@ function drawBubbles(g, w, selV, now, tlx, tly, z) {
     cand.push({ v, th, sx, sy, forced, d: (sx - cx) ** 2 + (sy - cy) ** 2 - (pinned ? 4e9 : forced ? 2e9 : 0) });
   }
   cand.sort((a, b) => a.d - b.d);
+  const rec = V.recent || (V.recent = new Map()); if (rec.size > 300) for (const [k, t] of rec) if (now - t > 90000) rec.delete(k);
+  const catN = {}; for (const b of act) catN[b.th.cat] = (catN[b.th.cat] || 0) + 1;
   for (const c of cand) {
     if (act.length >= cap && !c.forced) break;
+    if (!c.forced && (catN[c.th.cat] || 0) >= 2) continue;           // never more than two bubbles on the same subject at once
+    if (!c.forced && c.th.alts) {                                    // pick a wording nobody on screen used in the last minute and a half
+      const opts = [[c.th.long, c.th.short, c.th.emo], ...c.th.alts], ok = opts.find(o => !rec.has(o[0]) || now - rec.get(o[0]) > 90000) || opts[0];
+      c.th.long = ok[0]; c.th.short = String(ok[1]).slice(0, 14); c.th.emo = ok[2];
+    }
+    rec.set(c.th.long, now); catN[c.th.cat] = (catN[c.th.cat] || 0) + 1;
     const txt = textOf(c.th, c.v, c.forced), life = mode === 'long' || c.forced ? Math.min(11000, 4200 + txt.length * 70) : mode === 'short' ? 3800 : 2400;
     const s = { key: c.th.tick + ':' + c.th.kind, t0: now, life }; V.shown.set(c.v.id, s); act.push({ ...c, s });
     if (R.onBubble) R.onBubble(c.v, c.th, mode);

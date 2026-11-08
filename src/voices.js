@@ -32,6 +32,22 @@ const foodPer = w => (w.stock && w.stock.food || 0) / Math.max(1, w.vills.length
 const lc = s => String(s || '').toLowerCase();
 const cap1 = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
+/* extra wordings for the thoughts that many villagers share at once (shown in place of one already on screen) */
+const VEXTRA = {
+  hunger: [['Is it nearly time to eat? My belly says yes.', 'Peckish', '?'], ['Even dry bread would do right now.', 'Bread?', '?'], ['I was too busy to eat, and now I pay for it.', 'Hungry', '?']],
+  tired: [['I could sleep standing up.', 'Sleepy', 'z'], ['My bones ache for a bed and a blanket.', 'Weary', 'z'], ['One more task, then I rest.', 'Almost', 'z']],
+  lonely: [['It has been too quiet around me lately.', 'Quiet', '…'], ['I wish someone would stop and talk a while.', 'Talk?', '…'], ['Even a nod from a neighbour would help.', 'Alone', '…']],
+  sick: [['Perhaps some rest will clear my head.', 'Rest', '…'], ['I have felt better. Much better.', 'Ill', '!']],
+  cold: [['My fingers are numb. A fire would be wonderful.', 'Numb', '*'], ['Frost on everything. I can see my breath.', 'Frost', '*'], ['If only the wind would drop.', 'Wind', '*']],
+  home: [['Another night without a door to close.', 'Homeless', '?'], ['I could build something if I had the timber.', 'Build?', '?']],
+  quiet: [['I can never hear myself think in here.', 'Noisy', '…'], ['A wall of my own would be a luxury.', 'Walls', '…']],
+  happy: [['Full belly, warm hands, good friends. What more?', 'Blessed', '♪'], ['I caught myself humming at work today.', 'Humming', '♪'], ['The village feels like home.', 'Home', '♪']],
+  low: [['I cannot shake this heavy mood.', 'Heavy', '…'], ['Same chores, same worries, day after day.', 'Same', '…'], ['I wish something good would happen.', 'Hope?', '…']],
+  drought: [['Dust where there should be mud.', 'Dust', '!'], ['The sky stays empty. Not a cloud.', 'No rain', '!']],
+  harsh: [['The snow just keeps on coming.', 'Snow', '*'], ['We will be counting every log this winter.', 'Logs', '*']],
+  season: [['Every season brings its own work.', 'Seasons', '♪'], ['The year turns, and we turn with it.', 'Turning', '♪']],
+};
+
 /* ---- categories: score(w, v, c) says how much it is on the villager's mind (0 = not at all),
    lines(w, v, c) offers [long, short, glyph] choices. c = shared context for this thought. ---- */
 const VCATS = [
@@ -100,8 +116,9 @@ function thinkOf(w, v, slot) {
   let r = ((h >>> 3) % 10007) / 10007 * tot, pick = sc[0][0];
   for (const [k, s] of sc) { r -= s; if (r <= 0) { pick = k; break } }
   const L = pick.lines(w, v, c); if (!L.length) return null;
-  const l = L[(h >>> 11) % L.length];
-  return { cat: pick.id, kind: 'thought', long: l[0], short: String(l[1]).slice(0, 14), emo: l[2], tick: w.tick, at: w.tick };
+  const all = L.concat(VEXTRA[pick.id] || []), i0 = (h >>> 11) % all.length, l = all[i0];
+  const alts = []; for (let k = 1; k < all.length && alts.length < 4; k++) alts.push(all[(i0 + k) % all.length]);   // other wordings for the same thought, so a crowd does not repeat itself
+  return { cat: pick.id, kind: 'thought', long: l[0], short: String(l[1]).slice(0, 14), emo: l[2], tick: w.tick, at: w.tick, alts };
 }
 function dreamOf(w, v, c, h) {
   const o = [['I dream of green fields and endless summer.', 'Fields', 'z'], ['I dream I am flying over the village.', 'Flying', 'z'], ['I dream of the sea and distant sails.', 'The sea', 'z']];

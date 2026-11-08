@@ -47,5 +47,8 @@ function n(c,f){return Object.values(c).reduce((a,b)=>a+b,0)*f}
  const d2=JSON.parse(JSON.stringify(d));delete d2.voices;const g2=ctx.deserializeWorld(d2);run(g2,3);ok(g2.voices&&g2.vills.some(v=>v.th),'a save from before voices loads and starts thinking')}
 // cost
 {const v0=performance.now();for(let i=0;i<200;i++){w.tick+=20;ctx.voicesTick(w)}const ms=(performance.now()-v0)/200;ok(ms<0.5,'voices tick costs '+ms.toFixed(3)+' ms per 20 ticks ('+w.vills.length+' people)')}
+// variety: a thought carries other wordings for the same subject, none empty, none equal to the main line
+{let n=0,withAlts=0,bad=0;for(const v of w.vills)for(let s=0;s<20;s++){const th=ctx.thinkOf(w,v,s);if(!th||th.kind!=='thought')continue;n++;if(th.alts&&th.alts.length){withAlts++;if(th.alts.some(a=>!a[0]||!a[1]||a[0]===th.long))bad++}}
+ ok(n>50&&withAlts/n>0.8&&!bad,'thoughts carry alternative wordings: '+withAlts+' of '+n+', bad '+bad)}
 ok(faults.length===0,'no faults at the end: '+faults.slice(0,2));
 console.log(`voices_events: ${pass} passed, ${fail} failed`);process.exit(fail?1:0);

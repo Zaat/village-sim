@@ -19,7 +19,7 @@ let ok=0,bad=0;const check=(n,c,x)=>{console.log((c?'PASS ':'FAIL ')+n+(x?'  '+x
  for(let d=0;d<12;d++){for(let t=0;t<1200;t++)w.step()}check('monument draws sightseers',!!m&&(m.vtot||0)>0,m?'visits '+(m.vtot||0):'no monument')}
 // wolves return where there is game and breed with a cap
 {for(const a of w.animals)if(a.kind==='wolf')a.alive=false;const d0=w.animals.filter(a=>a.alive&&a.kind==='deer').length;
- let packs=0;const so=w.rng;for(let d=0;d<400;d++){const before=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;for(let t=0;t<1200;t++)w.step();const after=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;if(after>before&&before===0)packs++}
+ let packs=0;const so=w.rng;for(let d=0;d<400;d++){const before=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;for(let t=0;t<1200;t++)w.step();const after=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;if(after>before&&before===0)packs++;if(packs>=1)break}
  const wolves=w.animals.filter(a=>a.alive&&a.kind==='wolf').length;check('wolves come back over time',packs>=1,'new packs '+packs+', now '+wolves+', deer '+d0)}
 // looking at a building before anyone has visited it must not break later visits (found by a player report)
 {const pl=w.of('plaza')[0]||w.of('campfire')[0];delete pl.vh;delete pl.reg;delete pl.vtot;ctx.popularity(w,pl);let threw=null;try{ctx.recordVisit(w,pl,w.vills[0])}catch(e){threw=e}check('visits can be recorded after the building was inspected first',!threw&&pl.reg&&pl.vtot===1,String(threw))}
