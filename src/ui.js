@@ -130,7 +130,7 @@ function newWorld(seed, opts) {
 }
 /* ---- the new-world dialog ---- */
 let nwType = 'auto', nwSize = 'standard', nwHard = 1, nwPhil = 'balanced', nwOpen_ = 0;
-function nwRender() {
+function nwRender() { if ($('nw_traits')) $('nw_traits').textContent = '';
   $('nw_types').innerHTML = [['auto', 'Auto', 'Chosen by the seed'], ...Object.keys(MAP_TYPES).map(k => [k, MAP_TYPES[k].label, MAP_TYPES[k].blurb])].map(([k, l, b]) => `<button data-t="${k}" class="${nwType === k ? 'sel' : ''}"><b>${l}</b><span>${b}</span></button>`).join('');
   $('nw_sizes').innerHTML = Object.keys(MAP_SIZES).map(k => `<button data-s="${k}" class="${nwSize === k ? 'sel' : ''}"><b>${MAP_SIZES[k].label}</b><span>${MAP_SIZES[k].note}</span></button>`).join('');
   $('nw_hard').innerHTML = HARDSHIP.map((h, i) => `<button data-h="${i}" class="${nwHard === i ? 'sel' : ''}"><b>${h.name}</b><span>${h.note}</span></button>`).join('');
@@ -147,6 +147,12 @@ $('nw_hard').addEventListener('click', e => { const b = e.target.closest('button
 $('nw_phil').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwPhil = b.dataset.p; nwRender() } });
 $('nw_open').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwOpen_ = +b.dataset.o; nwRender() } });
 $('nw_sizes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwSize = b.dataset.s; nwRender() } });
+$('nw_check').onclick = () => {
+  const el = $('nw_traits'); el.textContent = 'Generating this world…'; setTimeout(() => {
+    try { const v = $('nw_seed').value.trim(), seed = (v === '' || isNaN(+v) ? 1 : +v) >>> 0, type = nwType === 'auto' ? pickMapType(seed) : nwType, size = sizeFor(type, nwSize), w = new World(seed, { map: type }, MAP_SIZES[size].dims);
+      el.innerHTML = `<b>${MAP_TYPES[type].label}, ${MAP_SIZES[size].label}, seed ${seed}</b>` + worldTraits(w).map(([k, t]) => `<div><span style="color:#9fb4c8">${k}:</span> ${escapeHtml(t)}</div>`).join('') } catch (e) { el.textContent = 'Could not check this world: ' + e.message }
+  }, 30) };
+$('nw_seed').addEventListener('input', () => { $('nw_traits').textContent = '' });
 $('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); lsSet('villagesim.hardship', String(nwHard)); lsSet('villagesim.phil', nwPhil); lsSet('villagesim.open', String(nwOpen_)); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize, hardship: nwHard, phil: nwPhil, open: nwOpen_ }) };
 $('nw_seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('nw_go').click(); e.stopPropagation() });
 
@@ -266,11 +272,11 @@ $('techCard').addEventListener('click', e => { const gb = e.target.closest('[dat
 /* the harbour, the fleet and the trade the village runs for itself */
 function renderDisc() {
   const w = world, el = $('discCard'), box = $('discBox'), D = w.disc; const show = !!(D && (D.sites.some(s => s.known) || D.exped.length || D.log.length)); box.style.display = show ? '' : 'none'; if (!show) return;
-  const mats = MAT_LIST.map(m => { const src = matSource(w, m); return `<span class="chip" title="${src === 'found' ? 'found by an expedition' : src === 'mine' ? 'from our mine' : src === 'trade' ? 'bought from a neighbour' : 'not yet found: search the far places, open a mine or trade'}" style="margin-right:6px;color:${src ? '#8fd18b' : '#6c7782'}">${src ? '✓' : '·'} ${MATS[m].name}</span>` }).join('');
+  const mats = MAT_LIST.map(m => { const src = matSource(w, m); return `<span class="chip" title="${src === 'found' ? 'found by an expedition' : src === 'trade' ? 'bought from a neighbour' : 'not yet found: look in the far places once we know the craft, or buy it from a friendly neighbour'}" style="margin-right:6px;color:${src ? '#8fd18b' : '#6c7782'}">${src ? '✓' : '·'} ${MATS[m].name}</span>` }).join('');
   let h = `<div class="hint" style="margin-bottom:3px">Materials the later technologies need</div><div>${mats}</div>`;
   const run = D.exped.filter(e => e.state === 'running' || e.state === 'pending');
   if (run.length) h += `<div class="hint" style="margin:6px 0 2px">On the road</div>` + run.map(e => { const s = D.sites.find(x => x.id === e.site), K = s && SITE_KINDS[s.kind], l = e.leader ? w.vills.find(v => v.id === e.leader) : null; return `<div class="techrow"><b>${K ? K.name : 'An expedition'}</b> <span class="hint">${e.state === 'pending' ? 'waiting for someone to lead it' : (l ? escapeHtml(l.name) + ' leads, ' : '') + (e.mode === 'sea' ? 'by boat' : 'on foot')}</span></div>` }).join('');
-  const sites = D.sites.filter(s => s.known && !s.done); if (sites.length) h += `<div class="hint" style="margin:6px 0 2px">Heard of, not yet visited (${sites.length})</div>` + sites.slice(0, 5).map(s => `<div class="techrow"><b>${SITE_KINDS[s.kind].name}</b> <span class="hint">${Math.round(Math.hypot(s.x - w.cx, s.y - w.cy))} tiles ${compass(w, s.x, s.y)}${s.mat ? ', may hold ' + MATS[s.mat].name : ''}</span></div>`).join('');
+  const sites = D.sites.filter(s => s.known && !s.done); if (sites.length) h += `<div class="hint" style="margin:6px 0 2px">Heard of, not yet visited (${sites.length})</div>` + sites.slice(0, 5).map(s => `<div class="techrow"><b>${SITE_KINDS[s.kind].name}</b> <span class="hint">${Math.round(Math.hypot(s.x - w.cx, s.y - w.cy))} tiles ${compass(w, s.x, s.y)}${s.mat && w.has(SURVEY[s.mat]) ? ', may hold ' + MATS[s.mat].name : ''}</span></div>`).join('');
   if (D.log.length) h += `<div class="hint" style="margin:6px 0 2px">Returned</div>` + D.log.slice(0, 3).map(l => `<div class="techrow"><span class="hint">day ${l.day}</span> ${escapeHtml(l.text)}</div>`).join('');
   h += `<div class="hint" style="margin-top:6px">${D.done} expeditions returned · ${D.lost} lost · ${D.lore} old writings found${D.deals ? ' · ' + D.deals + ' lessons bought' : ''}</div>`; el.innerHTML = h;
 }

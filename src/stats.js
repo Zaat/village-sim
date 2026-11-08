@@ -70,7 +70,6 @@ const STAT_SERIES = [
   { id: 'buildings', label: 'Buildings', group: 'Knowledge', get: w => w.buildings.size },
   { id: 'houses', label: 'Homes', group: 'Knowledge', get: w => w.houses().length },
   { id: 'outposts', label: 'Outposts alive', group: 'Expansion', get: w => w.out ? w.out.list.filter(o => o.state === 'active').length : 0 },
-  { id: 'outpop', label: 'People in outposts', group: 'Expansion', get: w => w.out ? w.out.list.filter(o => o.state === 'active').reduce((s, o) => s + o.pop, 0) : 0 },
   { id: 'neigh', label: 'Peoples known', group: 'Expansion', get: w => w.neigh ? w.neigh.filter(n => n.found).length : 0 },
   { id: 'ships', label: 'Ships', group: 'Expansion', get: w => w.boats.length },
   { id: 'trips', label: 'Trading trips (total)', group: 'Expansion', get: w => w.trade2 ? w.trade2.ledger.trips : 0 },
@@ -82,6 +81,7 @@ const STAT_SERIES = [
   { id: 'finds', label: 'Expeditions with a find (total)', group: 'Expansion', get: w => w.disc ? w.disc.finds : 0 },
   { id: 'mats', label: 'Materials in hand (of 4)', group: 'Knowledge', get: w => MAT_LIST.filter(m => matOk(w, m)).length },
   { id: 'fishstock', label: 'Fish in the water (average per tile x100)', group: 'Expansion', get: w => { if (!w._wn) { let n = 0; for (let i = 0; i < w.terr.length; i++) if (w.terr[i] <= TERR.SHALLOW) n++; w._wn = n || 1 } let t = 0; const f = w.fish; for (let i = 0; i < f.length; i++) t += f[i]; return Math.round(100 * t / w._wn) } },
+  { id: 'outpop', label: 'People living in outposts', group: 'Expansion', get: w => w.out ? w.out.list.reduce((t, o) => t + (o.state === 'active' ? o.pop || 0 : 0), 0) : 0 },
   { id: 'deernear', label: 'Deer within 25 tiles of the village', group: 'Expansion', get: w => deerNear(w) }
 ];
 const SERIES_BY_ID = Object.fromEntries(STAT_SERIES.map(s => [s.id, s]));

@@ -1,6 +1,6 @@
 // v0.28 sites, materials, rumours, expeditions, lore, fish stocks, migration, research deals, unlock toasts, statistics
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,TECHS,GATES,SHIPS,SITE_KINDS,MAT_LIST,matOk,matSource,localMats,neighMats,loreFind,fishSpawn,deerHub,deerHubs,researchDealDay,rumourDay,discoveryDay,techGaps,techCost,discover,STAT_SERIES,serializeWorld,deserializeWorld,landRegions,compass,expedPending});';
+const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,TECHS,GATES,SHIPS,SITE_KINDS,MAT_LIST,matOk,matSource,localMats,neighMats,loreFind,fishSpawn,deerHub,deerHubs,researchDealDay,rumourDay,discoveryDay,techGaps,techCost,discover,STAT_SERIES,serializeWorld,deserializeWorld,landRegions,compass,expedPending,SURVEY,triggerDay,worldTraits,expedFind,expedEnd,TRIGGERS});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 const faults=[];const run=(w,days)=>{const f0=w.fault.bind(w);w.fault=(k,e,en)=>{faults.push(k+': '+((e&&e.message)||e));return f0(k,e,en)};for(let d=0;d<days;d++)for(let t=0;t<1200;t++)w.step()};
@@ -48,6 +48,23 @@ ok(said.some(x=>/Discovery!.*It opens: /.test(x||'')),'the discovery message say
 ok(['blocked','caphit','works','wontiles','sitesknown','finds','mats','fishstock','deernear'].every(id=>ctx.STAT_SERIES.some(s=>s.id===id)),'new statistics series exist');
 ok(ctx.STAT_SERIES.every(s=>!s.get||Number.isFinite(s.get(a))),'every series computes');
 ok(ctx.SHIPS.barge&&ctx.SHIPS.barge.cap>0,'barge exists');
+// v0.28.1: scarce deposits, survey crafts, triggered sites, world traits
+{ const x=new ctx.World(12,{});ctx.discoveryDay(x);const dep=x.disc.sites.filter(q=>q.mat);
+  ok(dep.length>=2&&dep.length<=4,'only a few deposits per map: '+dep.length);ok(new Set(dep.map(q=>q.mat)).size===dep.length,'one deposit per material');
+  const loc=ctx.localMats(x);ok(loc.every(m=>dep.some(q=>q.mat===m&&Math.hypot(q.x-x.cx,q.y-x.cy)>=24&&Math.hypot(q.x-x.cx,q.y-x.cy)<=66)),'local materials have a deposit within reach');
+  ok(x.disc.sites.filter(q=>!q.mat&&(q.kind==='cave'||q.kind==='outcrop')).length>=1,'most caves and outcrops hold nothing');
+  const q=dep[0],v={health:100,name:'T',hunger:90,energy:90,mood:50},ex={site:q.id,mode:'land',state:'running'};const need=ctx.SURVEY[q.mat];delete x.tech.known[need];x.settings.disasters=false;
+  ctx.expedFind(x,ex,v,q);ok(!x.disc.mats[q.mat]&&ex.unnamed,'without the craft the deposit is not recognised');
+  ctx.expedEnd(x,ex,v,'ok');ok(!q.done&&q.uses>=1,'an unrecognised site can be visited again');
+  x.tech.known[need]=1;const ex2={site:q.id,mode:'land',state:'running'};ctx.expedFind(x,ex2,v,q);ok(x.disc.mats[q.mat],'with the craft the deposit is found');
+  // friendly-only trade
+  const y=new ctx.World(41,{});y.tech.known.trade=1;const n=y.neigh[0];n.found=true;n.met=true;n.rel=30;const m=ctx.neighMats(y,n)[0];ok(!ctx.matOk(y,m),'a cool neighbour sells nothing');n.rel=60;ok(ctx.matOk(y,m),'a friendly one does');
+  // triggered sites
+  const z=new ctx.World(12,{});ctx.discoveryDay(z);const n0=z.disc.sites.length;z.tech.known.divingbell=1;ctx.discoveryDay(z);ok(z.disc.sites.some(q=>q.kind==='deepwreck'&&q.known),'diving bells reveal deep wrecks');
+  ok(z.disc.sites.length>n0,'new sites were added');const n1=z.disc.sites.length;ctx.discoveryDay(z);ok(z.disc.sites.length===n1,'a trigger fires once');
+  // world traits
+  const tr=ctx.worldTraits(new ctx.World(5,{map:'continent'}));ok(tr.length>=6&&tr.every(r=>r[0]&&r[1]),'world traits list: '+tr.map(r=>r[0]).join(','));ok(tr.some(r=>r[0]==='Barges'),'barge line present');
+}
 // a long run: expeditions happen, nobody breaks, save and load keep the book
 const g=new ctx.World(12,{});run(g,32*10);const D=g.disc;
 ok(D.done>=3,'the village sends expeditions: '+D.done);ok(D.sites.some(s=>s.done&&ctx.SITE_KINDS[s.kind].sea)||D.sites.some(s=>s.done&&!ctx.SITE_KINDS[s.kind].sea),'at least one site visited');

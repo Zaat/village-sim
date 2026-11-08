@@ -15,25 +15,31 @@ const MAT_LIST = ['saltpetre', 'coal', 'copper', 'oil'];
 const MATS = { saltpetre: { name: 'saltpetre' }, coal: { name: 'coal' }, copper: { name: 'copper' }, oil: { name: 'oil' } };
 const SITE_KINDS = {
   ruin: { name: 'ruins of an older people', land: true, w: 3, how: 'Digging among the ruins', verb: 'dig' },
-  cave: { name: 'a deep cave', land: true, w: 2, how: 'Exploring the cave', verb: 'explore', mats: ['saltpetre', 'copper'] },
+  cave: { name: 'a deep cave', land: true, w: 2, how: 'Exploring the cave', verb: 'explore', mats: ['saltpetre', 'copper'] },       // mats = what such a site can hold when a deposit is seeded there
   outcrop: { name: 'an outcrop of dark stone', land: true, w: 2, how: 'Prospecting the outcrop', verb: 'prospect', mats: ['coal', 'oil', 'copper'] },
   hoard: { name: 'a buried hoard', land: true, w: 2, how: 'Digging for the hoard', verb: 'dig' },
   oldpost: { name: 'an abandoned outpost', land: true, w: 0, how: 'Searching the empty outpost', verb: 'search' },
   wreck: { name: 'a sunken wreck', sea: true, w: 3, how: 'Diving on the wreck', verb: 'salvage' },
   ownwreck: { name: 'the wreck of one of our own ships', sea: true, w: 0, how: 'Salvaging the lost ship', verb: 'salvage' },
   shoals: { name: 'rich fishing grounds', sea: true, w: 2, how: 'Fishing the rich shoals', verb: 'fish', reuse: 3 },
+  deepwreck: { name: 'a wreck in deep water', sea: true, w: 0, tech: 'divingbell', how: 'Diving on the deep wreck', verb: 'salvage' },
+  seabed: { name: 'ruins on the seabed', sea: true, w: 0, tech: 'sonar', how: 'Surveying the drowned ruins', verb: 'dive' },
+  lostcity: { name: 'a lost city seen from the air', land: true, w: 0, tech: 'aviation', how: 'Excavating the lost city', verb: 'dig' },
+  lowwater: { name: 'a hoard uncovered by the low water', land: true, w: 0, how: 'Digging at the dry riverbed', verb: 'dig' },
   whales: { name: 'whaling grounds', sea: true, deep: true, w: 1, how: 'Hunting whales', verb: 'hunt', tech: 'navigation', reuse: 2 }
 };
 const DISC = w => w.disc || (initDisc(w), w.disc);
 function initDisc(w) { w.disc = { sites: [], mats: {}, exped: [], nid: 1, nextRumour: 14, nextPlan: 30, nextBarge: 50, nextDeal: 45, deals: 0, done: 0, lost: 0, finds: 0, lore: 0, relics: 0, log: [], hist: { wrecks: 0, posts: {} }, gen: false } }
 const discHash = (w, k) => { let h = (w.seed ^ Math.imul(k + 7, 2654435761)) >>> 0; h = Math.imul(h ^ h >>> 15, 2246822519) >>> 0; return (h ^ h >>> 13) >>> 0 };
-/* two materials sit in the local rock of every map; two more with each neighbour */
+/* v0.28.1: each material has at most one or two deposits on a map. Two materials (local) lie within reach on the home landmass; the other two sit far off
+   (70% of maps) or only come by trade. A deposit is recognised on a visit only once the village knows the matching craft. */
+const SURVEY = { saltpetre: 'masonry', coal: 'mining', copper: 'bronze', oil: 'steam' };
+const DEPOSIT_KINDS = { saltpetre: ['cave'], coal: ['outcrop'], copper: ['cave', 'outcrop'], oil: ['outcrop'] };
 const localMats = w => { const a = discHash(w, 1) % 4; return [MAT_LIST[a], MAT_LIST[(a + 1 + discHash(w, 2) % 3) % 4]] };
-const neighMats = (w, n) => { const a = discHash(w, 100 + n.id) % 4; return [MAT_LIST[a], MAT_LIST[(a + 1 + discHash(w, 200 + n.id) % 3) % 4]] };
+const neighMats = (w, n) => [MAT_LIST[discHash(w, 100 + n.id) % 4]];                                           // one material per neighbour, offered only by a friend
 function matSource(w, m) {
   const D = DISC(w); if (D.mats[m]) return 'found';
-  if (localMats(w).includes(m) && w.of('minecamp').length > 0) return 'mine';
-  if (w.has('trade') && (w.neigh || []).some(n => n.found && n.met && !isHostile(n) && neighMats(w, n).includes(m))) return 'trade';
+  if (w.has('trade') && (w.neigh || []).some(n => n.found && n.met && !isHostile(n) && n.rel >= 45 && neighMats(w, n).includes(m))) return 'trade';
   return null;
 }
 const matOk = (w, m) => !!matSource(w, m);
@@ -42,17 +48,19 @@ const matOk = (w, m) => !!matSource(w, m);
 function genSites(w) {
   const { W, H } = CFG, rng = mulberry32((w.seed ^ 0x2C1B3C6D) >>> 0), R = () => rng(), D = w.disc, reg = landRegions(w), home = reg.label[w.cy * W + w.cx];
   const kindsLand = ['ruin', 'ruin', 'ruin', 'cave', 'cave', 'outcrop', 'outcrop', 'hoard', 'hoard'], kindsSea = ['wreck', 'wreck', 'wreck', 'shoals', 'shoals', 'whales', 'wreck'];
-  const place = (kind, ok, want, minD, maxD) => {
+  const place = (kind, ok, want, minD, maxD, mat) => {
     for (let g = 0; g < 400; g++) {
       const a = R() * Math.PI * 2, d = minD + R() * (maxD - minD), x = Math.round(w.cx + Math.cos(a) * d), y = Math.round(w.cy + Math.sin(a) * d); if (x < 3 || y < 3 || x >= W - 3 || y >= H - 3) continue;
       const i = y * W + x; if (!ok(i)) continue; if (D.sites.some(s => Math.hypot(s.x - x, s.y - y) < 9)) continue;
-      const K = SITE_KINDS[kind], s = { id: D.nid++, kind, x, y, known: false, done: false, uses: K.reuse || 1, mat: K.mats ? K.mats[(R() * K.mats.length) | 0] : null, prize: Math.round((kind === 'shoals' ? 70 : kind === 'whales' ? 100 : kind === 'cave' || kind === 'outcrop' ? 25 : 45) * (0.7 + 0.8 * R())), lore: R() < (kind === 'ruin' ? 0.7 : 0.15), risk: 0.04 + 0.05 * R() };
+      const K = SITE_KINDS[kind], s = { id: D.nid++, kind, x, y, known: false, done: false, uses: K.reuse || 1, mat: mat || null, prize: Math.round((kind === 'shoals' ? 70 : kind === 'whales' ? 100 : kind === 'cave' || kind === 'outcrop' ? 25 : 45) * (0.7 + 0.8 * R())), lore: R() < (kind === 'ruin' ? 0.7 : 0.15), risk: 0.04 + 0.05 * R() };
       D.sites.push(s); return s;
     }
   };
   const landOk = i => { const t = w.terr[i]; return (t === TERR.GRASS || t === TERR.ROCK) && reg.label[i] === home && !w.feat[i] && !w.bmap[i] };
   const shallowOk = i => w.terr[i] === TERR.SHALLOW, deepOk = i => w.terr[i] === TERR.DEEP;
   for (const k of kindsLand) place(k, landOk, 0, 14, 62);
+  const loc = localMats(w);                                                  // deposits: local ones near, the others far or none
+  for (const m of MAT_LIST) { const kind = DEPOSIT_KINDS[m][(R() * DEPOSIT_KINDS[m].length) | 0], near = loc.includes(m); if (near || R() < 0.7) place(kind, landOk, 0, near ? 24 : 66, near ? 66 : 105, m) }
   for (const k of kindsSea) place(k, k === 'whales' ? deepOk : shallowOk, 0, 16, 70);
   for (const k of ['ruin', 'cave', 'outcrop', 'hoard']) place(k, landOk, 0, 62, 100);                                     // a far ring, heard of only late
   for (const k of ['wreck', 'shoals', 'whales']) place(k, k === 'whales' ? deepOk : shallowOk, 0, 70, 115);
@@ -109,18 +117,19 @@ function planExpeditions(w) {
   const E = w.econ, coin = money(w), best = [];
   for (const s of D.sites) {
     const K = SITE_KINDS[s.kind]; if (!s.known || s.done || s.unreach || (K.tech && !w.has(K.tech)) || act.some(e => e.site === s.id)) continue;
+    if (s.seen && s.mat && !D.mats[s.mat] && !w.has(SURVEY[s.mat])) continue;                       // seen, not understood yet
     const sea = !!K.sea; if (sea && (!w.has('boats') || w.season === 3 || w.vills.length < 45)) continue; if (act.some(e => e.mode === (sea ? 'sea' : 'land'))) continue;
     let boat = null; if (sea) { boat = w.boats.find(b => b.crew == null && b.state === 'moored' && !b.noSea && (b.kind || 'fishing') === 'fishing' && w.buildings.get(b.dock) && sitePath(w, s, b)); if (!boat) continue }
     const path = sea ? sitePath(w, s, boat) : sitePath(w, s); if (!path) { if (!sea) s.unreach = true; continue }
     const len = path.length, speed = sea ? 0.07 : 0.1, days = Math.max(2, (2 * len / speed + 160) / CFG.TPD);
-    const matNew = s.mat && !matOk(w, s.mat), gain = s.prize + (matNew ? 70 : 0) + (s.lore ? 35 : 0);
+    const matNew = s.mat && !matOk(w, s.mat) && w.has(SURVEY[s.mat]), gain = s.prize + (matNew ? 90 : 0) + (s.lore ? 35 : 0);
     const risk = clamp((s.risk + 0.0004 * len) * (sea ? 1.4 : 1) * (w.settings.disasters ? 1 : 0.4), 0, 0.4), cb = costBenefit(w, { gain, cost: sea ? 2 : 1, risk, stake: 40, days, crew: PARTY, min: 1.1 });
     if (cb.go) best.push({ s, K, sea, boat, days: Math.round(days * 10) / 10, risk, cb, len });
   }
   if (!best.length) return; best.sort((a, b) => b.cb.ratio - a.cb.ratio); proposeExpedition(w, best[0], app);
 }
 function proposeExpedition(w, p, app) {
-  const D = DISC(w), { s, K } = p, what = `${K.name} to the ${compass(w, s.x, s.y)}`, mat = s.mat && !matOk(w, s.mat) ? ` It may hold ${MATS[s.mat].name}, which we lack.` : '';
+  const D = DISC(w), { s, K } = p, what = `${K.name} to the ${compass(w, s.x, s.y)}`, mat = s.mat && !matOk(w, s.mat) ? (w.has(SURVEY[s.mat]) ? ` It may hold ${MATS[s.mat].name}, which we lack.` : ' Hunters say the stone there looks odd.') : '';
   ask(w, { kind: 'expedition', topic: `An expedition could ${K.verb === 'fish' || K.verb === 'hunt' ? 'go to' : K.verb} ${what}: about ${p.days} days ${p.sea ? 'by boat' : 'on foot with a party of three'}, ${Math.round(p.risk * 100)}% risk.${mat} Worth about ${Math.round(p.cb.gain)} coins' worth against ${Math.round(p.cb.total * 10) / 10} in labour and risk.`,
     options: [{ id: 'go', text: `Send an expedition (${p.days} days)` }, { id: 'wait', text: 'Not now: keep everyone at home work' }], default: app < 0.7 ? 'wait' : 'go',
     apply: (id, sp, reason, src) => {
@@ -171,7 +180,7 @@ function expedFind(w, ex, v, s) {
   if (K.verb === 'fish') { const f = Math.round(s.prize * 0.9 * mult); w.stock.food = Math.min(w.cap(), w.stock.food + f); bits.push(`${f} loads of fish`); for (let dy = -5; dy <= 5; dy++) for (let dx = -5; dx <= 5; dx++) { const i = (s.y + dy) * CFG.W + s.x + dx; if (i >= 0 && i < w.fish.length && w.terr[i] === TERR.SHALLOW) w.fish[i] = Math.min(CFG.FISH_MAX, w.fish[i] + 2) } }
   else if (K.verb === 'hunt') { const f = Math.round(s.prize * 0.7 * mult); w.stock.food = Math.min(w.cap(), w.stock.food + f); bits.push(`${f} loads of whale meat and oil`); bits.push(giveValue(w, Math.round(s.prize * 0.4 * mult))) }
   else { bits.push(giveValue(w, Math.round(s.prize * mult))); D.relics++ }
-  if (s.mat && !D.mats[s.mat]) { D.mats[s.mat] = w.day; bits.push(`a source of ${MATS[s.mat].name}`) }
+  if (s.mat && !D.mats[s.mat]) { if (w.has(SURVEY[s.mat])) { D.mats[s.mat] = w.day; bits.push(`a source of ${MATS[s.mat].name}`) } else { ex.unnamed = true; s.seen = true; bits.push('strange stone nobody can name yet (it may be worth another look when we know more)') } }
   if (s.lore) { const r = loreFind(w, s); if (r) { bits.push(r); D.lore++ } }
   ex.text = bits.join(', ') || 'little of value';
 }
@@ -186,7 +195,7 @@ function loreFind(w, s) {
 function expedEnd(w, ex, v, how) {
   const D = DISC(w), s = D.sites.find(x => x.id === ex.site), K = s && SITE_KINDS[s.kind]; if (ex.state === 'done') return; ex.state = 'done'; ex.how = how;
   if (how === 'lost') { D.lost++; w.emit('expedition', `${v.name} was lost at sea on the way home from ${K ? K.name : 'the expedition'}.`, { lost: true }); return }
-  D.done++; if (s) { s.uses--; if (s.uses <= 0) s.done = true } D.finds += ex.found ? 1 : 0;
+  D.done++; if (s && !ex.unnamed) { s.uses--; if (s.uses <= 0) s.done = true } D.finds += ex.found ? 1 : 0;
   const text = `${v.name} returns from ${K ? K.name : 'the expedition'} with ${ex.text || 'news'}.`; D.log.unshift({ day: w.day, text }); if (D.log.length > 8) D.log.pop();
   w.emit('expedition', text, { find: true }); v.mood = Math.min(100, v.mood + 8);
 }
@@ -197,6 +206,7 @@ function expedAbort(w, v) {
 function discoveryDay(w) {
   const D = DISC(w); if (!D.gen) { D.gen = true; genSites(w) } ownHistoryDay(w); rumourDay(w); planExpeditions(w);
   bargeDay(w); researchDealDay(w);
+  triggerDay(w);
   D.exped = D.exped.filter(e => e.state !== 'done' || w.day - (e.day || w.day) < 3);
   for (const e of D.exped) if (e.state === 'pending' && w.day > e.until) { e.state = 'done'; w.say('Nobody is free to lead the expedition, and it is put off.'); DISC(w).nextPlan = w.day + 6 }
   for (const e of D.exped) if (e.state === 'running' && w.day - e.day > 60) e.state = 'done';            // a stuck run is dropped
@@ -259,4 +269,55 @@ function researchDealDay(w) {
       E.treasury -= price; E.spent = (E.spent || 0) + price; const f0 = t.focus, p0 = t.points; t.focus = id; t.points = techCost(w, id) + p0; discover(w); t.focus = f0 === id ? null : f0; t.points = p0; n.rel += 3; D.deals++;
       recordDecision(w, `to buy lessons in ${T.name.toLowerCase()} from ${n.name} for ${price} coins.`, sp, src); w.emit('research', `${n.name}'s scholars teach the village ${T.name.toLowerCase()} for ${price} coins.`, { id, nid: n.id, price }); w.gov.nextMeeting = w.day + 4;
     } });
+}
+
+/* ----- v0.28.1: sites that appear because the village learned something or the world changed ----- */
+const TRIGGERS = [
+  { tech: 'divingbell', kind: 'deepwreck', n: 2, prize: 110, lore: true, risk: 0.09, text: 'Divers with their new bells speak of wrecks lying too deep for any swimmer.' },
+  { tech: 'sonar', kind: 'seabed', n: 2, prize: 140, lore: true, risk: 0.08, text: 'The sonar draws drowned ruins on the seabed.' },
+  { tech: 'aviation', kind: 'lostcity', n: 1, prize: 170, lore: true, risk: 0.07, text: 'From the air the flyers see the outline of a city under the forest.' }
+];
+function newSite(w, kind, ok, minD, maxD, extra) {
+  const D = DISC(w), { W, H } = CFG, rng = mulberry32((w.seed ^ 0x7A1C2D91 ^ Math.imul(D.nid, 40503)) >>> 0), K = SITE_KINDS[kind];
+  for (let g = 0; g < 500; g++) {
+    const a = rng() * Math.PI * 2, d = minD + rng() * (maxD - minD), x = Math.round(w.cx + Math.cos(a) * d), y = Math.round(w.cy + Math.sin(a) * d); if (x < 3 || y < 3 || x >= W - 3 || y >= H - 3) continue;
+    if (!ok(y * W + x) || D.sites.some(s => Math.hypot(s.x - x, s.y - y) < 8)) continue;
+    return addSite(w, kind, x, y, Object.assign({ known: true, day: w.day, uses: K.reuse || 1, risk: 0.05 }, extra));
+  }
+  return null;
+}
+function triggerDay(w) {
+  const D = DISC(w); if (!D.gen) return; D.trig = D.trig || {}; const reg = landRegions(w), home = reg.label[w.cy * CFG.W + w.cx];
+  const landOk = i => { const t = w.terr[i]; return (t === TERR.GRASS || t === TERR.ROCK) && reg.label[i] === home && !w.feat[i] && !w.bmap[i] }, seaOk = i => w.terr[i] <= TERR.SHALLOW;
+  for (const T of TRIGGERS) if (!D.trig[T.tech] && w.has(T.tech)) {
+    D.trig[T.tech] = w.day; let n = 0; for (let k = 0; k < T.n; k++) if (newSite(w, T.kind, SITE_KINDS[T.kind].sea ? seaOk : landOk, 20, 100, { prize: T.prize, lore: T.lore, risk: T.risk })) n++;
+    if (n) w.emit('rumour', T.text, { tech: T.tech });
+  }
+  /* a dry summer uncovers something now and then (at most once in four years) */
+  if (w.drought && w.day - (D.lastLow || -999) > 128 && discHash(w, 500 + w.day) % 100 < 6) {
+    D.lastLow = w.day; if (newSite(w, 'lowwater', landOk, 16, 55, { prize: 60, lore: false, risk: 0.04 })) w.emit('rumour', 'The dry summer has drained the river-pools: something glints in the mud.', { event: 'drought' });
+  }
+}
+
+/* ----- v0.28.1: what a generated world is good for (shown in the new-world dialog) ----- */
+function worldTraits(w) {
+  const { W, H } = CFG, N = W * H, T = [], reg = landRegions(w), home = reg.label[w.cy * W + w.cx];
+  let land = 0, homeSize = 0, shal = 0, rock = 0; const big = {};
+  for (let i = 0; i < N; i++) { const t = w.terr[i]; if (t > TERR.SHALLOW) { land++; if (reg.label[i] === home) homeSize++; else if (reg.label[i] > 0) big[reg.label[i]] = (big[reg.label[i]] || 0) + 1 } }
+  for (let y = Math.max(1, w.cy - 40); y < Math.min(H - 1, w.cy + 40); y++) for (let x = Math.max(1, w.cx - 40); x < Math.min(W - 1, w.cx + 40); x++) { const t = w.terr[y * W + x]; if (t === TERR.SHALLOW) shal++; else if (t === TERR.ROCK) rock++ }
+  const isl = Object.values(big).filter(n => n >= 150).length, ns = (w.neigh || []).filter(n => n.found !== false);
+  T.push(['Land', `${Math.round(100 * land / N)}% of the map; the home land is ${homeSize > 9000 ? 'large' : homeSize > 4000 ? 'medium' : 'small'}${isl ? `, with ${isl} other ${isl === 1 ? 'landmass' : 'landmasses'}` : ''}`]);
+  T.push(['Fishing', shal > 1800 ? 'rich shallows near home' : shal > 600 ? 'some shallows near home' : 'little shallow water: fish are scarce']);
+  T.push(['Stone', rock > 900 ? 'plenty of rock near home' : rock > 250 ? 'some rock near home' : 'little bare rock']);
+  const by = { land: 0, sea: 0 }; for (const n of ns) by[n.reach === 'land' ? 'land' : 'sea']++;
+  T.push(['Neighbours', `${ns.length} peoples: ${by.land} by land, ${by.sea} across water`]);
+  /* barges: a land neighbour with water within reach of it that connects to the water near home */
+  const water = i => w.terr[i] <= TERR.SHALLOW, seen = new Uint8Array(N), q = []; let barge = 0;
+  for (let y = Math.max(2, w.cy - 14); y < Math.min(H - 2, w.cy + 14); y++) for (let x = Math.max(2, w.cx - 14); x < Math.min(W - 2, w.cx + 14); x++) { const i = y * W + x; if (water(i)) { seen[i] = 1; q.push(i) } }
+  for (let h = 0; h < q.length; h++) { const u = q[h], x = u % W, y = (u / W) | 0; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const nx = x + dx, ny = y + dy; if (nx < 1 || ny < 1 || nx >= W - 1 || ny >= H - 1) continue; const v = ny * W + nx; if (!seen[v] && water(v)) { seen[v] = 1; q.push(v) } } }
+  for (const n of ns) if (n.reach === 'land') { let f = false; for (let y = Math.floor(n.y - n.r - 5); y <= n.y + n.r + 5 && !f; y++) for (let x = Math.floor(n.x - n.r - 5); x <= n.x + n.r + 5; x++) { const i = y * W + x; if (i > 0 && i < N && seen[i] && Math.hypot(x - n.x, y - n.y) <= n.r + 5) { f = true; break } } if (f) barge++ }
+  T.push(['Barges', barge ? `${barge} walkable neighbour${barge > 1 ? 's' : ''} also reachable by water: river barges are possible` : 'no neighbour reachable by river: barges are unlikely']);
+  const D = w.disc; if (D && !D.gen) { D.gen = true; genSites(w) }
+  if (D) { const land = D.sites.filter(s => !SITE_KINDS[s.kind].sea).length, sea = D.sites.length - land, dep = D.sites.filter(s => s.mat).map(s => s.mat); T.push(['Hidden places', `${land} on land, ${sea} at sea`]); T.push(['Deposits', dep.length ? [...new Set(dep)].join(', ') + ' (find them to unlock later technologies)' : 'none seeded: later materials only by trade']) }
+  return T;
 }

@@ -25,6 +25,11 @@ const { chromium } = require('playwright');const path = require('path');
   await p.evaluate(() => { const w = world, s = w.disc.sites.find(x => x.known && !SITE_KINDS[x.kind].sea); R.cam.z = 2; R.cam.x = s.x * CFG.T; R.cam.y = s.y * CFG.T; __sim.select(null); w.settings.fog = false }); await p.waitForTimeout(700);
   await p.screenshot({ path: __dirname + '/art_sites.png' });
   ok(await p.evaluate(() => typeof siteMark === 'function'), 'site flag drawing present');
+  // v0.28.1: new-world dialog "Check this world"
+  await p.evaluate(() => nwOpen()); await p.waitForTimeout(200); await p.fill('#nw_seed', '5'); await p.click('#nw_check'); await p.waitForTimeout(1500);
+  ok(await p.evaluate(() => /Barges/.test($('nw_traits').textContent) && /Neighbours/.test($('nw_traits').textContent)), 'check shows barges and neighbours');
+  await p.screenshot({ path: __dirname + '/ui_traits.png' });
+  await p.fill('#nw_seed', '6'); ok(await p.evaluate(() => $('nw_traits').textContent.trim() === ''), 'changing the seed clears the traits');
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 3).join(' | '));
   console.log('ui_disc: passed', pass, 'failed', fail); await b.close(); process.exit(fail ? 1 : 0);
 })();
