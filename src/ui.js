@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -237,7 +237,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'stats') renderStats(); if (curTab === 'events') renderTalk(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -340,6 +340,25 @@ function renderNeigh() {
       ${n.colony ? `<div class="hint">Founded on day ${n.colony.day} by ${escapeHtml(n.colony.circle)}, who left ${n.colony.mode === 'peace' ? 'in peace' : 'in bitterness'}.</div>` : ''}${n.tribute > w.day ? `<div class="hint">Paid for peace until day ${n.tribute}</div>` : ''}${n.hist && n.hist[0] ? `<div class="hint">${escapeHtml(n.hist[0])}</div>` : ''}</div>`;
   }).join('');
   html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '';
+  el.innerHTML = html;
+}
+const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
+function renderWar() {
+  const w = world, el = $('warCard'), box = el.parentElement; if (!w.neigh) { box.style.display = 'none'; return } box.style.display = '';
+  const W = w.war, on = w.settings.raids, rolls = W ? W.rolls : {}, ids = Object.keys(rolls), t = threatLevel(w), tgt = targetSize(w);
+  if (!on && !ids.length && !(W && W.battles.length)) { el.innerHTML = '<div class="hint">Peace holds. Turn on <b>Raids and war</b> in Settings and hostile neighbours may attack the dock and the outposts, and the council may answer with soldiers.</div>'; return }
+  const byT = {}; for (const id of ids) { const r = rolls[id]; byT[r.t] = (byT[r.t] || 0) + 1 }
+  const away = W ? W.away.length : 0, mor = W ? Math.round(W.morale * 100) : 70, col = mor >= 60 ? '#7ad07a' : mor >= 35 ? '#d9c26a' : '#e07a5a';
+  let html = `<div class="hint" style="margin-bottom:4px">Danger felt: ${t < 0.05 ? 'none' : t < 0.35 ? 'a little' : t < 0.8 ? 'real' : 'grave'}${tgt ? ` · the council wants about ${tgt} under arms` : ''}${projBuilt(w, 'watchtower') ? ' · 🗼 watchtower keeps watch' : ''}${projBuilt(w, 'barracks') ? ' · barracks drill the ranks' : ''}</div>`;
+  if (ids.length) html += `<div class="grp"><b>${ids.length} under arms</b> <span class="hint">strength ${armyPower(w).toFixed(1)}${away ? ` · ${away} away on campaign` : ''}</span>
+    <div class="hint">${UNIT_ORDER.filter(k => byT[k]).map(k => `${UNIT_ICON[k]} ${byT[k]} ${byT[k] === 1 ? UNITS[k].one : UNITS[k].name.toLowerCase()}`).join(' · ')}</div>
+    <div class="polh" style="margin-top:3px"><span class="hint">Morale</span><span class="hint">${mor}%</span></div><div class="bar"><i style="background:${col};width:${mor}%"></i></div></div>`;
+  else html += '<div class="hint">No standing soldiers.</div>';
+  if (W && W.campaign) { const n = w.neigh.find(x => x.id === W.campaign.n); html += `<div class="hint" style="margin-top:4px">⚔️ The army is marching on ${escapeHtml(n ? n.name : 'a neighbour')}; it is due back around day ${W.campaign.back}.</div>` }
+  if (W) {
+    html += `<div class="hint" style="margin-top:6px">Raids beaten off ${W.repelled} · campaigns won ${W.won}, lost ${W.lost}, drawn ${W.drawn} · fallen ${W.fallen} · enemies slain ${W.slain}${W.plunder ? ' · plunder ' + W.plunder : ''}${W.sacked ? ' · outposts overrun ' + W.sacked : ''}</div>`;
+    if (W.battles.length) html += `<div style="margin-top:6px">${W.battles.slice(0, 5).map(b => `<div class="hint">Day ${b.d}: ${b.kind === 'campaign' ? 'campaign against' : b.kind === 'outpost' ? (b.at ? escapeHtml(b.at) + ' against' : 'outpost against') : 'raid by'} ${escapeHtml(b.foe)} · <b>${b.outcome}</b> · lost ${b.lostOurs || 0}, enemy ${b.lostTheirs || 0}</div>`).join('')}</div>`;
+  }
   el.innerHTML = html;
 }
 function renderChron() {
@@ -453,10 +472,10 @@ const dateText = d => `Day ${d} (year ${Math.floor(d / (CFG.DPS * 4)) + 1})`;
 const humanAge = days => `${ageYears(days)} (about ${humanYears(days)} in human years)`;
 const ageYears = days => { const y = days / (CFG.DPS * 4); return y < 1 ? `${Math.round(days)} days` : `${y.toFixed(1)} years` };
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
-const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
 const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][Math.min(2, s.style || 0)] : BUILDING_NAMES[s.type] || s.type;
 const OUTPUT = { logcamp: 'firewood', minecamp: 'stone', lodge: 'food', farm: 'food', dock: 'food' };
-const VENUES = { monument: 'sightseers', temple: 'visitors', library: 'readers', lighthouse: 'sightseers', bastion: 'sightseers', citadel: 'sightseers', foundry: 'sightseers', granaryhall: 'sightseers', plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
+const VENUES = { monument: 'sightseers', temple: 'visitors', library: 'readers', lighthouse: 'sightseers', bastion: 'sightseers', citadel: 'sightseers', barracks: 'visits', watchtower: 'sightseers', foundry: 'sightseers', granaryhall: 'sightseers', plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
 function buildingPanel(w, s, extra) {
   const pct = Math.max(0, Math.round(100 * s.hp / s.maxHp)), cx = s.x + s.w / 2, cy = s.y + s.h / 2;
   const near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - cx, v.y - cy) < Math.max(s.w, s.h) + 2.5);
@@ -517,7 +536,7 @@ function updateInspector() {
     const home = s.home != null ? w.buildings.get(s.home) : null, sk = Object.entries(s.skill).filter(([, v]) => v > 0.2).sort((a, b) => b[1] - a[1]).slice(0, 3);
     const gr = w.groups.find(x => x.id === s.group), tt = titleOf(w, s), ptn = s.partner != null ? nameOf(s.partner) : null;
     el.innerHTML = `<h3>Villager</h3><div class="big">${escapeHtml(s.name)} <span class="hint">of House ${escapeHtml(s.family)}</span></div>
-      <div class="hint">${s.sex === 'f' ? 'Woman' : 'Man'} · ${s.stage()} · age ${humanAge(s.age)}${tt ? ' · council ' + tt : ''}${s.role && !s.isChild() ? ' · ' + s.role : ''}${s.preg > 0 ? ' · expecting' : ''}</div>
+      <div class="hint">${s.sex === 'f' ? 'Woman' : 'Man'} · ${s.stage()} · age ${humanAge(s.age)}${tt ? ' · council ' + tt : ''}${s.role && !s.isChild() ? ' · ' + s.role : ''}${w.war && w.war.rolls[s.id] ? ' · ' + UNITS[w.war.rolls[s.id].t].one + (w.war.away.includes(s.id) ? ' (away on campaign)' : '') : ''}${s.preg > 0 ? ' · expecting' : ''}</div>
       <div class="tags">${s.traitWords().map(t => `<span class="tag">${t}</span>`).join('') || '<span class="tag">Even-tempered</span>'}${gr ? `<span class="tag" style="border-color:${gr.color}">${escapeHtml(gr.name)}</span>` : ''}</div>
       ${s.char ? `<div class="hint" style="margin:4px 0">Character: <b style="color:var(--ink)">${ruthWord(s.char)}</b>, ${faithWord(s.char)}, ${ambWord(s.char)}. ${escapeHtml(upbringingText(s))}</div>` : ''}
       <div style="margin-bottom:6px">${escapeHtml(s.label)}${s.carry ? ' · carrying ' + s.carry.amt + ' ' + s.carry.kind : ''}</div>

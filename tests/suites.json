@@ -1,13 +1,109 @@
 {
- "node": ["save","golden","bld","regime_events","strife_events","living","maps","routes","animals","unreach","outposts","bridges","lives_events","stats_events","tech_events","concerns_events","concerns_states","livelihoods_events","stats_legacy","privacy_events","research_limits","discovery_events","voices_events","perf"],
- "first": ["save","golden","routes","outposts","maps","animals","unreach"],
- "pages": ["ui_disc","ui_growth","ui_liv","ui_tree","ui_voices","concerns_ui"],
- "ui_only": ["render","debug","statsui","concernsui","voicesui","ui","treeui"],
+ "node": [
+  "save",
+  "golden",
+  "bld",
+  "regime_events",
+  "strife_events",
+  "living",
+  "maps",
+  "routes",
+  "animals",
+  "unreach",
+  "outposts",
+  "bridges",
+  "lives_events",
+  "stats_events",
+  "tech_events",
+  "concerns_events",
+  "concerns_states",
+  "livelihoods_events",
+  "stats_legacy",
+  "privacy_events",
+  "research_limits",
+  "discovery_events",
+  "voices_events",
+  "war_events",
+  "perf"
+ ],
+ "first": [
+  "save",
+  "golden",
+  "routes",
+  "outposts",
+  "maps",
+  "animals",
+  "unreach"
+ ],
+ "pages": [
+  "ui_disc",
+  "ui_growth",
+  "ui_liv",
+  "ui_tree",
+  "ui_voices",
+  "concerns_ui",
+  "ui_war"
+ ],
+ "ui_only": [
+  "render",
+  "debug",
+  "statsui",
+  "concernsui",
+  "voicesui",
+  "ui",
+  "treeui"
+ ],
  "touch": {
-  "voices": ["voices_events","save","living","golden"],
-  "discovery": ["discovery_events","save","living","golden","outposts"],
-  "concerns": ["concerns_events","concerns_states","stats_legacy","save","golden"],
-  "stats": ["stats_events","stats_legacy","save","golden"]
+  "voices": [
+   "voices_events",
+   "save",
+   "living",
+   "golden"
+  ],
+  "discovery": [
+   "discovery_events",
+   "save",
+   "living",
+   "golden",
+   "outposts"
+  ],
+  "concerns": [
+   "concerns_events",
+   "concerns_states",
+   "stats_legacy",
+   "save",
+   "golden"
+  ],
+  "stats": [
+   "stats_events",
+   "stats_legacy",
+   "save",
+   "golden"
+  ],
+  "war": [
+   "war_events",
+   "save",
+   "living",
+   "golden",
+   "outposts",
+   "strife_events",
+   "routes"
+  ]
  },
- "est": {"living":535,"discovery_events":336,"stats_events":248,"bld":227,"outposts":130,"privacy_events":93,"save":91,"routes":70,"lives_events":68,"strife_events":60,"regime_events":47,"concerns_events":47,"perf":60}
+ "est": {
+  "living": 535,
+  "discovery_events": 336,
+  "stats_events": 248,
+  "bld": 227,
+  "outposts": 130,
+  "privacy_events": 93,
+  "save": 91,
+  "routes": 70,
+  "lives_events": 68,
+  "strife_events": 60,
+  "regime_events": 47,
+  "concerns_events": 47,
+  "perf": 60,
+  "war_events": 150
+ }
 }

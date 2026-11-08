@@ -313,6 +313,7 @@ class World {
     tradeDay(this);
     routesDay(this);
     outpostDay(this);
+    try { warDay(this) } catch (e) { this.fault('war', e) }
     bridgeDay(this);
     try { terraDay(this) } catch (e) { this.fault('terra', e) }
     try { discoveryDay(this) } catch (e) { this.fault('disc', e) }

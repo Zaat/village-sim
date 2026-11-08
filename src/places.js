@@ -28,7 +28,7 @@ function pickSpot(w, b, inside, v) {
   return null;
 }
 /* landmarks people walk over to look at, and why */
-const LANDMARKS = { monument: 'Monument', temple: 'Temple', library: 'Library', lighthouse: 'Lighthouse', bastion: 'Bastion', citadel: 'Citadel', foundry: 'Foundry', granaryhall: 'Great Granary' };
+const LANDMARKS = { monument: 'Monument', temple: 'Temple', library: 'Library', lighthouse: 'Lighthouse', bastion: 'Bastion', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', foundry: 'Foundry', granaryhall: 'Great Granary' };
 function pickLandmark(w, v) {
   const list = []; for (const t in LANDMARKS) for (const b of w.of(t)) { const pull = t === 'temple' ? 1 + 2 * (v.char ? v.char.piety : 0.3) : t === 'monument' ? 1.5 : t === 'library' ? 0.5 + 2 * v.trait.cur : 1; list.push({ b, pull }) }
   if (!list.length) return null; let tot = 0; for (const x of list) tot += x.pull; let r = w.r() * tot; for (const x of list) { r -= x.pull; if (r <= 0) return x.b } return list[0].b;

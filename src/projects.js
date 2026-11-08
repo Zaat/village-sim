@@ -54,6 +54,18 @@ const PROJECTS = {
     fit: v => 0.35 * v.trait.cur + 0.3 * v.trait.ind + 0.35 * v.char.amb,
     focus: 'enterprise', need: w => clamp(0.9 * (w.rx ? w.rx.I : 0) + (w.stock.stone < 30 ? 0.1 : 0), 0, 1)
   },
+  barracks: {
+    name: 'Barracks', tech: 'spears', size: [3, 2], cost: { wood: 50, stone: 30 }, time: 800, minPop: 24, req: w => threatLevel(w) > 0.1 || soldiersOf(w).length >= 4,
+    pitch: 'a barracks where the village’s soldiers can train and be kitted', gives: 'The ranks drill faster, fight a quarter better, and can carry the best arms the village knows.',
+    fit: v => 0.5 * v.trait.brave + 0.3 * (v.op.defense + 1) / 2 + 0.2 * (v.op.law + 1) / 2,
+    focus: 'safety', need: w => clamp(0.7 * threatLevel(w) + 0.2 * (soldiersOf(w).length / Math.max(4, targetSize(w))), 0, 1)
+  },
+  watchtower: {
+    name: 'Watchtower', tech: 'watchtowers', size: [2, 3], cost: { wood: 35, stone: 40 }, time: 700, minPop: 26, req: w => threatLevel(w) > 0.1,
+    pitch: 'a tall watchtower above the approaches', gives: 'Raiders are seen long before they land: the defenders are readier and the raid is easier to beat.',
+    fit: v => 0.35 * v.trait.brave + 0.35 * (1 - v.trait.cur) + 0.3 * (v.op.defense + 1) / 2,
+    focus: 'safety', need: w => clamp(0.6 * threatLevel(w) + 0.2 * lesson(w, 'raids'), 0, 1)
+  },
   citadel: {
     name: 'Citadel', tech: 'ironwork', size: [4, 3], cost: { wood: 40, stone: 120 }, time: 1300, minPop: 38, req: w => projBuilt(w, 'bastion') && !!(w.rx && w.rx.A > 0.15),
     pitch: 'a garrisoned citadel above the village', gives: 'A standing garrison deters raiders, cows crime, and makes uprisings and coups far harder.',

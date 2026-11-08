@@ -33,7 +33,7 @@
       <select id="set_open" style="width:100%;margin-bottom:8px"><option value="0">Off</option><option value="1">Relaxed</option><option value="2">Unlimited</option></select>
       <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
-      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids from neighbours <span class="hint">hostile clans may attack the dock; off by default</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids and war <span class="hint">hostile clans may attack the dock and outposts, and the council may march against them; off by default</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
     </div>
     <div class="card"><h3>Concern alerts</h3>
@@ -117,6 +117,7 @@
     <section class="tab" id="tab_world">
     <div class="card" id="outBox"><h3>Settlements &amp; outposts</h3><div id="outCard"></div></div>
     <div class="card"><h3>Neighbours</h3><div id="neighCard"></div></div>
+    <div class="card" id="warBox"><h3>Defence &amp; war</h3><div id="warCard"></div></div>
     <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
     </section>
     <section class="tab" id="tab_stats">
@@ -168,6 +169,7 @@
 <script src="src/neighbours.js"></script>
 <script src="src/mapgen.js"></script>
 <script src="src/diplomacy.js"></script>
+<script src="src/war.js"></script>
 <script src="src/routes.js"></script>
 <script src="src/save.js"></script>
 <script src="src/world.js"></script>

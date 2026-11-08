@@ -41,7 +41,7 @@ const neighName = n => n.name;
 /* ----- how strong is the village if it is attacked? ----- */
 function defenseScore(w) {
   const ad = adultsOf(w), brave = ad.filter(v => v.trait.brave > 0.55 && v.age < 60 && !v.isElder()).length, friendRaiders = w.neigh && w.neigh.some(n => n.kind === 'raiders' && n.pact === 2);
-  return 1 + 2 * Math.max(0, w.gov.policy.defense) + (projBuilt(w, 'bastion') ? 2 : 0) + (w.has('watchtowers') ? 1 : 0) + (w.has('ironwork') ? 1 : 0) + 1.5 * lesson(w, 'raids') + Math.min(3, brave / 6) + (w.fortifyUntil > w.day ? 1.5 : 0) + (friendRaiders ? 1.5 : 0) + (w.rx ? w.rx.def : 0) + 3 * techFx(w, 'defence');
+  return 1 + 2 * Math.max(0, w.gov.policy.defense) + (projBuilt(w, 'bastion') ? 2 : 0) + (w.has('watchtowers') ? 1 : 0) + (w.has('ironwork') ? 1 : 0) + armyPower(w) + (towerBuilt(w) ? 1 : 0) + 1.5 * lesson(w, 'raids') + Math.min(3, brave / 6) + (w.fortifyUntil > w.day ? 1.5 : 0) + (friendRaiders ? 1.5 : 0) + (w.rx ? w.rx.def : 0) + 3 * techFx(w, 'defence');
 }
 
 /* ----- first contact ----- */
@@ -138,21 +138,22 @@ function demandTribute(w, n) {
 }
 function raidVisit(w, n) {
   n.raids++; n.raidCd = w.day + 22 + ((w.r() * 18) | 0); startVisit(w, n, 'raid', 2);
-  const attackers = 2 + Math.floor(n.strength / 10) + (n.grudge > 0.3 ? 1 : 0), D = defenseScore(w), ratio = attackers * 1.1 / D, dock = w.of('dock')[0];
-  let outcome = ratio < 0.75 ? 'repelled' : ratio < 1.4 ? 'partial' : 'heavy', text;
+  const attackers = 2 + Math.floor(n.strength / 10) + (n.grudge > 0.3 ? 1 : 0), D = defenseScore(w), st = settleRaid(w, n, attackers, D), dock = w.of('dock')[0];
+  let outcome = st.outcome, text, victims = [];
   if (outcome === 'repelled') {
     n.rel -= 8; n.strength = Math.max(8, n.strength - 3); text = byLand(n) ? `Raiders from ${n.name} march on the village, but the watch drives them off!` : `Raiders from ${n.name} land at the dock, but the watch drives them off!`;
     for (const v of w.vills) if (v.isAdult() && v.trait.brave > 0.55) { v.mood = Math.min(100, v.mood + 4); v.reputation = Math.min(100, (v.reputation || 50) + 2) }
   } else {
     const f = outcome === 'partial' ? 0.2 + 0.15 * w.r() : 0.4 + 0.2 * w.r(), lost = {}; for (const k of ['food', 'wood', 'stone']) { lost[k] = Math.round(w.stock[k] * f); w.stock[k] -= lost[k] }
-    const dead = outcome === 'heavy' ? 1 + (w.r() < 0.5 ? 1 : 0) : w.r() < 0.35 ? 1 : 0; let victims = [];
+    const dead = outcome === 'heavy' ? 1 + (w.r() < 0.5 ? 1 : 0) : w.r() < 0.35 ? 1 : 0;
     const fighters = w.vills.filter(v => v.isAdult() && !v.isElder()).sort((a, b) => b.trait.brave - a.trait.brave).slice(0, 4 + dead);
-    for (let i = 0; i < dead && i < fighters.length; i++) { const v = fighters[(w.r() * fighters.length) | 0]; if (v && !victims.includes(v)) { v.health = 0; v.cause = 'raid'; victims.push(v) } }
+    for (let i = 0; i < dead && i < fighters.length; i++) { const v = fighters[(w.r() * fighters.length) | 0]; if (v && !victims.includes(v)) { v.health = -1; v.cause = 'raid'; victims.push(v) } }
     for (const v of w.vills) v.mood = Math.max(0, v.mood - (outcome === 'heavy' ? 14 : 8));
     let burned = ''; if (outcome === 'heavy' && w.r() < 0.6) { const hs = w.houses(); if (hs.length > 2) { const b = hs[(w.r() * hs.length) | 0]; const gone = damageBuilding(w, b, baseHp(b) * (0.9 + 0.5 * w.r()), 'raiders'); burned = gone ? ' A house was set ablaze and burned down.' : ' A house was set ablaze, but the fire was beaten out.' } }
     n.rel -= 4; n.strength += 2;
     text = `Raiders from ${n.name} ${outcome === 'heavy' ? 'storm ashore and plunder the village' : 'land and carry off loot'}: ${lost.food} food, ${lost.wood} firewood and ${lost.stone} stone taken.${victims.length ? ' ' + victims.map(v => v.name).join(', ') + (victims.length > 1 ? ' fall' : ' falls') + ' defending the village.' : ''}${burned}`;
   }
+  afterRaid(w, n, st, victims);
   learn(w, 'raids', outcome === 'repelled' ? 0.12 : 0.3); for (const v of w.vills) if (v.isAdult()) experience(v, 'raid', outcome === 'repelled' ? 0.3 : 0.7); dlog(w, n, text, 'raid');
   if (dock && outcome !== 'repelled') w.scars.push({ x: dock.x - 1, y: dock.y - 1, w: 2, h: 2, until: w.tick + CFG.TPD * 4 });
   respondToRaid(w, n, outcome);

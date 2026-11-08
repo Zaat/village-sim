@@ -198,7 +198,7 @@ function tryCoup(w, ad, chief, crisis) {
 function uprising(w, ad, chief) {
   const R = w.regime, g = w.gov, leader = ad.filter(v => !g.council.some(c => c.id === v.id) && v.trait.brave > 0.5 && v.charisma() > 0.5).sort((a, b) => b.charisma() - a.charisma())[0] || null;
   R.ax.auth = Math.max(0.1, R.ax.auth - 0.35); R.unrest = 0; R.revolts++; R.noManage = w.day + 60; g.termEnd = w.day;
-  const fighters = ad.filter(v => v.trait.brave > 0.55).sort(() => w.r() - 0.5).slice(0, 3), dead = []; for (const f of fighters) if (w.r() < 0.35) { f.health = 0; f.cause = 'strife'; dead.push(f) }
+  const fighters = ad.filter(v => v.trait.brave > 0.55).sort(() => w.r() - 0.5).slice(0, 3), dead = []; for (const f of fighters) if (w.r() < 0.35) { f.health = -1; f.cause = 'strife'; dead.push(f) }
   for (const v of ad) { v.mood = Math.min(100, v.mood + (v.char.ruth < 0.55 ? 6 : -6)) }
   if (chief) { chief.stocksUntil = w.tick + CFG.TPD * 3; chief.mood = Math.max(0, chief.mood - 15); chief.story('Was overthrown by the people.') }
   if (leader) { experience(leader, 'power', 2); leader.reputation = Math.min(100, leader.reputation + 12); leader.story('Led the uprising against the hard rule.') }
@@ -214,6 +214,6 @@ function regimeNeed(w, id) {
 /* what a great work means to this kind of village */
 function regimeProjectBias(w, id) {
   const rx = w.rx; if (!rx) return 0;
-  const tbl = { bastion: 0.5 * rx.A + 0.3 * rx.I, monument: 0.6 * rx.A + 0.5 * rx.P, library: 0.5 * rx.O - 0.4 * rx.P - 0.3 * rx.A, hall: 0.4 * rx.C + 0.2 * rx.O, amphitheatre: 0.4 * rx.C + 0.3 * rx.P, granaryhall: 0.4 * rx.C + 0.2 * rx.P, lighthouse: 0.5 * rx.O + 0.2 * rx.I, temple: 0.6 * rx.P + 0.2 * rx.C, foundry: 0.7 * rx.I + 0.2 * rx.A, citadel: 0.6 * rx.A + 0.2 * rx.I };
+  const tbl = { bastion: 0.5 * rx.A + 0.3 * rx.I, monument: 0.6 * rx.A + 0.5 * rx.P, library: 0.5 * rx.O - 0.4 * rx.P - 0.3 * rx.A, hall: 0.4 * rx.C + 0.2 * rx.O, amphitheatre: 0.4 * rx.C + 0.3 * rx.P, granaryhall: 0.4 * rx.C + 0.2 * rx.P, lighthouse: 0.5 * rx.O + 0.2 * rx.I, temple: 0.6 * rx.P + 0.2 * rx.C, foundry: 0.7 * rx.I + 0.2 * rx.A, citadel: 0.6 * rx.A + 0.2 * rx.I, barracks: 0.5 * rx.A + 0.2 * rx.I, watchtower: 0.3 * rx.A + 0.2 * rx.O };
   return 0.2 * (tbl[id] || 0);
 }

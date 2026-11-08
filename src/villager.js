@@ -94,7 +94,7 @@ class Villager {
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0) + 0.04 * techFx(w, 'health'));
     if (w.cold) { this.health -= 0.012 * Math.max(0.15, 1 - Math.min(0.7, techFx(w, 'health')) - (w.liv ? w.liv.fx.warm : 0)); this.cause = 'cold' }
-    if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : this.cause === 'strife' ? 'was killed in the unrest' : 'starved'); return }
+    if (this.health <= 0) { w.kill(this, this.cause === 'wolf' ? 'was killed by a wolf' : this.cause === 'cold' ? 'froze to death' : this.cause === 'fever' ? 'succumbed to the fever' : this.cause === 'sea' ? 'was lost at sea' : this.cause === 'raid' ? 'was killed in a raid' : this.cause === 'war' ? 'fell in battle' : this.cause === 'strife' ? 'was killed in the unrest' : 'starved'); return }
     const old = CFG.OLD_DAYS * (w.lifeScale || 1); if (this.age > old && w.r() < ((this.age - old) * 0.03) / CFG.TPD) { w.kill(this, 'passed away peacefully of old age'); return }
     if (this.preg > 0) { this.preg--; if (this.preg === 0) w.birth(this) }
     if ((w.tick + this.id) % 10 === 0 && !this.sleeping && this.checkDanger()) return;

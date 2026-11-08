@@ -22,6 +22,8 @@ const CONCERN_KINDS = {
   unity: 'The village is divided',
   faction: 'A rival faction',
   outpost: 'An outpost is slipping away',
+  defence: 'The village is poorly defended',
+  army: 'The army is going hungry',
 };
 
 function initConcerns(w) {
@@ -114,6 +116,12 @@ function outpostRules(w, C, found) {
     found.push({ key: 'outpost:' + o.id, sev: o.loyalty < 0.2 ? 2 : 1, title: `${o.name} is slipping away`, text: `${o.name} (${o.pop} people) feels little loyalty to the village (${Math.round(o.loyalty * 100)}%).`, why: 'Outposts that feel forgotten or overtaxed break away and take their people with them.', m: { v: o.loyalty, ok: 0.3, bad: 0.1 }, fix: ['nudge_ease', 'feast'] });
 }
 
+function warRules(w, C, found) {
+  if (!w.war || !w.settings || !w.settings.raids) return; const W = w.war, t = threatLevel(w), n = soldiersHome(w).length, tg = targetSize(w);
+  if (t >= 0.35 && n < Math.max(3, tg * 0.5)) found.push({ key: 'defence', sev: t > 0.7 ? 2 : 1, title: 'The village is poorly defended', text: `Hostile neighbours are near, but only ${n} villagers stand in arms (the council wants about ${tg}).`, why: 'A raid on a village with few defenders ends in loot, burning and death.', m: { v: n, ok: Math.max(3, tg * 0.5), bad: 1 }, fix: ['nudge_ease'] });
+  if (W.morale < 0.35 && Object.keys(W.rolls).length >= 3) found.push({ key: 'army', sev: W.morale < 0.2 ? 2 : 1, title: 'The army is going hungry', text: `The ranks are demoralised (${Math.round(W.morale * 100)}%): too little food or too many defeats.`, why: 'Soldiers who are hungry or beaten desert, and the village is left open.', m: { v: W.morale, ok: 0.5, bad: 0.2 }, fix: ['feast'] });
+}
+
 /* ----- keeping the list: raise, update, resolve ----- */
 function concernTitle(k, c) { return c && c.title ? c.title : CONCERN_KINDS[k.split(':')[0]] || k }
 function concernsDay(w) {
@@ -122,7 +130,7 @@ function concernsDay(w) {
   C.pop.push(pop); if (C.pop.length > 192) C.pop.shift();
   if (w.day % 4 === 0) { C.snap.push({ d: w.day, c: { ...w.causes } }); if (C.snap.length > 12) C.snap.shift() }
   if (w.day < 12) return;
-  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found);
+  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found); warRules(w, C, found);
   const seen = new Set();
   for (const f of found) {
     seen.add(f.key); let c = C.list.find(x => x.key === f.key);

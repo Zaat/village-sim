@@ -357,6 +357,7 @@ function drawVillager(g, v, w, now, sel) {
   rc(g, skin, -2, -13, 5, 5); rc(g, hair, -2, -14, 5, 2); rc(g, hair, -3, -13, 1, 3); rc(g, '#222', 1, -11, 1, 1);
   if (gcol) { rc(g, gcol, -4, -9, 2, 2); rc(g, 'rgba(0,0,0,.25)', -4, -7, 2, 1) }
   const hc = HATS[v.role]; if (hc && v.age >= CFG.CHILD_DAYS) { if (v.role === 'farmer' || v.role === 'fisher') { rc(g, hc, -4, -14, 9, 1); rc(g, hc, -2, -16, 5, 2) } else if (v.role === 'hunter') { rc(g, hc, -3, -15, 6, 3); rc(g, hc, -3, -12, 1, 3) } else { rc(g, hc, -3, -15, 6, 2); if (v.role === 'miner') rc(g, '#ffe27a', 1, -16, 2, 1) } }
+  const sr = w.war && w.war.rolls && w.war.rolls[v.id]; if (sr && UNITS[sr.t] && v.age >= CFG.CHILD_DAYS) { const tr = UNITS[sr.t].tier, hm = ['#7a5a3a', '#8b9096', '#9aa0a6', '#b9bfc6', '#c7ccd1', '#3a3f4a'][tr]; rc(g, hm, -3, -15, 6, 2); rc(g, hm, -3, -14, 1, 3); rc(g, 'rgba(255,255,255,.35)', -2, -15, 2, 1); rc(g, '#5a3d22', 6, -18, 1, 15); rc(g, tr >= 3 ? '#d7dbe0' : '#a9a39a', 5, -21, 3, 3) }
   if ((v.trade || v.side) && !v.carry && v.jobKind === 'craft' && v.age >= CFG.CHILD_DAYS) {
     const L = tradeLook(w, v);
     if (L) { rc(g, L[2], -3, -7, 6, 3); if (work) { rc(g, '#6b4f36', 5, -3, 7, 3); rc(g, L[1], 5, -4, 7, 1); rc(g, 'rgba(0,0,0,.25)', 6, -1, 1, 1); rc(g, 'rgba(0,0,0,.25)', 10, -1, 1, 1); const [shape, col] = L; if (shape === 'hammer') { rc(g, '#7a5a3a', 4, -11, 1, 4); rc(g, col, 3, -12, 3, 2) } else if (shape === 'needle') { rc(g, col, 4, -10, 3, 1); rc(g, '#d34', 7, -10, 1, 1) } else if (shape === 'pot') { rc(g, col, 4, -9, 3, 3); rc(g, 'rgba(0,0,0,.25)', 4, -7, 3, 1) } else if (shape === 'loaf') { rc(g, col, 4, -9, 4, 2) } else if (shape === 'book') { rc(g, col, 4, -10, 3, 3); rc(g, '#3f6fb0', 4, -10, 1, 3) } else if (shape === 'cross') { rc(g, col, 5, -11, 1, 4); rc(g, col, 4, -10, 3, 1) } else if (shape === 'gem') { rc(g, col, 5, -10, 2, 2); rc(g, '#fff', 5, -10, 1, 1) } else if (shape === 'spear') { rc(g, '#7a5a3a', 5, -15, 1, 9); rc(g, col, 4, -17, 3, 2) } else if (shape === 'coin') { rc(g, col, 4, -9, 3, 3) } else if (shape === 'note') { rc(g, col, 5, -12, 1, 4); rc(g, col, 6, -12, 2, 1) } else if (shape === 'heart') { rc(g, col, 4, -11, 2, 1); rc(g, col, 6, -11, 2, 1); rc(g, col, 4, -10, 4, 2) } else { rc(g, col, 4, -9, 3, 3) } } }
@@ -478,6 +479,16 @@ function projectArt(g, w, b, now, dark) {
     if (snow) for (let k = 0; k < 5; k++) rc(g, '#f4f6fa', X + 3 + k * 9, Y + 3, 6, 1);
     rc(g, '#2a2c30', X + 19, Y + 30, 10, 14); rc(g, '#4a3420', X + 20, Y + 31, 8, 13); rc(g, '#2a2c30', X + 9, Y + 20, 2, 7); rc(g, '#2a2c30', X + 37, Y + 20, 2, 7);
     rc(g, '#5a3d22', X + 23, Y - 8, 2, 12); rc(g, '#3c6fb4', X + 25, Y - 8, 9, 5); rc(g, '#f0e6d0', X + 28, Y - 7, 3, 3);
+  } else if (b.type === 'barracks') {
+    rc(g, '#6e5a42', X + 2, Y + 18, Wd - 4, Ht - 20); for (let r = 0; r < 5; r++) rc(g, r % 2 ? '#7d6850' : '#5f4d38', X + 2, Y + 20 + r * 5, Wd - 4, 1);
+    for (let r = 0; r < 8; r++) rc(g, r % 2 ? '#8a3a2e' : '#9a463a', X + 1 + r * 2, Y + 8 + r, Wd - 2 - r * 4, 1); if (snow) rc(g, '#f4f6fa', X + 12, Y + 8, Wd - 24, 2);
+    rc(g, '#2e2216', X + 18, Y + 28, 10, Ht - 30); rc(g, '#4a3420', X + 19, Y + 29, 8, Ht - 31); rc(g, lit ? '#ffd98a' : '#b9c4cc', X + 6, Y + 24, 4, 5); rc(g, lit ? '#ffd98a' : '#b9c4cc', X + Wd - 12, Y + 24, 4, 5);
+    rc(g, '#5a3d22', X + Wd - 8, Y + 2, 2, 14); rc(g, '#a02818', X + Wd - 6, Y + 2, 7, 4); rc(g, '#8b9096', X + 4, Y + 14, 2, 8); rc(g, '#c7ccd1', X + 4, Y + 10, 2, 4);
+  } else if (b.type === 'watchtower') {
+    rc(g, '#7a7e84', X + 8, Y + 14, Wd - 16, Ht - 14); for (let r = 0; r < 7; r++) for (let k = 0; k < 3; k++) rc(g, (r + k) % 2 ? '#8b9096' : '#70747a', X + 8 + k * 7 + (r % 2) * 3, Y + 16 + r * 5, 6, 1);
+    rc(g, '#5f6368', X + 4, Y + 8, Wd - 8, 7); for (let k = 0; k < 3; k++) rc(g, '#8b9096', X + 5 + k * 8, Y + 4, 5, 5); rc(g, '#4a4e54', X + 4, Y + 14, Wd - 8, 1);
+    rc(g, '#2a2c30', X + Wd / 2 - 3, Y + Ht - 12, 6, 12); rc(g, '#2a2c30', X + Wd / 2 - 1, Y + 22, 2, 6); rc(g, lit ? '#ffb347' : '#b9c4cc', X + Wd / 2 - 2, Y + 9, 4, 3);
+    if (snow) for (let k = 0; k < 3; k++) rc(g, '#f4f6fa', X + 5 + k * 8, Y + 4, 5, 1);
   } else if (b.type === 'temple') {
     rc(g, '#a8a498', X + 2, Y + 40, Wd - 4, 6); rc(g, '#bab6aa', X + 5, Y + 36, Wd - 10, 5);
     rc(g, '#e6e0d0', X + 8, Y + 16, Wd - 16, 21); for (let k = 0; k < 5; k++) { rc(g, '#f6f2e6', X + 10 + k * 10, Y + 16, 4, 21); rc(g, '#cfc8b6', X + 13 + k * 10, Y + 16, 1, 21) }

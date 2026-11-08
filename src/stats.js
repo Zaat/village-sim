@@ -12,14 +12,14 @@
    Nothing here changes the simulation; it only watches.
    ========================================================================== */
 const STAT_EVERY = 4, STAT_CAP = 2400;
-const STAT_GROUPS = ['People', 'Hardship', 'Society', 'Economy & expansion', 'Knowledge'];
+const STAT_GROUPS = ['People', 'Hardship', 'Society', 'Economy & expansion', 'Knowledge', 'Conflict'];
 const STAT_EVENTS = [
   ['born', 'Births', 'People'], ['cabin', 'Cabins built', 'People'], ['arrivals', 'Newcomers arrive', 'People'], ['couples', 'Couples formed', 'People'], ['died', 'Deaths (all)', 'People'],
   ['died_age', 'Died of old age', 'People'], ['died_hunger', 'Starved', 'People'], ['died_cold', 'Froze', 'People'], ['died_fever', 'Died of fever', 'People'], ['died_wolf', 'Killed by wolves', 'People'], ['died_sea', 'Lost at sea', 'People'], ['died_violence', 'Killed in raids or strife', 'People'],
   ['fire', 'Fires', 'Hardship'], ['storm', 'Storms', 'Hardship'], ['drought', 'Droughts', 'Hardship'], ['harsh_winter', 'Harsh winters', 'Hardship'], ['fever', 'Fever outbreaks', 'Hardship'], ['wolves', 'Wolf attacks', 'Hardship'], ['famine', 'Famines', 'Hardship'], ['collapse', 'Buildings collapsed', 'Hardship'], ['cargo_lost', 'Cargoes lost', 'Hardship'],
   ['election', 'Elections', 'Society'], ['decision', 'Council decisions', 'Society'], ['coup', 'Coups', 'Society'], ['uprising', 'Uprisings', 'Society'], ['purge', 'Purges', 'Society'], ['reform', 'Reforms', 'Society'], ['rival_council', 'Rival councils', 'Society'], ['strike', 'Strikes', 'Society'], ['civil_strife', 'Civil strife', 'Society'], ['secession', 'Secessions', 'Society'], ['sect', 'Sects founded', 'Society'],
   ['theft', 'Thefts', 'Society'], ['assault', 'Assaults', 'Society'], ['trial', 'Trials', 'Society'], ['banished', 'Banishments', 'Society'], ['feud', 'Feuds begun', 'Society'], ['feud_mended', 'Feuds mended', 'Society'], ['estate', 'Estates passed on', 'Society'], ['holiday', 'Holidays', 'Society'],
-  ['deal', 'Market deals', 'Economy & expansion'], ['trip', 'Trading trips', 'Economy & expansion'], ['ship_built', 'Ships built', 'Economy & expansion'], ['harbour_upgrade', 'Harbour upgrades', 'Economy & expansion'], ['voyage', 'Peoples discovered', 'Economy & expansion'], ['outpost_founded', 'Outposts founded', 'Economy & expansion'], ['outpost_failed', 'Outposts failed', 'Economy & expansion'], ['outpost_free', 'Outposts broke away', 'Economy & expansion'], ['bridge', 'Bridges built', 'Economy & expansion'],
+  ['deal', 'Market deals', 'Economy & expansion'], ['trip', 'Trading trips', 'Economy & expansion'], ['ship_built', 'Ships built', 'Economy & expansion'], ['harbour_upgrade', 'Harbour upgrades', 'Economy & expansion'], ['voyage', 'Peoples discovered', 'Economy & expansion'], ['outpost_founded', 'Outposts founded', 'Economy & expansion'], ['outpost_failed', 'Outposts failed', 'Economy & expansion'], ['outpost_free', 'Outposts broke away', 'Economy & expansion'], ['bridge', 'Bridges built', 'Economy & expansion'], ['campaign', 'Campaigns launched', 'Conflict'], ['war_won', 'Campaigns won', 'Conflict'], ['war_lost', 'Campaigns lost', 'Conflict'], ['war_drawn', 'Campaigns drawn', 'Conflict'], ['outpost_attacked', 'Outposts attacked', 'Conflict'], ['outpost_defended', 'Outpost attacks beaten off', 'Conflict'],
   ['terraform', 'Terraform works done', 'Economy & expansion'], ['expedition', 'Expeditions returned', 'Economy & expansion'], ['expedition_lost', 'Expeditions lost', 'Economy & expansion'], ['rumour', 'Sites heard of', 'Economy & expansion'], ['research_deal', 'Lessons bought from neighbours', 'Knowledge'],
   ['concern', 'Concerns raised', 'Society'], ['concern_critical', 'Critical concerns', 'Society'], ['concern_response', 'Responses tried', 'Society'], ['invention', 'Jobs invented', 'Economy & expansion'], ['invention_failed', 'Inventions that failed', 'Economy & expansion'], ['overtime', 'Overtime calls', 'Society'], ['aspiration', 'Dreams achieved', 'People'], ['discovery', 'Discoveries', 'Knowledge'], ['tech_lost', 'Knowledge lost', 'Knowledge'], ['era', 'New ages', 'Knowledge'], ['project', 'Great works finished', 'Knowledge'], ['lesson', 'Lessons learned', 'Knowledge']
 ].map(([key, label, group]) => ({ key, label, group }));
@@ -71,6 +71,8 @@ const STAT_SERIES = [
   { id: 'projects', label: 'Great works', group: 'Knowledge', get: w => Object.keys(w.proj.done).length },
   { id: 'buildings', label: 'Buildings', group: 'Knowledge', get: w => w.buildings.size },
   { id: 'houses', label: 'Homes', group: 'Knowledge', get: w => w.houses().length },
+  { id: 'soldiers', label: 'Soldiers', group: 'Conflict', get: w => w.war ? Object.keys(w.war.rolls).length : 0 },
+  { id: 'armypow', label: 'Army strength', group: 'Conflict', get: w => w.war && typeof armyPower === 'function' ? Math.round(armyPower(w) * 10) / 10 : 0 },
   { id: 'outposts', label: 'Outposts alive', group: 'Expansion', get: w => w.out ? w.out.list.filter(o => o.state === 'active').length : 0 },
   { id: 'neigh', label: 'Peoples known', group: 'Expansion', get: w => w.neigh ? w.neigh.filter(n => n.found).length : 0 },
   { id: 'ships', label: 'Ships', group: 'Expansion', get: w => w.boats.length },
@@ -112,7 +114,7 @@ function statFromEmit(w, type, text, data) {
   const c = (k, t) => statCount(w, k, 1, t || text), d = data || {}, tx = text || '';
   switch (type) {
     case 'birth': c('born'); break;
-    case 'death': { c('died'); const why = String(d.why || ''); c(/hunger|starv/.test(why) ? 'died_hunger' : /old age|peacefully/.test(why) ? 'died_age' : /froze/.test(why) ? 'died_cold' : /fever/.test(why) ? 'died_fever' : /wolf/.test(why) ? 'died_wolf' : /sea/.test(why) ? 'died_sea' : /raid|strife|struck|fight/.test(why) ? 'died_violence' : 'died_other'); break }
+    case 'death': { c('died'); const why = String(d.why || ''); c(/hunger|starv/.test(why) ? 'died_hunger' : /old age|peacefully/.test(why) ? 'died_age' : /froze/.test(why) ? 'died_cold' : /fever/.test(why) ? 'died_fever' : /wolf/.test(why) ? 'died_wolf' : /sea/.test(why) ? 'died_sea' : /raid|strife|struck|fight|battle/.test(why) ? 'died_violence' : 'died_other'); break }
     case 'event': {
       const k = d.kind; if (k === 'fire' || /^Fire/.test(tx)) c('fire'); else if (k === 'storm' || /violent storm/.test(tx)) c('storm'); else if (k === 'drought') c('drought'); else if (k === 'harsh') c('harsh_winter'); else if (k === 'fever' || /fever sweeps/.test(tx)) c('fever'); else if (k === 'wolves') c('wolves'); else if (k === 'newcomers') c('arrivals');
       else if (/^Famine/.test(tx)) c('famine'); else if (/collapses/.test(tx)) c('collapse'); else if (/cargo was lost/.test(tx)) c('cargo_lost'); break
@@ -131,6 +133,7 @@ function statFromEmit(w, type, text, data) {
     case 'outpost': if (/settlers.*to found|aboard a ship|on the road/.test(tx)) c('outpost_founded'); else if (/died out|lost on the way/.test(tx)) c('outpost_failed'); break;
     case 'diplomacy': if (/declare themselves free/.test(tx)) c('outpost_free'); break;
     case 'bridge': c('bridge'); break;
+    case 'war': if (d.kind === 'campaign') { if (d.outcome === 'won') c('war_won'); else if (d.outcome === 'lost') c('war_lost'); else if (d.outcome === 'drawn') c('war_drawn'); else if (d.outcome === 'march') c('campaign') } else if (d.kind === 'outpost') { if (d.outcome === 'repelled') c('outpost_defended'); else c('outpost_attacked') } break;
     case 'discovery': c('discovery'); break;
     case 'terraform': c('terraform'); break;
     case 'expedition': c(d.lost ? 'expedition_lost' : 'expedition'); break;

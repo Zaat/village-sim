@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.29.2 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.30 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,19 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Conflict: soldiers, battles and campaigns (new in 0.30)
+Peace is still the default. Everything below needs the **Raids and war** switch in Settings (the old "Raids" switch, renamed) and a hostile neighbour the village has met.
+- **A standing army (`src/war.js`).** When danger is felt (a met, hostile clan, a raid in living memory, strife at home) the council musters a watch from the bravest adults, a few at a time, up to a target that grows with the danger, the defence policy and the regime (authority keeps bigger armies). When the danger passes the ranks are stood down slowly. Soldiers are ordinary villagers: they carry a helmet and a spear on the map (steel-grey for better arms) and the inspector names their rank.
+- **Arms follow technology:** militia, spearmen (hafted spears), archers (bows), swordsmen (iron armour), legionaries (drilled ranks), musketeers (muskets). One soldier a day is re-equipped when the stores allow; drill adds experience.
+- **Barracks and Watchtower** are two new great projects. The barracks drills the ranks (+25% strength, faster experience) and lets the army carry the best arms known; the watchtower gives early warning, so a raid is easier to beat. Both have art and appear only when danger is felt.
+- **Upkeep and morale:** each soldier eats a little extra from the store (cheaper under authority, dearer in open regimes). Hungry or beaten armies lose morale and weaken; victories raise it; a starving army deserts.
+- **Battles are abstract:** two sides, three rounds, casualties on both. The same model settles raids on the village (the ranks bleed first, and friends with a treaty may stand with the village), attacks on outposts and the council's own campaigns.
+- **Hostile neighbours attack outposts** now and then; an outpost may drive them off (with soldiers sent from the village if there are enough), lose people, or be overrun and abandoned.
+- **Campaigns:** when raids or a grudge have gone on long enough and the army is big enough, the council is asked whether to march on the neighbour, send envoys with gifts instead, or hold. A campaign takes days; the soldiers are away and do not defend meanwhile. Victory brings plunder and a spell of tribute; defeat costs lives, morale and the neighbour's respect.
+- **Concerns, statistics, chronicle:** new "poorly defended" and "army going hungry" concerns; series for soldiers and army strength; counters for campaigns and outposts attacked; campaigns appear in the chronicle. A new **Defence & war** card in the World tab shows the army, morale, results and the last battles.
+- **Bug fix:** raid and strife victims were given 0 health, but villagers regain a little health before the death check, so many of those deaths never happened. They are now killed properly.
+- **Tests:** `tests/war_events.js` (51 checks: battles, muster and stand-down, raids, allies, campaigns, outposts, projects, concerns, save and load, upkeep and the regime), `tests/ui_war.js` (page test with screenshots). Control of the army (orders, stance) is planned for 0.33.
 
 ## Varied bubbles and quicker tests (new in 0.29.2)
 - **Bubbles:** every thought now carries other wordings for the same subject (about 35 new lines for hunger, tiredness, loneliness, cold, contentment, low spirits, housing, privacy, drought, winter and the season). A bubble picks a wording that has not been on screen in the last 90 seconds, and no more than two bubbles on the same subject show at once. Choosing is display-only: the simulation is identical to v0.29.

@@ -171,7 +171,7 @@ function civilDay(w, ad) {
   const fr = rebels.filter(fit), fl = loyal.filter(fit);
   for (const v of ad) v.mood = Math.max(0, v.mood - 1.2);
   c.rounds++;
-  const clash = (list, foes) => { const picks = list.slice().sort(() => w.r() - 0.5).slice(0, 1 + ((w.r() * 2) | 0)); for (const v of picks) { const roll = w.r(); if (roll < 0.1 && foes.length) { v.health = 0; v.cause = 'strife'; c.dead.push(v.name); S.casualties++ } else if (roll < 0.4) { v.health = Math.max(5, v.health - 35); c.hurt++; v.mood = Math.max(0, v.mood - 10) } } };
+  const clash = (list, foes) => { const picks = list.slice().sort(() => w.r() - 0.5).slice(0, 1 + ((w.r() * 2) | 0)); for (const v of picks) { const roll = w.r(); if (roll < 0.1 && foes.length) { v.health = -1; v.cause = 'strife'; c.dead.push(v.name); S.casualties++ } else if (roll < 0.4) { v.health = Math.max(5, v.health - 35); c.hurt++; v.mood = Math.max(0, v.mood - 10) } } };
   clash(fr, fl); clash(fl, fr); S.clashes++;
   const sR = fr.length + (leader ? leader.charisma() * 2 : 0) + 0.5 * rebels.length, sL = fl.length + 2 + defenseScore(w) + 0.5 * loyal.length + (projBuilt(w, 'citadel') ? 2 : 0) + 3 * R.ax.auth;
   if (c.rounds < 3 + ((c.since + 1) % 3) && !(c.rounds >= 2 && (fr.length < 2 || fl.length < 2))) return;
