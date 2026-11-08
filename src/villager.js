@@ -121,6 +121,7 @@ class Villager {
     const st = this.cur, w = this.w;
     if (st.check && !st.check()) { this.abort(0); return false }
     if (st.label) this.label = st.label;
+    if (st.chatWith) { const o = st.chatWith; if (o.alive) try { voiceChat(w, this, o) } catch (e) { w.fault('voices', e) } }
     if (st.type === 'go') {
       this.path = st.path || w.search(this.tx, this.ty, st.goal, st.maxCost); st.path = null;
       if (!this.path && !st.maxCost) this.path = w.search(this.tx, this.ty, st.goal, undefined, true);     // boxed in: hack through brush
@@ -274,7 +275,7 @@ class Villager {
     if (!best) return false;
     const o = best, ox = o.tx, oy = o.ty; this.jobKind = 'social';
     this.steps = [go((x, y) => Math.abs(x - ox) + Math.abs(y - oy) <= 1, null, 'Looking for ' + o.name, { maxCost: 70 }),
-    work(50, 'Chatting with ' + o.name, () => { if (o.alive && Math.abs(o.x - this.x) + Math.abs(o.y - this.y) <= 3) w.interact(this, o); else this.social = Math.min(100, this.social + 8) })];
+    work(50, 'Chatting with ' + o.name, () => { if (o.alive && Math.abs(o.x - this.x) + Math.abs(o.y - this.y) <= 3) w.interact(this, o); else this.social = Math.min(100, this.social + 8) }, { chatWith: o })];
     return true;
   }
 

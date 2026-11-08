@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.28.1 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.29 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Voices and thoughts (new in 0.29)
+- **Villagers now think, dream and talk.** About thirty kinds of thought are drawn from the villager's real state: hunger, tiredness, loneliness, cold, no home of their own, mood, their trade, play and lessons for children, a partner or child, a coming baby, grief, the stores before winter, drought and harsh winters, festivals, a fresh discovery, an expedition setting out or coming back, village troubles and council decisions, rumours of far places, their own dream for the future, quarrels and friends, money and old age. Sleepers dream. Choosing a thought uses no random numbers, so the village runs exactly as it did before (a test compares 30 days against a build with voices removed).
+- **Conversations.** When two villagers stop to chat, one speaks and the other answers a moment later. The topic comes from what they share: the stores, the weather, work, a partner or child, news, the festival, an issue they disagree on; a pair who dislike each other speak coldly.
+- **Bubbles scale with speed** (`src/render.js`): at 1&times; and below full lines, six at a time; at 3&times; a few words, six at a time; at 10&times; and 30&times; a single glyph, three at a time, nearest the middle of the screen; at 100&times; none. Thoughts are white bubbles, speech has a tail, dreams are blue clouds. A Settings switch turns them off.
+- **Click to pin.** Click a bubble to select that villager and pin the line; the inspector's **Mind** block shows the current thought (click it to pin at 3&times; and below), the last few thoughts, and an Unpin button. A pinned line stays on screen at any speed.
+- **Talk of the village** (Events tab): at 1&times; and below a live feed of the lines being shown; at 3&times; a running digest; faster than that only the **daily summaries** ("the talk of the village: daily work 30%, the council 20%, wanting privacy 5%; 12 conversations", with one quoted line), merged into weekly lines above 10&times;. Summaries are saved with the village.
+- **Claude-written lines (optional, off by default).** A toggle next to the council's Claude switch lets Claude replace the selected villager's rule-based thought with a line of its own (up to 60 per session, slow speeds only, same permission as the council).
+- **Statistics:** new series for the share of thoughts that are worries and for conversations per day. Tests: `tests/voices_events.js` (30 checks), `tests/ui_voices.js` (page test with screenshots).
 
 ## Expeditions, discovery and a living sea (new in 0.28)
 - **Hidden sites (`src/discovery.js`):** every map seeds about 23 places worth a journey, out of reach of the village at first: ruins of an older people, deep caves, outcrops of dark stone, buried hoards (on land) and sunken wrecks, rich fishing grounds and whaling grounds (at sea). The village's own past adds more: **the wreck of a trading ship it lost** and **abandoned outposts** become sites too. Sites come from the map seed alone (their own random stream), so a map always has the same hidden places.

@@ -1,6 +1,6 @@
 // One world for the insight report: node tools/insight_one.js SEED MAP DAYS  ->  one JSON line (summary + a few derived features)
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,ST,statsSummary,CFG});';
+const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,ST,statsSummary,CFG});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+process.argv[2],map=process.argv[3]||'island',days=+process.argv[4]||320;
 const w=new ctx.World(seed,{map,survival:process.env.SURVIVAL==='1',raids:process.env.RAIDS==='1'});for(let t=0;t<1200*days;t++)w.step();

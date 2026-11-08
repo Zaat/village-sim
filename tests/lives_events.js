@@ -1,6 +1,6 @@
 // v0.22: hobbies and errands, ownership and inheritance, feuds, regime policy push, power shares, save/load
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,LV,startFeud,feudDay,feudOf,inheritFrom,propsOf,powerShares,policyTargets,serializeWorld,deserializeWorld,statusDay,wealthOf});';
+const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,LV,startFeud,feudDay,feudOf,inheritFrom,propsOf,powerShares,policyTargets,serializeWorld,deserializeWorld,statusDay,wealthOf});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 const w=new ctx.World(+process.argv[2]||555,{map:'island'});

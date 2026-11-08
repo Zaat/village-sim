@@ -149,3 +149,12 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #livCard .prices td{white-space:nowrap}#livCard .prices td:first-child{white-space:normal}
 .bt.b{color:#c9a46a}.btg{margin:0 0 4px 6px;font-size:10px;line-height:1.35}.grant{font-size:10px;padding:0 6px;margin-left:4px;border-radius:8px}
 #tree{position:absolute;inset:0;background:rgba(5,8,11,.7);align-items:center;justify-content:center;z-index:31}.treebox{width:min(1180px,96vw);height:min(760px,94vh);display:flex;flex-direction:column;background:rgba(18,24,30,.99);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:0 12px 40px rgba(0,0,0,.55)}.treescroll{flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#11171c}.treeinfo{min-height:74px;padding-top:8px}
+/* voices: thought block in the inspector and the talk feed */
+.thoughts{margin:6px 0 4px;padding:6px 8px;background:#141b22;border:1px solid #232d37;border-radius:6px}
+.thought{font-size:12.5px;padding:2px 0;color:#c4ccd3}.thought i{color:#8a97a3;font-style:normal;margin-right:2px}
+.thought.now{cursor:pointer;color:#f0f3f6}.thought.now:hover{background:#1b252e}.thought.now small{color:#6e7b87;margin-left:4px}
+.thought.pin{border-left:3px solid #e0a010;padding-left:6px;color:#fff}.thought.old{color:#7e8a95;font-size:12px}
+.thought button.mini{margin-left:6px;padding:0 6px;font-size:11px}
+#talkCard .tl{font-size:12.5px;padding:2px 0;border-bottom:1px solid #20282f;color:#c4ccd3}#talkCard .tl b{color:#e6ebf0}#talkCard .tl i{color:#8a97a3;font-style:normal}
+#talkCard .tl.dream{color:#aab6e8}#talkCard .tl.say{color:#f1e7c0}
+#talkCard div b{color:var(--mut);margin-right:5px;font-weight:600}

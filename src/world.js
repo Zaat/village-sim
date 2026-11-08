@@ -316,6 +316,7 @@ class World {
     bridgeDay(this);
     try { terraDay(this) } catch (e) { this.fault('terra', e) }
     try { discoveryDay(this) } catch (e) { this.fault('disc', e) }
+    try { voicesDay(this) } catch (e) { this.fault('voices', e) }
     neighbourDay(this);
     buildingDay(this);
     characterDay(this);
@@ -401,6 +402,7 @@ class World {
     this.section('villagers', () => { for (const v of this.vills.slice()) if (v.alive) { try { v.update() } catch (e) { this.entityFault('villager', v, e) } } });
     if (this.tick % 60 === 0) this.section('planner', () => planTown(this));
     if (this.tick % 400 === 0) this.section('groups', () => updateGroups(this));
+    if (this.tick % 20 === 0) this.section('voices', () => voicesTick(this));
     if (!this.holidayDone && this.tod > 0.68) this.section('holiday', () => resolveHoliday(this));
     if (!this.meetingDone && this.tod > 0.62) { this.meetingDone = true; this.section('council', () => holdMeeting(this)) }
     if (this.tick % 240 === 0) this.section('roles', () => assignRoles(this));

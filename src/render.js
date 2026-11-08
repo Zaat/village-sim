@@ -367,7 +367,7 @@ function drawVillager(g, v, w, now, sel) {
   if (st === 'elder') rc(g, '#8a6a4a', 4, -8, 1, 8);
   g.restore();
   let em = v.emote; if (v.fighting) em = '!'; else if (/Chat|Talk|Feast/.test(v.label)) em = '…'; else if (w.cold && s === 3) em = '*'; else if (v.hunger < 20) em = '?';
-  if (em) { const hy = y - 18 * k - 2; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x - 4, hy - 6, 8, 8); g.fillStyle = em === '!' ? '#d33' : em === '*' ? '#4a90d9' : '#333'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText(em, x, hy + 1); g.textAlign = 'left' }
+  if (em && !(R.vo && R.vo.prev.has(v.id))) { const hy = y - 18 * k - 2; g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(x - 4, hy - 6, 8, 8); g.fillStyle = em === '!' ? '#d33' : em === '*' ? '#4a90d9' : '#333'; g.font = 'bold 8px sans-serif'; g.textAlign = 'center'; g.fillText(em, x, hy + 1); g.textAlign = 'left' }
 }
 
 /* ---------- main draw ---------- */
@@ -423,6 +423,7 @@ function render(w, sel, now) {
     g.fillStyle = 'rgba(255,255,255,.85)';
     for (const p of R.snow) { p.y += p.s * 0.004 * (R.vh / 600 + 0.5); p.x += Math.sin(now / 1500 + p.d) * 0.0004 + 0.0003; if (p.y > 1) { p.y = -0.02; p.x = Math.random() } if (p.x > 1) p.x = 0; g.fillRect(p.x * R.vw, p.y * R.vh, 1.5 + p.s, 1.5 + p.s) }
   }
+  try { drawBubbles(g, w, sel, now, tlx, tly, z) } catch (e) { R.vo = null; console.error(e) }
 }
 function inViewR(b, x0, x1, y0, y1) { return b.x + b.w >= x0 && b.x <= x1 && b.y + b.h >= y0 && b.y <= y1 }
 function scarArt(g, sc, w) {
@@ -632,4 +633,66 @@ function outpostTraffic(g, w, o, now, selected) {
     else { rc(g, 'rgba(0,0,0,.2)', x - 6, y + 3, 12, 3); rc(g, kind === 'load' ? '#8a6a3a' : '#c9b48a', x - 5, y - 2, 10, 5); rc(g, '#3a2a18', x - 5, y + 3, 3, 2); rc(g, '#3a2a18', x + 2, y + 3, 3, 2); if (kind === 'party') { rc(g, '#e8c84a', x - 2, y - 7, 2, 5); rc(g, '#4a90d9', x + 1, y - 6, 2, 4) } } };
   if (o.state === 'travelling') { const f = clamp((nowD - o.day) / Math.max(1, o.arrive - o.day), 0, 1); sprite(f, false, 'party'); return }
   for (const c of o.cargo) { const f = clamp((nowD - c.from) / Math.max(1, c.at - c.from), 0, 1); sprite(1 - f, true, 'load') }
+}
+
+/* ---------- thought and speech bubbles (screen space) ----------
+   What shows depends on the speed: 1x and below full lines (6 at a time), 3x a few words (6),
+   10x and 30x a single glyph (3, nearest the centre of the screen), 100x none. The selected
+   villager's bubble always shows (a pinned thought stays until unpinned). */
+const BUBBLE_CAP = 6, BUBBLE_CAP_FAST = 3;
+function bubbleMode() { const sp = R.speed === undefined ? 1 : R.speed; return sp <= 1 ? 'long' : sp <= 3 ? 'short' : sp < 100 ? 'emo' : 'off' }
+function wrapText(g, text, maxW) {
+  const words = text.split(' '), lines = []; let cur = '';
+  for (const w of words) { const t = cur ? cur + ' ' + w : w; if (cur && g.measureText(t).width > maxW) { lines.push(cur); cur = w } else cur = t }
+  if (cur) lines.push(cur); return lines;
+}
+function drawBubbles(g, w, selV, now, tlx, tly, z) {
+  const V = R.vo || (R.vo = { shown: new Map(), prev: new Set(), rects: [], pin: null }); V.rects = [];
+  if (R.bubbles === false) { V.prev = new Set(); return }
+  const mode = bubbleMode(), sp = R.speed === undefined ? 1 : R.speed, paused = sp <= 0, T = CFG.T, selId = selV && selV.id !== undefined && selV.stage ? selV.id : null, pin = V.pin;
+  const cap = mode === 'emo' ? BUBBLE_CAP_FAST : BUBBLE_CAP, cx = R.vw / 2, cy = R.vh / 2, cand = [], act = [];
+  const textOf = (th, v, forced) => forced ? (sp <= 3 ? th.long : th.short) : mode === 'long' ? th.long : mode === 'short' ? th.short : th.emo;
+  for (const v of w.vills) {
+    if (!v.alive) continue;
+    const pinned = !!(pin && pin.id === v.id), th = pinned ? pin.th : v.th; if (!th || w.tick < th.at) continue;
+    const forced = pinned || v.id === selId; if (mode === 'off' && !forced) continue;
+    const sx = ((v.x + (v.sx || 0)) * T - tlx) * z, sy = ((v.y + (v.sy || 0)) * T - 16 * (v.stage() === 'child' ? 0.7 : 1) - tly) * z;
+    if (sx < -30 || sy < -30 || sx > R.vw + 30 || sy > R.vh + 60) continue;
+    const key = th.tick + ':' + th.kind, s = V.shown.get(v.id);
+    if (s && s.key === key) { if (pinned || paused || now - s.t0 < s.life) act.push({ v, th, sx, sy, s, forced }); continue }
+    if (!forced && w.tick - th.at > 240) continue;                    // a stale thought is not worth starting
+    cand.push({ v, th, sx, sy, forced, d: (sx - cx) ** 2 + (sy - cy) ** 2 - (pinned ? 4e9 : forced ? 2e9 : 0) });
+  }
+  cand.sort((a, b) => a.d - b.d);
+  for (const c of cand) {
+    if (act.length >= cap && !c.forced) break;
+    const txt = textOf(c.th, c.v, c.forced), life = mode === 'long' || c.forced ? Math.min(11000, 4200 + txt.length * 70) : mode === 'short' ? 3800 : 2400;
+    const s = { key: c.th.tick + ':' + c.th.kind, t0: now, life }; V.shown.set(c.v.id, s); act.push({ ...c, s });
+    if (R.onBubble) R.onBubble(c.v, c.th, mode);
+  }
+  if (V.shown.size > 3000) V.shown.clear();
+  const fs = 11, placed = [], ids = new Set(); act.sort((a, b) => b.sy - a.sy);
+  g.save(); g.textAlign = 'left'; g.textBaseline = 'alphabetic';
+  for (const b of act) {
+    const { v, th, sx, forced } = b, pinned = !!(pin && pin.id === v.id), fade = paused || pinned ? 1 : Math.min(1, (b.s.life - (now - b.s.t0)) / 500, (now - b.s.t0) / 120 + 0.3);
+    const txt = pinned ? th.long : textOf(th, v, forced), emo = mode === 'emo' && !forced;
+    g.font = (emo ? 'bold 13px' : fs + 'px') + ' system-ui, sans-serif';
+    const lines = emo ? [txt] : wrapText(g, (th.kind === 'dream' ? 'z z  ' : '') + txt, mode === 'long' || pinned || sp <= 3 && forced ? 150 : 100), lh = emo ? 14 : 13;
+    let tw = 0; for (const l of lines) tw = Math.max(tw, g.measureText(l).width);
+    const bw = Math.ceil(tw) + 10, bh = lines.length * lh + 6;
+    let bx = Math.round(sx - bw / 2), by = Math.round(b.sy - bh - 8);
+    for (let k = 0; k < 6; k++) { const hit = placed.find(r => bx < r.x + r.w + 2 && bx + bw + 2 > r.x && by < r.y + r.h + 2 && by + bh + 2 > r.y); if (!hit) break; by = hit.y - bh - 3 }
+    if (bx < 2) bx = 2; if (bx + bw > R.vw - 2) bx = R.vw - 2 - bw; if (by < 2) by = 2;
+    placed.push({ x: bx, y: by, w: bw, h: bh }); V.rects.push({ id: v.id, x: bx, y: by, w: bw, h: bh }); ids.add(v.id);
+    g.globalAlpha = Math.max(0.05, fade);
+    const dream = th.kind === 'dream', say = th.kind === 'say';
+    g.fillStyle = dream ? 'rgba(214,222,255,.96)' : say ? 'rgba(255,252,238,.97)' : 'rgba(255,255,255,.96)'; g.strokeStyle = pinned ? '#e0a010' : 'rgba(30,36,50,.45)'; g.lineWidth = pinned ? 2 : 1;
+    g.beginPath(); if (g.roundRect) g.roundRect(bx + .5, by + .5, bw, bh, dream ? 8 : say ? 5 : 7); else g.rect(bx + .5, by + .5, bw, bh); g.fill(); g.stroke();
+    const tx = Math.max(bx + 6, Math.min(bx + bw - 6, sx));                      // tail towards the speaker
+    if (say) { g.beginPath(); g.moveTo(tx - 3, by + bh + .5); g.lineTo(tx, by + bh + 6); g.lineTo(tx + 3, by + bh + .5); g.closePath(); g.fill(); g.stroke(); g.fillStyle = 'rgba(255,252,238,.97)'; g.fillRect(tx - 2.5, by + bh - 0.5, 6, 2) }
+    else { g.fillStyle = dream ? 'rgba(214,222,255,.96)' : 'rgba(255,255,255,.96)'; g.beginPath(); g.arc(tx, by + bh + 3, 2.2, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.arc(tx + 1, by + bh + 7.5, 1.3, 0, 7); g.fill(); g.stroke() }
+    g.fillStyle = th.kind === 'say' && th.cat === 'talk' && /!/.test(th.emo) ? '#a02020' : dream ? '#2a3070' : '#1c222c';
+    lines.forEach((l, i) => g.fillText(l, bx + 5, by + 3 + (i + 1) * lh - 3.5));
+  }
+  g.restore(); g.globalAlpha = 1; V.prev = ids;
 }

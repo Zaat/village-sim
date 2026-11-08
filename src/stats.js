@@ -44,6 +44,8 @@ const STAT_SERIES = [
   { id: 'treasury', label: 'Treasury (coins)', group: 'Resources', get: w => w.econ ? w.econ.treasury : 0 },
   { id: 'wealth', label: 'Average wealth', group: 'Resources', get: w => { const a = adultsOf(w); return a.length ? a.reduce((s, v) => s + wealthOf(v), 0) / a.length : 0 } },
   { id: 'gini', label: 'Inequality (Gini)', group: 'Society', get: w => { const a = adultsOf(w).map(wealthOf).sort((x, y) => x - y), t = a.reduce((s, x) => s + x, 0); if (!t) return 0; let c = 0; a.forEach((x, i) => { c += (2 * (i + 1) - a.length - 1) * x }); return c / (a.length * t) } },
+  { id: 'worry', label: 'Share of thoughts that are worries (%)', group: 'Society', get: w => w.voices ? w.voices.worry || 0 : 0 },
+  { id: 'chats', label: 'Conversations per day', group: 'Society', get: w => w.voices ? w.voices.chats || 0 : 0 },
   { id: 'mood', label: 'Average mood', group: 'Society', get: w => { const a = adultsOf(w); return a.length ? a.reduce((s, v) => s + v.mood, 0) / a.length : 0 } },
   { id: 'status', label: 'Average standing', group: 'Society', get: w => { const a = adultsOf(w); return a.length ? a.reduce((s, v) => s + (v.status || 0), 0) / a.length : 0 } },
   { id: 'unity', label: 'Unity', group: 'Society', get: w => w.regime.ax.cohes },

@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -216,7 +216,7 @@ addEventListener('pagehide', () => { if (autosaveOn && $('autosave').checked) sa
 
 /* ---------- panels ---------- */
 function bar(label, val, col) { return `<div class="hint">${label} ${Math.round(val)}</div><div class="bar"><i style="background:var(--acc);width:${clamp(val, 0, 100)}%;background:${col}"></i></div>` }
-function resRow(name, val, cap, col) { return `<div class="res"><span class="hint">${name}</span><div class="bar"><i style="background:var(--acc);width:${clamp(val / cap * 100, 0, 100)}%;background:${col}"></i></div><b>${val} / ${cap}</b></div>` }
+function resRow(name, val, cap, col) { return `<div class="res"><span class="hint">${name}</span><div class="bar"><i style="background:var(--acc);width:${clamp(val / cap * 100, 0, 100)}%;background:${col}"></i></div><b>${Math.floor(val)} / ${cap}</b></div>` }
 function opBar(label, v) { const a = Math.abs(v) * 50; return `<div class="opr"><span>${label}</span><div class="opb"><i style="left:${v < 0 ? 50 - a : 50}%;width:${a}%;background:${v < 0 ? '#6a8fd0' : '#e0a458'}"></i></div></div>` }
 function skillWord(s) { return s > 0.7 ? 'expert' : s > 0.45 ? 'skilled' : s > 0.2 ? 'capable' : 'novice' }
 function moodWord(m) { return m > 80 ? 'joyful' : m > 62 ? 'content' : m > 42 ? 'uneasy' : m > 25 ? 'unhappy' : 'miserable' }
@@ -238,7 +238,7 @@ function updateUI() {
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
   if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
-  if (curTab === 'stats') renderStats(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
+  if (curTab === 'stats') renderStats(); if (curTab === 'events') renderTalk(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
 function techRowHtml(w, id, avail) {
@@ -521,6 +521,7 @@ function updateInspector() {
       <div class="tags">${s.traitWords().map(t => `<span class="tag">${t}</span>`).join('') || '<span class="tag">Even-tempered</span>'}${gr ? `<span class="tag" style="border-color:${gr.color}">${escapeHtml(gr.name)}</span>` : ''}</div>
       ${s.char ? `<div class="hint" style="margin:4px 0">Character: <b style="color:var(--ink)">${ruthWord(s.char)}</b>, ${faithWord(s.char)}, ${ambWord(s.char)}. ${escapeHtml(upbringingText(s))}</div>` : ''}
       <div style="margin-bottom:6px">${escapeHtml(s.label)}${s.carry ? ' · carrying ' + s.carry.amt + ' ' + s.carry.kind : ''}</div>
+      ${thoughtBlock(w, s)}
       ${bar('Mood (' + moodWord(s.mood) + ')', s.mood, '#c678dd')}${bar('Hunger (full)', s.hunger, '#e0a458')}${bar('Energy', s.energy, '#6a8fd0')}${bar('Health', s.health, '#8fd18b')}
       ${s.desire ? `<div class="hint" style="margin:4px 0"><b>Dreams</b> ${escapeHtml(s.desireText())}</div>` : ''}
       ${w.has('coinage') ? `<div class="hint">Coins: ${s.coins || 0} (earned ${s.earned || 0} in all)</div>` : ''}
@@ -577,12 +578,13 @@ cv.addEventListener('pointermove', e => { if (!drag) return; const dx = e.client
 cv.addEventListener('pointerup', e => { cv.classList.remove('drag'); if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top) } drag = null });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0016), e.clientX - r.left, e.clientY - r.top) }, { passive: false });
 function pick(sx, sy) {
+  { const bv = bubbleAt(sx, sy); if (bv) { selected = bv; showTab('village'); updateUI(); return } }
   const p = screenToWorld(sx, sy), T = CFG.T, rad = Math.max(11, 16 / R.cam.z); let best = null, bd = rad;
   for (const v of world.vills) { const d = Math.hypot(v.x * T - p.x, v.y * T - 6 - p.y); if (d < bd) { bd = d; best = v } }
   for (const a of world.animals) if (a.alive) { const d = Math.hypot(a.x * T - p.x, a.y * T - 5 - p.y); if (d < bd) { bd = d; best = a } }
   if (!best && world.out) for (const o of world.out.list) if (o.state === 'active') { const d = Math.hypot(o.x * T + 8 - p.x, o.y * T + 4 - p.y); if (d < Math.max(34, 30 / R.cam.z)) { best = o; break } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
-  selected = best; if (!best) follow = false; else showTab('village'); updateUI();
+  if (best !== selected) voiceUnpin(); selected = best; if (!best) follow = false; else showTab('village'); updateUI();
 }
 const mini = $('mini');
 function miniGo(e) { const r = mini.getBoundingClientRect(); R.cam.x = (e.clientX - r.left) / r.width * CFG.W * CFG.T; R.cam.y = (e.clientY - r.top) / r.height * CFG.H * CFG.T; follow = false; clampCam() }
@@ -694,7 +696,7 @@ function frame(now) {
     if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }
     if (follow && selected && Number.isFinite(selected.x) && Number.isFinite(selected.y) && selected.alive !== false) { const tx = selected.type ? (selected.x + selected.w / 2) * CFG.T : selected.x * CFG.T, ty = selected.type ? (selected.y + selected.h / 2) * CFG.T : selected.y * CFG.T; c.x += (tx - c.x) * 0.12; c.y += (ty - c.y) * 0.12 }
     if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || !Number.isFinite(c.z) || c.z <= 0) { c.x = (world.cx + 1) * CFG.T; c.y = (world.cy + 1) * CFG.T; c.z = Number.isFinite(c.z) && c.z > 0 ? c.z : 2; follow = false }       // a bad number in the camera would otherwise break every frame
-    const r0 = performance.now(); try { clampCam(); render(world, selected, now) } catch (e) { dbgNote('render', e); dbgPersist(world) } DBG.renderMs = DBG.renderMs * 0.9 + (performance.now() - r0) * 0.1;
+    const r0 = performance.now(); R.speed = speed; try { clampCam(); render(world, selected, now) } catch (e) { dbgNote('render', e); dbgPersist(world) } DBG.renderMs = DBG.renderMs * 0.9 + (performance.now() - r0) * 0.1;
     uiAcc += dt; if (uiAcc > 300) { uiAcc = 0; try { updateUI() } catch (e) { dbgNote('ui', e); dbgPersist(world) } }
     miniAcc += dt; if (miniAcc > 120) { miniAcc = 0; try { drawMinimap(world, selected) } catch (e) { dbgNote('minimap', e) } }
   } catch (e) { dbgNote('frame', e); dbgPersist(world) }
@@ -730,7 +732,7 @@ addEventListener('unhandledrejection', e => { dbgNote('promise', e.reason); if (
 
 window.__sim = { get world() { return world }, select(o) { selected = o; updateUI() }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };
 dbgLoadPrevious();
-initStatsUI(); concernsInit(); newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
+initStatsUI(); concernsInit(); voicesInit(); voicesAiInit(); newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
 {
   const m = readMeta();
   if (m) {

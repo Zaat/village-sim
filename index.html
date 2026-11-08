@@ -47,6 +47,7 @@
       <div class="btnrow"><button id="exportBtn">Export file</button><button id="importBtn">Import file</button></div>
       <input type="file" id="importFile" accept=".json,application/json" style="display:none">
       <label class="tog" style="margin-top:8px"><input type="checkbox" id="autoresume" checked><span class="sw"></span><span>Resume automatically <span class="hint">when the page opens</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="bubbleToggle" checked><span class="sw"></span><span>Thought bubbles <span class="hint">speech, thoughts and dreams above villagers</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
       <div class="hint" style="margin-top:6px">Browser saves stay on this device and can be cleared by the browser. Export a file to keep a village safe or move it to another device.</div>
     </div>
@@ -56,6 +57,8 @@
       <label class="tog"><input type="checkbox" id="mindToggle"><span class="sw"></span><span id="mindLabel">Off — uses your Claude usage when on</span></label>
       <div class="hint" id="mindStatus"></div>
       <button id="mindRetry" style="display:none;margin-top:6px">Request permission again</button>
+      <label class="tog" style="margin-top:8px"><input type="checkbox" id="vaiToggle"><span class="sw"></span><span>Claude writes the selected villager's thoughts <span class="hint">off by default; uses your Claude usage</span></span></label>
+      <div class="hint" id="vaiStatus"></div>
       <div id="mindLog"></div>
     </div>
     <details class="card" id="diagCard"><summary>Diagnostics <span class="beta" id="diagBadge">ok</span></summary>
@@ -131,6 +134,7 @@
       <div class="btnrow" style="margin-top:10px"><button id="statCsv">Export CSV</button><button id="statJson">Export JSON</button></div></div>
     </section>
     <section class="tab" id="tab_events">
+    <div class="card" id="talkCard"></div>
     <div class="card"><h3>Events</h3><div id="log"></div></div>
     </section>
   </aside>
@@ -159,6 +163,7 @@
 <script src="src/bridges.js"></script>
 <script src="src/terraform.js"></script>
 <script src="src/discovery.js"></script>
+<script src="src/voices.js"></script>
 <script src="src/places.js"></script>
 <script src="src/neighbours.js"></script>
 <script src="src/mapgen.js"></script>
@@ -170,6 +175,7 @@
 <script src="src/debug.js"></script>
 <script src="src/statsui.js"></script>
 <script src="src/concernsui.js"></script>
+<script src="src/voicesui.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/treeui.js"></script>
 </body>
