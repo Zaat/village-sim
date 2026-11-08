@@ -63,3 +63,5 @@ sha=$(grep "^v0.27 " tools/release-commits.txt | cut -d" " -f2)
 gh release create v0.27 --repo $R --target "$sha" --title "v0.27 — Unlocks, research limits and a shaped land" --notes-file docs/releases/v0.27.md
 sha=$(grep "^v0.28 " tools/release-commits.txt | cut -d" " -f2)
 gh release create v0.28 --repo $R --target "$sha" --title "v0.28 — Expeditions, discovery and a living sea" --notes-file docs/releases/v0.28.md
+sha=$(grep "^v0.28.1 " tools/release-commits.txt | cut -d" " -f2)
+gh release create v0.28.1 --repo $R --target "$sha" --title "v0.28.1 — Scarcer materials, new discoveries and a world check" --notes-file docs/releases/v0.28.1.md
