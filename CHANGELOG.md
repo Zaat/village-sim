@@ -2,6 +2,9 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.29.2 — Varied bubbles and quicker tests
+Villagers' thoughts no longer repeat across a crowd: every thought carries other wordings for the same subject (about 35 new lines for hunger, tiredness, loneliness, cold, contentment, low spirits, housing, privacy, drought, winter and the seasons), a bubble picks a wording that has not been on screen in the last 90 seconds, and no more than two bubbles on the same subject show at once. The small white emote box over a villager now shows only for the selected villager (alarms still show for all). The simulation is identical to v0.29. Tests: the full run is about 17 minutes (was 22), the wolf check and the performance gate are shorter.
+
 ### v0.29.1 — Test suite overhaul
 Tools only; the game is identical to v0.29. The tests now run two at a time and print each result as it finishes, with a timing table. `tools/check.sh` runs only the suites the changed files can affect, `full` runs all 24 (about 22 minutes instead of 28 to 45), and `pages` runs the browser page tests. One loader builds the source list from the script tags in `index.html`. New golden-trajectory tests (six map types, 30 days each) and a performance gate (10 years, fail above 1.5 ms per tick) join the suites. A full green run is stamped with a hash of the code, and `tools/release.sh` now refuses to release unless that stamp matches the exact code being released, so a failing or untested build cannot go out. Old debug and screenshot scripts moved to `tests/legacy/`.
 
