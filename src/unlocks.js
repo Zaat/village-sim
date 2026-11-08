@@ -18,6 +18,10 @@ const GATES = {
   fields: { name: 'six or more farms', ok: w => w.of('farm').length >= 6 },
   contact: { name: 'neighbours to learn from or deal with', ok: w => !!(w.neigh && w.neigh.length) },
   library: { name: 'a library', ok: w => projBuilt(w, 'library') },
+  saltpetre: { name: 'saltpetre (from a cave, a mine or a neighbour)', ok: w => matOk(w, 'saltpetre') },
+  coal: { name: 'coal (from a seam, a mine or a neighbour)', ok: w => matOk(w, 'coal') },
+  copper: { name: 'copper (from a lode, a mine or a neighbour)', ok: w => matOk(w, 'copper') },
+  oil: { name: 'oil (from a seep, a mine or a neighbour)', ok: w => matOk(w, 'oil') },
   folk30: { name: '30 people', ok: w => popOf(w) >= 30 }, folk60: { name: '60 people', ok: w => popOf(w) >= 60 },
   folk100: { name: '100 people', ok: w => popOf(w) >= 100 }, folk150: { name: '150 people', ok: w => popOf(w) >= 150 }
 };
@@ -51,21 +55,21 @@ const UNLOCK_ROWS = {
   siegecraft: [['ore'], 'Siege engines'], glass: [['ore', 'rock'], 'Glass windows and lenses'],
   printing: [['library', 'folk100'], 'Books by the hundred'], architecture: [['rock', 'folk100'], 'Townhouses'], compass: [['harbour'], 'Safe long voyages'],
   accounting: [['folk100'], 'Surer trade gains'], anatomy: [['folk100'], 'Confident surgeons'], scientific: [['library', 'folk100'], 'Discoveries follow each other'],
-  reclamation: [['coast', 'folk100'], 'Polders: shallows become fields'], agronomy: [['fields'], 'Selective breeding'], gunpowder: [['ore', 'folk100'], 'Black powder'],
+  reclamation: [['coast', 'folk100'], 'Polders: shallows become fields'], agronomy: [['fields'], 'Selective breeding'], gunpowder: [['ore', 'saltpetre', 'folk100'], 'Black powder'],
   optics: [['ore', 'library'], 'Lenses and telescopes'],
   muskets: [['ore', 'folk100'], 'Muskets'], bastion: [['rock', 'folk100'], 'Angled forts'], divingbell: [['harbour'], 'Underwater work'],
-  chronometer: [['harbour', 'folk100'], 'Exact positions at sea'], blastfurnace: [['ore', 'timber', 'folk100'], 'Iron in bulk'],
+  chronometer: [['harbour', 'folk100'], 'Exact positions at sea'], blastfurnace: [['ore', 'timber', 'coal', 'folk100'], 'Iron in bulk'],
   natphilosophy: [['library', 'folk100'], 'Engineering by laws'], vaccination: [['folk100'], 'Epidemics fade'], parliament: [['folk100'], 'Constitutional rule'],
   fertilizer: [['fields'], 'Tired soil recovers'], frigate: [['harbour', 'timber'], 'Armed ships'], artillery: [['ore', 'folk100'], 'Cannon'],
-  steam: [['ore', 'folk100'], 'Steam engines'], railways: [['ore', 'rock', 'folk150'], 'Railways'], steamship: [['harbour', 'ore'], 'Steamships'],
-  telegraph: [['folk100'], 'News in minutes'], sanitation: [['rock', 'folk100'], 'Sewers: epidemics fade'], steel: [['ore', 'folk100'], 'Steel'],
+  steam: [['ore', 'coal', 'folk100'], 'Steam engines'], railways: [['ore', 'rock', 'folk150'], 'Railways'], steamship: [['harbour', 'ore'], 'Steamships'],
+  telegraph: [['copper', 'folk100'], 'News in minutes'], sanitation: [['rock', 'folk100'], 'Sewers: epidemics fade'], steel: [['ore', 'coal', 'folk100'], 'Steel'],
   mechfarm: [['fields', 'ore'], 'Machines in the fields'], factories: [['ore', 'folk150'], 'Factories'], ironclads: [['harbour', 'ore'], 'Armoured ships'],
-  electricity: [['folk100'], 'Light and power on a wire'], concrete: [['rock', 'folk100'], 'Concrete', 'Apartment blocks'], dredging: [['coast', 'ore'], 'Steam dredging'],
+  electricity: [['copper', 'folk100'], 'Light and power on a wire'], concrete: [['rock', 'folk100'], 'Concrete', 'Apartment blocks'], dredging: [['coast', 'ore'], 'Steam dredging'],
   pubschools: [['folk100'], 'Every child taught'],
-  engines: [['ore', 'folk150'], 'Combustion engines'], radio: [['folk100'], 'Voices across the air'], antibiotics: [['folk150'], 'Infections cured'],
+  engines: [['ore', 'oil', 'folk150'], 'Combustion engines'], radio: [['folk100'], 'Voices across the air'], antibiotics: [['folk150'], 'Infections cured'],
   skyscrapers: [['rock', 'folk150'], 'Towers'], hybrids: [['fields'], 'Hybrid crops'], massprod: [['ore', 'folk150'], 'Assembly lines'], welfare: [['folk150'], 'A safety net'],
   computers: [['folk150'], 'Machines that calculate'], earthworks: [['ore', 'folk150'], 'Earthworks: hills and shallows become open ground'], shipping: [['harbour', 'folk150'], 'Container shipping'],
-  sonar: [['harbour'], 'Seabed mapping'], aviation: [['ore', 'folk150'], 'Flight']
+  sonar: [['harbour'], 'Seabed mapping'], aviation: [['ore', 'oil', 'folk150'], 'Flight']
 };
 /* what a technology gives: the hand-written line(s) plus every great project it opens */
 function unlocksOf(id) {

@@ -11,7 +11,7 @@ class World {
     this.neigh = null; this.fog = false; this.seen = null; this.seenVer = 0; this.voyage = null; this.voyageCd = 0; this.visit = null; this.fortifyUntil = 0; this.dipDay = 0;
     this.dbg = { errors: new Map(), total: 0, prof: {}, ticks: 0, tickMs: 0, tickMax: 0, unstuck: 0, lastTickAt: 0, onFault: null };
     this.seed = seed >>> 0; this.rng = mulberry32(this.seed);
-    this.settings = { survival: false, disasters: true, crime: true, raids: false, hardship: 1, openKnowledge: 0, philosophy: 'balanced', ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initTerra(this); this.sandbox = !!this.settings.openKnowledge; initBridges(this); initLives(this); initStats(this); initConcerns(this);
+    this.settings = { survival: false, disasters: true, crime: true, raids: false, hardship: 1, openKnowledge: 0, philosophy: 'balanced', ...settings, map: this.arch }; initSociety(this); initTech(this); initEcon(this); initProjects(this); initHistory(this); initRegime(this); initStrife(this); initTrade2(this); initOutposts(this); initTerra(this); initDisc(this); this.sandbox = !!this.settings.openKnowledge; initBridges(this); initLives(this); initStats(this); initConcerns(this);
     const N = CFG.W * CFG.H, { W, H } = CFG;
     this.terr = new Uint8Array(N); this.feat = new Uint8Array(N); this.res = new Uint8Array(N);
     this.road = new Uint8Array(N); this.bmap = new Int16Array(N); this.blk = new Uint8Array(N);
@@ -315,6 +315,7 @@ class World {
     outpostDay(this);
     bridgeDay(this);
     try { terraDay(this) } catch (e) { this.fault('terra', e) }
+    try { discoveryDay(this) } catch (e) { this.fault('disc', e) }
     neighbourDay(this);
     buildingDay(this);
     characterDay(this);
@@ -379,7 +380,7 @@ class World {
     const g = GROW[this.season] * (1 + 0.15 * this.wet) * (this.drought ? 0.5 : 1) * (this.settings.survival ? 0.85 : 1) * (this.has('rotation') ? 1.15 : 1);
     for (const b of this.buildings.values()) if (b.type === 'farm' && b.state === 1) { b.g += g / CFG.FARM_GROW; if (b.g >= 1) { b.state = 2; b.g = 1 } }
     if (this.tick % 50 === 0) for (let k = this.regrow.length - 1; k >= 0; k--) { const g = this.regrow[k]; if (g.at > this.tick || this.season >= 3) continue; if (g.tree) { const i = g.idx; if (this.terr[i] === TERR.GRASS && !this.feat[i] && !this.bmap[i] && !this.road[i] && !this.bpAt.has(i)) { this.feat[i] = g.tree; this.res[i] = 1; this.young.push(i); this.trees++ } } else this.res[g.idx] = 4; this.regrow.splice(k, 1) }
-    if (this.tick % Math.round((this.settings.survival ? 400 : 200) * (projBuilt(this, 'lighthouse') ? 0.7 : 1)) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if ((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) this.fish[i]++;
+    if (this.tick % Math.round((this.settings.survival ? 400 : 200) * (projBuilt(this, 'lighthouse') ? 0.7 : 1)) === 0 && this.season < 3) for (let i = 0; i < this.fish.length; i++) if (((this.terr[i] === TERR.SHALLOW && this.fish[i] < CFG.FISH_MAX) || (this.terr[i] === TERR.DEEP && this.fish[i] < CFG.FISH_DEEP)) && fishSpawn(this, i)) this.fish[i]++;
     if (this.tick % 100 === 0 && this.season < 2 && this.trees < this.trees0 * (this.has('forestry') ? 1.6 : 1.3)) {      // saplings spread from existing woods (capped, and never beside roads or buildings); foresters replant more
       for (let a = 0; a < (this.has('forestry') ? 24 : 14); a++) {
         const x = this.hx + 1 + ((this.r() * 158) | 0), y = this.hy + 1 + ((this.r() * 110) | 0), i = y * CFG.W + x;

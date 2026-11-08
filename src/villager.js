@@ -169,6 +169,7 @@ class Villager {
     if (this.repairB) { if (this.repairB.repairer === this.id) this.repairB.repairer = 0; if (this.repairPaid) { w.stock.wood += this.repairPaid.w; w.stock.stone += this.repairPaid.s; this.repairB.skipUntil = w.tick + 2400; this.repairPaid = null } this.repairB = null }       // a job that fell through is refunded, and that building is left alone for a while
     if (w.trade2 && w.trade2.active && w.trade2.active.skipper === this.id && this.jobKind === 'trade') { this.cart = false; tripEnd(w, 'abort') }
     if (this.boat) { const b = this.boat, d = w.buildings.get(b.dock); if (b.state === 'out' && d) { this.x = d.x + 0.5; this.y = d.y + 0.5 } b.home(); this.boat = null }
+    if (this.jobKind === 'expedition') expedAbort(w, this);
     if (w.voyage && w.voyage.id === this.id) { w.voyage = null; w.voyageCd = Math.max(w.voyageCd, w.day + 5) }
     this.jobKind = null;
   }
@@ -287,6 +288,8 @@ class Villager {
     if (w.neigh && !w.voyage && w.stock.food >= pop * 3 && (this.role === 'fisher' || this.trait.cur > 0.6) && this.isAdult()) T('voyage', () => this.planVoyage());
     if (w.trade2 && w.trade2.active && w.trade2.active.state === 'pending' && this.isAdult() && !winter && (this.role === 'fisher' || this.trait.soc > 0.5 || this.trait.cur > 0.5)) T('trade', () => this.planTradeTrip());
     if (w.neigh && !w.voyage && w.stock.food >= pop * 2.2 && (this.role === 'hunter' || this.trait.cur > 0.55 || this.trait.brave > 0.6) && this.isAdult()) T('explore', () => this.planExplore());
+    if (expedPending(w) && this.isAdult() && !winter && this.age < 56 && (this.role === 'hunter' || this.role === 'fisher' || this.trait.cur > 0.5 || this.trait.brave > 0.55)) T('exped', () => this.planExpedition());
+    if (w.disc && w.disc.exped.some(e => e.state === 'running' && e.mode === 'land') && this.isAdult() && !winter && (this.role === 'hunter' || this.trait.brave > 0.5)) T('escort', () => escortStart(w, this));
     switch (this.role) {
       case 'builder': T('build', () => this.planBuild()); break;
       case 'farmer': if (!winter) T('farm', () => this.planFarm()); break;
@@ -452,6 +455,7 @@ class Villager {
       work(10, 'Mooring the boat', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; w.voyage = null; w.voyageCd = w.day + 6 })];
     return true;
   }
+  planExpedition() { const w = this.w, ex = expedPending(w); return !!ex && this.energy >= 45 && expedStart(w, ex, this) }
   planBoatFish() {
     const w = this.w; if (!w.has('boats')) return false;
     const boat = w.boats.find(b => b.crew == null && b.state === 'moored' && (b.kind || 'fishing') === 'fishing'); if (!boat) return false;

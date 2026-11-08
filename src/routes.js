@@ -75,7 +75,7 @@ function routeEval(w, n, ship) {
 /* the best way to trade with one neighbour right now */
 function bestPlan(w, n) {
   const plans = []; const free = w.boats.filter(b => b.crew == null && b.state === 'moored' && !b.noSea && w.buildings.get(b.dock));
-  if (free.length && w.has('seatrade')) { const by = free.slice().sort((a, b) => shipOf(b).cap - shipOf(a).cap); const seen = new Set(); for (const b of by) { if (seen.has(b.kind)) continue; seen.add(b.kind); const p = routeEval(w, n, b); if (p) plans.push(p) } }
+  if (free.length) { const by = free.slice().sort((a, b) => shipOf(b).cap - shipOf(a).cap); const seen = new Set(); for (const b of by) { if (b.kind === 'barge' ? n.reach !== 'land' : !w.has('seatrade')) continue; if (seen.has(b.kind)) continue; seen.add(b.kind); const p = routeEval(w, n, b); if (p) plans.push(p) } }
   if (n.reach === 'land' && w.has('trade')) { const p = routeEval(w, n, null); if (p) plans.push(p) }
   plans.sort((a, b) => b.gain - a.gain); return plans[0] || null;
 }
@@ -182,6 +182,7 @@ function tripHome(w, run) {                                         // back at t
 function tripEnd(w, why) {
   const t = T2(w), a = t.active; if (!a) return; t.active = null; const run = a.run;
   if (run) {
+    if (why === 'lost' && run.ship && w.disc && run.plan) historyWreck(w, run.ship.x, run.ship.y, `A trading ship was lost on the way to ${(w.neigh.find(n => n.id === run.plan.nid) || {}).name || 'a far port'}.`);
     if (why === 'lost') { const pr = money(w) ? w.econ.prices : BASE_PRICE; t.ledger.lost += Math.round(TRADE_KEYS.reduce((s, k) => s + ((run.hold && run.hold[k]) || 0) * pr[k] + ((run.back && run.back[k]) || 0) * pr[k], 0)) }
     else for (const part of [run.hold, run.back]) for (const k of TRADE_KEYS) if (part && part[k]) w.stock[k] = Math.min(w.cap(), w.stock[k] + part[k]);
     if (run.ship) { run.ship.hold = null; run.ship.home() }

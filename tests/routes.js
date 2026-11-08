@@ -1,6 +1,6 @@
 // Trade route checks: node tests/routes.js
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS,costBenefit,routeEval,bestPlan,tradeAppetite,T2,TRADE_KEYS,serializeWorld,deserializeWorld,dockTier,HARBOUR_COST,yardDay,harbourDay,tripEnd,shipOf,SHIPS,initNeighbour});';
+const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS,costBenefit,routeEval,bestPlan,tradeAppetite,T2,TRADE_KEYS,serializeWorld,deserializeWorld,dockTier,HARBOUR_COST,yardDay,harbourDay,tripEnd,shipOf,SHIPS,initNeighbour});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let ok=0,bad=0;const check=(n,c,x)=>{console.log((c?'PASS ':'FAIL ')+n+(x?'  '+x:''));c?ok++:bad++};
 // 1 cost-benefit is a plain, shared rule

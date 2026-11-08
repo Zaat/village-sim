@@ -19,11 +19,12 @@ class Animal {
     if (Math.hypot(this.x - ox, this.y - oy) < 0.3 * s) { if ((this.stuck = (this.stuck || 0) + 1) > 5) { this.stuck = 0; this.moving = false; return true } } else this.stuck = 0;       // sliding along an obstacle without getting anywhere: give up and choose a new target
     return false;
   }
-  wander(speed, r) {
+  wander(speed, r, hub) {
     if (this.wait > 0) { this.wait--; this.moving = false; return }
     if (this.stepTo(this.tx, this.ty, speed)) {
       this.wait = 20 + ((this.w.r() * 80) | 0);
       for (let k = 0; k < 6; k++) { const nx = this.x + (this.w.r() * 2 - 1) * r, ny = this.y + (this.w.r() * 2 - 1) * r; if (this.canStep(nx, ny)) { this.tx = nx; this.ty = ny; break } }
+      if (hub && (this.id * 7 + this.w.tick) % 100 < 32) { const hx = this.x + clamp(hub.x - this.x, -r, r), hy = this.y + clamp(hub.y - this.y, -r, r); if (this.canStep(hx, hy)) { this.tx = hx; this.ty = hy } }       // seasonal drift
     }
   }
   update() {
@@ -37,7 +38,7 @@ class Animal {
       if (tx !== null) { this.fleeing = 12; this.tx = clamp(tx, 2, CFG.W - 2); this.ty = clamp(ty, 2, CFG.H - 2); this.wait = 0 }
     }
     if (this.fleeing > 0) { this.fleeing--; this.stepTo(this.tx, this.ty, this.kind === 'deer' ? 0.13 : 0.12) }
-    else this.wander(this.kind === 'deer' ? 0.04 : 0.05, this.kind === 'deer' ? 7 : 4);
+    else this.wander(this.kind === 'deer' ? 0.04 : 0.05, this.kind === 'deer' ? 7 : 4, this.kind === 'deer' ? deerHub(w, this) : null);
   }
   wolf() {
     const w = this.w; this.life--; this.hunger += 0.02;

@@ -105,7 +105,8 @@ function discover(w) {
   const by = top ? top.v : null; t.log.unshift({ id, day: w.day, by: by ? by.name : null }); if (t.log.length > 20) t.log.pop();
   if (by) { by.story(`Led the village to discover ${T.name.toLowerCase()}.`); by.mood = Math.min(100, by.mood + 15); by.reputation = Math.min(100, by.reputation + 10); if (by.desire && by.desire.kind === 'know') by.debates += 3 }
   for (const v of w.vills) v.mood = Math.min(100, v.mood + 4);
-  w.emit('discovery', `Discovery! ${by ? by.name + ' and the villagers' : 'The villagers'} have learned ${T.name.toLowerCase()}. ${T.desc}`, { id, by });
+  const U = typeof unlocksOf === 'function' ? unlocksOf(id) : null, opens = U && U.gives.length && U.gives[0] !== T.desc ? ` It opens: ${U.gives.slice(0, 3).join(', ').replace(/ \(great project\)/g, '')}.` : '';
+  w.emit('discovery', `Discovery! ${by ? by.name + ' and the villagers' : 'The villagers'} have learned ${T.name.toLowerCase()}. ${T.desc}${opens}`, { id, by, gives: U ? U.gives.slice(0, 3) : [] });
   if (techEra(w) > before) w.emit('era', `A new age dawns: the ${AGES[techEra(w)]}.`, { era: techEra(w) });
   if (id === 'carpentry' || id === 'masonry' || id === 'brickwork' || id === 'architecture' || id === 'concrete') w.say(`New homes and storehouses will now be built as ${({ carpentry: 'timber-framed buildings', masonry: 'stone buildings', brickwork: 'brick buildings', architecture: 'townhouses', concrete: 'apartment blocks' })[id]}; old ones can be upgraded.`);
 }
@@ -149,7 +150,7 @@ function techLossDay(w) {
   const t = w.tech, peak = t.peak || 0, pop = w.vills.length; if (peak < 40 || pop > peak * 0.45 || w.r() > 0.3) return;
   const known = Object.keys(t.known).filter(id => !Object.keys(t.known).some(o => TECHS[o] && TECHS[o].req.includes(id)));       // leaves: nothing known builds on them
   known.sort((a, b) => TECHS[b].age - TECHS[a].age || t.known[b] - t.known[a]); const id = known[0]; if (!id || TECHS[id].age === 0) return;
-  delete t.known[id]; t.points = 0; t.lost = (t.lost || 0) + 1; t.peak = Math.max(pop * 1.6, peak * 0.8);
+  delete t.known[id]; t.points = 0; t.lost = (t.lost || 0) + 1; (t.lostIds || (t.lostIds = [])).push(id); t.peak = Math.max(pop * 1.6, peak * 0.8);
   w.emit('techloss', `With so many gone, the village forgets how to ${TECHS[id].name.toLowerCase()}. What was learned must be learned again.`, { id });
 }
 /* ----- neighbours learn too, slowly; the more learned (and friendlier) ones become a source of knowledge ----- */

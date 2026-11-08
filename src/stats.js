@@ -20,6 +20,7 @@ const STAT_EVENTS = [
   ['election', 'Elections', 'Society'], ['decision', 'Council decisions', 'Society'], ['coup', 'Coups', 'Society'], ['uprising', 'Uprisings', 'Society'], ['purge', 'Purges', 'Society'], ['reform', 'Reforms', 'Society'], ['rival_council', 'Rival councils', 'Society'], ['strike', 'Strikes', 'Society'], ['civil_strife', 'Civil strife', 'Society'], ['secession', 'Secessions', 'Society'], ['sect', 'Sects founded', 'Society'],
   ['theft', 'Thefts', 'Society'], ['assault', 'Assaults', 'Society'], ['trial', 'Trials', 'Society'], ['banished', 'Banishments', 'Society'], ['feud', 'Feuds begun', 'Society'], ['feud_mended', 'Feuds mended', 'Society'], ['estate', 'Estates passed on', 'Society'], ['holiday', 'Holidays', 'Society'],
   ['deal', 'Market deals', 'Economy & expansion'], ['trip', 'Trading trips', 'Economy & expansion'], ['ship_built', 'Ships built', 'Economy & expansion'], ['harbour_upgrade', 'Harbour upgrades', 'Economy & expansion'], ['voyage', 'Peoples discovered', 'Economy & expansion'], ['outpost_founded', 'Outposts founded', 'Economy & expansion'], ['outpost_failed', 'Outposts failed', 'Economy & expansion'], ['outpost_free', 'Outposts broke away', 'Economy & expansion'], ['bridge', 'Bridges built', 'Economy & expansion'],
+  ['terraform', 'Terraform works done', 'Economy & expansion'], ['expedition', 'Expeditions returned', 'Economy & expansion'], ['expedition_lost', 'Expeditions lost', 'Economy & expansion'], ['rumour', 'Sites heard of', 'Economy & expansion'], ['research_deal', 'Lessons bought from neighbours', 'Knowledge'],
   ['concern', 'Concerns raised', 'Society'], ['concern_critical', 'Critical concerns', 'Society'], ['concern_response', 'Responses tried', 'Society'], ['invention', 'Jobs invented', 'Economy & expansion'], ['invention_failed', 'Inventions that failed', 'Economy & expansion'], ['overtime', 'Overtime calls', 'Society'], ['aspiration', 'Dreams achieved', 'People'], ['discovery', 'Discoveries', 'Knowledge'], ['tech_lost', 'Knowledge lost', 'Knowledge'], ['era', 'New ages', 'Knowledge'], ['project', 'Great works finished', 'Knowledge'], ['lesson', 'Lessons learned', 'Knowledge']
 ].map(([key, label, group]) => ({ key, label, group }));
 const STAT_LABEL = Object.fromEntries(STAT_EVENTS.map(e => [e.key, e.label]));
@@ -72,7 +73,16 @@ const STAT_SERIES = [
   { id: 'outpop', label: 'People in outposts', group: 'Expansion', get: w => w.out ? w.out.list.filter(o => o.state === 'active').reduce((s, o) => s + o.pop, 0) : 0 },
   { id: 'neigh', label: 'Peoples known', group: 'Expansion', get: w => w.neigh ? w.neigh.filter(n => n.found).length : 0 },
   { id: 'ships', label: 'Ships', group: 'Expansion', get: w => w.boats.length },
-  { id: 'trips', label: 'Trading trips (total)', group: 'Expansion', get: w => w.trade2 ? w.trade2.ledger.trips : 0 }
+  { id: 'trips', label: 'Trading trips (total)', group: 'Expansion', get: w => w.trade2 ? w.trade2.ledger.trips : 0 },
+  { id: 'blocked', label: 'Technologies waiting on a missing input', group: 'Knowledge', get: w => techBlocked(w).length },
+  { id: 'caphit', label: 'Days scholars hit their daily limit (total)', group: 'Knowledge', get: w => w.tech.capHit || 0 },
+  { id: 'works', label: 'Terraform works built', group: 'Expansion', get: w => w.terra ? w.terra.built : 0 },
+  { id: 'wontiles', label: 'Tiles won from rock and water', group: 'Expansion', get: w => w.terra ? w.terra.tiles : 0 },
+  { id: 'sitesknown', label: 'Sites heard of and not yet visited', group: 'Expansion', get: w => w.disc ? w.disc.sites.filter(s => s.known && !s.done).length : 0 },
+  { id: 'finds', label: 'Expeditions with a find (total)', group: 'Expansion', get: w => w.disc ? w.disc.finds : 0 },
+  { id: 'mats', label: 'Materials in hand (of 4)', group: 'Knowledge', get: w => MAT_LIST.filter(m => matOk(w, m)).length },
+  { id: 'fishstock', label: 'Fish in the water (average per tile x100)', group: 'Expansion', get: w => { if (!w._wn) { let n = 0; for (let i = 0; i < w.terr.length; i++) if (w.terr[i] <= TERR.SHALLOW) n++; w._wn = n || 1 } let t = 0; const f = w.fish; for (let i = 0; i < f.length; i++) t += f[i]; return Math.round(100 * t / w._wn) } },
+  { id: 'deernear', label: 'Deer within 25 tiles of the village', group: 'Expansion', get: w => deerNear(w) }
 ];
 const SERIES_BY_ID = Object.fromEntries(STAT_SERIES.map(s => [s.id, s]));
 
@@ -120,6 +130,10 @@ function statFromEmit(w, type, text, data) {
     case 'diplomacy': if (/declare themselves free/.test(tx)) c('outpost_free'); break;
     case 'bridge': c('bridge'); break;
     case 'discovery': c('discovery'); break;
+    case 'terraform': c('terraform'); break;
+    case 'expedition': c(d.lost ? 'expedition_lost' : 'expedition'); break;
+    case 'rumour': c('rumour'); break;
+    case 'research': c('research_deal'); break;
     case 'era': c('era'); break;
     case 'techloss': c('tech_lost'); break;
     case 'project': if (d.done) c('project'); break;

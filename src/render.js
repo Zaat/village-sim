@@ -242,7 +242,7 @@ function dockArt(g, w, b, now) {
   if (w.season === 3) { if (ux !== 0) rc(g, 'rgba(255,255,255,.8)', ux > 0 ? X : X - 2 * T, Y + 5, len, 1); else rc(g, 'rgba(255,255,255,.8)', X + 5, uy > 0 ? Y : Y - 2 * T, 1, len) }
 }
 function drawBoat(g, bt, w, now) {
-  if (bt.kind === 'cargo' || bt.kind === 'carrack') { shipArt(g, bt.x * CFG.T, bt.y * CFG.T, bt.dir, now, bt.kind === 'carrack' ? '#2f7a4a' : '#4a8a6a'); if (bt.hold && Object.values(bt.hold).some(v => v > 0)) { const x = Math.round(bt.x * CFG.T), y = Math.round(bt.y * CFG.T); rc(g, '#9a6a36', x - 7 * bt.dir, y - 6, 5, 4); rc(g, '#b88444', x - 1 * bt.dir, y - 6, 5, 4); rc(g, '#7a5a30', x - 4 * bt.dir, y - 9, 5, 3) } return }
+  if (bt.kind === 'cargo' || bt.kind === 'carrack' || bt.kind === 'barge') { shipArt(g, bt.x * CFG.T, bt.y * CFG.T, bt.dir, now, bt.kind === 'carrack' ? '#2f7a4a' : bt.kind === 'barge' ? '#8a6a3a' : '#4a8a6a'); if (bt.hold && Object.values(bt.hold).some(v => v > 0)) { const x = Math.round(bt.x * CFG.T), y = Math.round(bt.y * CFG.T); rc(g, '#9a6a36', x - 7 * bt.dir, y - 6, 5, 4); rc(g, '#b88444', x - 1 * bt.dir, y - 6, 5, 4); rc(g, '#7a5a30', x - 4 * bt.dir, y - 9, 5, 3) } return }
   const T = CFG.T, x = Math.round(bt.x * T), y = Math.round(bt.y * T), nav = w.has('navigation'), bob = Math.round(Math.sin(now / 420 + bt.id) * 1);
   rc(g, 'rgba(255,255,255,.35)', x - 11, y + 3 + bob, 22, 1); if (bt.state === 'out') { rc(g, 'rgba(255,255,255,.3)', x - 13 * bt.dir, y + 1 + bob, 6, 1); rc(g, 'rgba(255,255,255,.2)', x - 16 * bt.dir, y + 3 + bob, 5, 1) }
   g.save(); g.translate(x, y + bob); g.scale(bt.dir, 1);
@@ -381,6 +381,7 @@ function render(w, sel, now) {
   g.drawImage(R.terr, 0, 0);
   if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighArt(g, w, n, now);
   if (w.out) for (const o of w.out.list) if (o.state === 'active' && Math.abs(o.x * T - c.x) < R.vw / z + 60 && Math.abs(o.y * T - c.y) < R.vh / z + 60) outpostArt(g, w, o, now);
+  if (w.disc) for (const s of w.disc.sites) if (s.known && !s.done && Math.abs(s.x * T - c.x) < R.vw / z + 40 && Math.abs(s.y * T - c.y) < R.vh / z + 40) siteMark(g, s, now);
   const x0 = Math.max(0, Math.floor(tlx / T) - 2), x1 = Math.min(W - 1, Math.ceil((tlx + R.vw / z) / T) + 2), y0 = Math.max(0, Math.floor(tly / T) - 3), y1 = Math.min(H - 1, Math.ceil((tly + R.vh / z) / T) + 2);
   const t = w.tod; let dark = 0; if (t > 0.6 && t < 0.75) dark = (t - 0.6) / 0.15; else if (t >= 0.75 && t < 0.95) dark = 1; else if (t >= 0.95) dark = (1 - t) / 0.05;
   const tick = (now / 450) | 0;
@@ -593,6 +594,11 @@ function wearArt(g, b, now) {
   if (r < 0.35) { const t = ((now / 1100) + b.x * 0.13) % 1; g.fillStyle = `rgba(150,140,125,${0.35 * (1 - t)})`; g.fillRect(X + Wd * 0.3 + Math.sin(t * 5) * 2, Y + Ht * 0.5 - t * 10, 3, 3) }
 }
 
+/* a small flag where the village has heard of something worth a journey (gold on land, blue at sea) */
+function siteMark(g, s, now) {
+  const T = CFG.T, x = Math.round(s.x * T + T / 2), y = Math.round(s.y * T + T / 2), sea = SITE_KINDS[s.kind].sea, bob = sea ? Math.round(Math.sin(now / 500 + s.id)) : 0;
+  rc(g, 'rgba(0,0,0,0.3)', x - 3, y + 2, 7, 2); rc(g, '#5a4630', x, y - 7 + bob, 1, 9); rc(g, sea ? '#7fd0ff' : '#ffd24a', x + 1, y - 7 + bob, 5, 3); rc(g, sea ? '#3d8fc8' : '#c8932a', x + 1, y - 5 + bob, 5, 1);
+}
 /* ---- outposts: camps that grow into towns, and the carts and ships that link them home ---- */
 function outpostArt(g, w, o, now) {
   const T = CFG.T, X = o.x * T + 8, Y = o.y * T + 8, snow = w.season === 3, st = o.stage, roof = ['#a9824a', '#8a6a3a', '#7a5a34', '#6f4f30'][st], wall = '#c9b48a';

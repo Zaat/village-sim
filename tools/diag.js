@@ -1,6 +1,6 @@
 // Deep diagnostics for one long world: node tools/diag.js SEED MAP DAYS [every=32]  -> one JSON line per period
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,FEAT,villageAge,evTotal,ST});';
+const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TERR,FEAT,villageAge,evTotal,ST});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+process.argv[2],map=process.argv[3]||'island',days=+process.argv[4]||2400,every=+process.argv[5]||32;
 const w=new ctx.World(seed,{map}),W=ctx.CFG.W;let chats=0,evs={},evlog=[];const NOTABLE=/secession|civil|coup|uprising|purge|famine|fever|banish|strike|outpost|sect|exile|starv|storm|fire|wolves|harsh/;

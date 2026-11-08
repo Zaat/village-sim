@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -231,7 +231,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
   if (curTab === 'stats') renderStats(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -264,6 +264,16 @@ function renderTech() {
 }
 $('techCard').addEventListener('click', e => { const gb = e.target.closest('[data-grant]'); if (gb) { grantTech(world, gb.dataset.grant); renderTech(); return } const r = e.target.closest('[data-br]'); if (!r) return; techOpen = techOpen === r.dataset.br ? null : r.dataset.br; renderTech() });
 /* the harbour, the fleet and the trade the village runs for itself */
+function renderDisc() {
+  const w = world, el = $('discCard'), box = $('discBox'), D = w.disc; const show = !!(D && (D.sites.some(s => s.known) || D.exped.length || D.log.length)); box.style.display = show ? '' : 'none'; if (!show) return;
+  const mats = MAT_LIST.map(m => { const src = matSource(w, m); return `<span class="chip" title="${src === 'found' ? 'found by an expedition' : src === 'mine' ? 'from our mine' : src === 'trade' ? 'bought from a neighbour' : 'not yet found: search the far places, open a mine or trade'}" style="margin-right:6px;color:${src ? '#8fd18b' : '#6c7782'}">${src ? '✓' : '·'} ${MATS[m].name}</span>` }).join('');
+  let h = `<div class="hint" style="margin-bottom:3px">Materials the later technologies need</div><div>${mats}</div>`;
+  const run = D.exped.filter(e => e.state === 'running' || e.state === 'pending');
+  if (run.length) h += `<div class="hint" style="margin:6px 0 2px">On the road</div>` + run.map(e => { const s = D.sites.find(x => x.id === e.site), K = s && SITE_KINDS[s.kind], l = e.leader ? w.vills.find(v => v.id === e.leader) : null; return `<div class="techrow"><b>${K ? K.name : 'An expedition'}</b> <span class="hint">${e.state === 'pending' ? 'waiting for someone to lead it' : (l ? escapeHtml(l.name) + ' leads, ' : '') + (e.mode === 'sea' ? 'by boat' : 'on foot')}</span></div>` }).join('');
+  const sites = D.sites.filter(s => s.known && !s.done); if (sites.length) h += `<div class="hint" style="margin:6px 0 2px">Heard of, not yet visited (${sites.length})</div>` + sites.slice(0, 5).map(s => `<div class="techrow"><b>${SITE_KINDS[s.kind].name}</b> <span class="hint">${Math.round(Math.hypot(s.x - w.cx, s.y - w.cy))} tiles ${compass(w, s.x, s.y)}${s.mat ? ', may hold ' + MATS[s.mat].name : ''}</span></div>`).join('');
+  if (D.log.length) h += `<div class="hint" style="margin:6px 0 2px">Returned</div>` + D.log.slice(0, 3).map(l => `<div class="techrow"><span class="hint">day ${l.day}</span> ${escapeHtml(l.text)}</div>`).join('');
+  h += `<div class="hint" style="margin-top:6px">${D.done} expeditions returned · ${D.lost} lost · ${D.lore} old writings found${D.deals ? ' · ' + D.deals + ' lessons bought' : ''}</div>`; el.innerHTML = h;
+}
 function renderHarbour() {
   const w = world, el = $('harbourCard'), box = $('harbourBox'), t = w.trade2; const show = !!(t && w.neigh && w.has('trade') && (w.of('dock').length || w.neigh.some(n => n.reach === 'land' && n.found))); box.style.display = show ? '' : 'none'; if (!show) return;
   const docks = w.of('dock'), tier = docks.length ? Math.max(...docks.map(dockTier)) : 0, app = tradeAppetite(w), L = t.ledger, coin = w.has('coinage');
