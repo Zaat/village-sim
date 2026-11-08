@@ -1,6 +1,6 @@
 // v0.23 statistics: counters agree with the world's own counts, series are sampled, thinning, csv, save/load, summary
 const fs=require('fs'),vm=require('vm');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'].map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,ST,STAT_EVENTS,STAT_SERIES,statCount,statsDay,statsSummary,statsCSV,statsRecords,evRate,evTotal,seriesPoints,serializeWorld,deserializeWorld,STAT_CAP});';
+const code=require('./lib').SRC.map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,ST,STAT_EVENTS,STAT_SERIES,statCount,statsDay,statsSummary,statsCSV,statsRecords,evRate,evTotal,seriesPoints,serializeWorld,deserializeWorld,STAT_CAP});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 const days=+process.argv[3]||260;const w=new ctx.World(+process.argv[2]||555,{map:process.argv[4]||'island'});

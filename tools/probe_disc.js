@@ -1,6 +1,6 @@
 // node tools/probe_disc.js SEED MAP YEARS : discoveries. Sites known, expeditions, finds, materials and fish stock, every year.
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const files=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'];
+const files=require('../tests/lib').SRC;
 const code=files.map(f=>fs.readFileSync(path.join(process.env.SRC||path.join(__dirname,'..','src'),f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,localMats,matOk,techBlocked,TECHS,evTotal});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+process.argv[2]||12,map=process.argv[3]||'island',years=+process.argv[4]||10;

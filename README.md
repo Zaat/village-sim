@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.29 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.29.1 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,13 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Tests and releases (new in 0.29.1)
+Tools only, no change to the game. `tools/check.sh` is a runner (`tools/run.js`) that prints each result as it finishes and keeps suite timings in `tests/timings.json`.
+- `tools/check.sh` runs only the suites the changed files can affect (a change to a browser-only file, such as `ui.js` or `render.js`, needs none); `tools/check.sh full` runs all 24 node suites two at a time (about 22 minutes); `tools/check.sh pages` runs the Playwright page tests; `tools/check.sh regime_events save` runs named suites; `--bail` stops at the first failure.
+- A passing `full` run is stamped with a hash of the source and the tests. `tools/release.sh` refuses to release unless that stamp matches the code being released (so `SKIP_TESTS=1` only works right after a green full run), and a failing suite stops the release. Releases numbered x.y also need the page tests green for the same source.
+- `tests/lib.js` builds the list of simulation files from the script tags in `index.html`, so a new module needs no edit in the tests. `tests/golden.js` runs 30 days on each of the six map types and compares a signature with `tests/golden.json` (`--update` after an intended change). `tests/perf.js` fails a 10-year run above 1.5 ms per tick.
+- The old debug and screenshot scripts are in `tests/legacy/`; the suites are listed in `tests/suites.json`.
 
 ## Voices and thoughts (new in 0.29)
 - **Villagers now think, dream and talk.** About thirty kinds of thought are drawn from the villager's real state: hunger, tiredness, loneliness, cold, no home of their own, mood, their trade, play and lessons for children, a partner or child, a coming baby, grief, the stores before winter, drought and harsh winters, festivals, a fresh discovery, an expedition setting out or coming back, village troubles and council decisions, rumours of far places, their own dream for the future, quarrels and friends, money and old age. Sleepers dream. Choosing a thought uses no random numbers, so the village runs exactly as it did before (a test compares 30 days against a build with voices removed).
@@ -300,7 +307,8 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 | `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
 | `src/render.js` | camera, seasonal terrain cache, pixel art drawn in code, lighting, minimap |
 | `src/ui.js` | panels, input, Claude narrator toggle, main loop |
-| `tests/` | headless engine test (`node tests/sim.js SEED DAYS`), Playwright screenshots |
+| `tests/` | the release suites (listed in `tests/suites.json`), golden trajectories, the performance gate, Playwright page tests; old one-off scripts live in `tests/legacy/` |
+| `tools/run.js` | the test runner behind `tools/check.sh` (affected suites, `full`, `pages`, timings, green stamp) |
 
 The simulation files never touch the DOM, so they run in Node for batch experiments.
 

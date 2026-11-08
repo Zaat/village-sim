@@ -1,6 +1,6 @@
 // Forces each strife event and checks it behaves: node tests/strife_events.js
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'].map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,vOf,regimeDay,strifeDay,shadowDay,respondShadow,startCivil,civilDay,secede,sectDay,strikeDay,respondStrike,secessionTalks,adultsOf,chiefOf,serializeWorld,deserializeWorld,projBuilt,projAvailable,rxFrom,rxBuildings,deliberate,ISSUES,PROJECTS,NEIGH_PROFILE});';
+const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,vOf,regimeDay,strifeDay,shadowDay,respondShadow,startCivil,civilDay,secede,sectDay,strikeDay,respondStrike,secessionTalks,adultsOf,chiefOf,serializeWorld,deserializeWorld,projBuilt,projAvailable,rxFrom,rxBuildings,deliberate,ISSUES,PROJECTS,NEIGH_PROFILE});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let d=1;d<=90;d++){for(let t=0;t<1200;t++)w.step()}
 const log=[];w.listeners.push((t,txt)=>{if(t==='regime'||t==='diplomacy')log.push(`[${t}] ${txt}`)});

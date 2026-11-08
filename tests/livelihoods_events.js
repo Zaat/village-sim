@@ -1,6 +1,6 @@
 // Livelihoods (v0.25): trades unlock, demand, goods and saturation, pay, inventions, overtime, dreams, save
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const files=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'];
+const files=require('./lib').SRC;
 const code=files.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,LIV,TRADES,allTrades,census,demandOf,livelihoodsDay,jobEffect,tradeOf,overtimeMode,dreamsDay,judgeInventions,serializeWorld,deserializeWorld,CN,concernsDay,planLivelihood,livelihoodSummary,tradeLook,holdings});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++}else{fail++;console.log('FAIL',m)}};

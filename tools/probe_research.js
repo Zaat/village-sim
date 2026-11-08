@@ -1,6 +1,6 @@
 // node tools/probe_research.js SEED MAP YEARS [OPEN] [PHIL] : research pace. Known techs, age, blocked-by-gate, scholar cap hits, pop, every 5 years.
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const files=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'];
+const files=require('../tests/lib').SRC;
 const code=files.map(f=>fs.readFileSync(path.join(process.env.SRC||path.join(__dirname,'..','src'),f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS,AGES,techBlocked,techGaps,GATES,techEra});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const seed=+process.argv[2]||12,map=process.argv[3]||'island',years=+process.argv[4]||40,open=+process.argv[5]||0,philosophy=process.argv[6]||'balanced';

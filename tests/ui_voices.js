@@ -22,7 +22,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await p.click('#sel [data-unpin]'); await p.waitForTimeout(300);
   ok(await p.evaluate(() => !R.vo.pin), 'Unpin clears the pin');
   // pinning from the inspector
-  await p.evaluate(() => { const v = world.vills.find(x => x.th && x.th.kind === 'thought'); __sim.select(v); }); await p.waitForTimeout(400);
+  await p.evaluate(() => { const v = world.vills.find(x => x.th && x.age >= CFG.INFANT_DAYS); v.th.at = world.tick; __sim.select(v); }); await p.waitForTimeout(400);
   ok(await p.evaluate(() => !!document.querySelector('#sel [data-pin]')), 'current thought is clickable at 1x');
   await p.click('#sel [data-pin]'); await p.waitForTimeout(300);
   ok(await p.evaluate(() => R.vo.pin && R.vo.pin.id === selected.id), 'clicking the thought pins it');

@@ -1,6 +1,6 @@
 // v0.29 voices: thoughts from real state, three sizes, no effect on the simulation, chats, summaries, save, statistics
 const fs=require('fs'),vm=require('vm');
-const files=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'];
+const files=require('./lib').SRC;
 const code=files.map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,TECHS,thinkOf,voiceChat,voicesTick,voicesDay,voiceDigest,VCATS,VCAT,WORRY,VOICE_PERIOD,serializeWorld,deserializeWorld,STAT_SERIES,ST,statsEnsure});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};

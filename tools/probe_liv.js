@@ -1,6 +1,6 @@
 // node tools/probe_liv.js SEED MAP DAYS : livelihoods health record (employment, trades, income, errors)
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const files=['config','animals','villager','town','society','techtree','unlocks','tech','water','trade','projects','history','buildings','places','neighbours','diplomacy','routes','mapgen','character','regime','strife','lives','livelihoods','stats','concerns','outposts','bridges','terraform','discovery','voices','save','world'];
+const files=require('../tests/lib').SRC;
 const code=files.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,LIV,livelihoodSummary,TRADES,census});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 if(process.env.NOLIV){ctx.livelihoodsDay=()=>{}}
