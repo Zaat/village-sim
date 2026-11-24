@@ -78,3 +78,5 @@ sha=$(grep "^v0.30 " tools/release-commits.txt | cut -d" " -f2)
 mk v0.30 --repo $R --target "$(git rev-parse "$sha")" --title "v0.30 — Conflict" --notes-file docs/releases/v0.30.md
 sha=$(grep "^v0.31 " tools/release-commits.txt | cut -d" " -f2)
 mk v0.31 --repo $R --target "$(git rev-parse "$sha")" --title "v0.31 — Society depth" --notes-file docs/releases/v0.31.md
+sha=$(grep "^v0.32 " tools/release-commits.txt | cut -d" " -f2)
+mk v0.32 --repo $R --target "$(git rev-parse "$sha")" --title "v0.32 — Settlements, causes of death and housing" --notes-file docs/releases/v0.32.md

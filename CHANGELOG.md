@@ -2,6 +2,11 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.32 — Settlements, causes of death and housing
+Settlements, causes of death and housing. Click another settlement on the map (or its name in the World tab) for a full panel: people, temper, strength, treaty and dealings, what each side knows that the other does not, origin and history. A new **Causes of death** card in the Society tab shows totals by cause, this year against last year, age groups, the main preventable cause with advice and recent deaths. When the ground near the village is full, new homes are now sited further out (suburbs and hamlets) and the Housing concern says so. Fixes: the tree of knowledge window fits the stage on small screens, 'Recently eased' stays open, culture no longer saturates, plague is a little likelier. Tests: `tests/ui_settle.js` and `tests/housing_events.js`.
+
+<img src="docs/screenshots/v0.32-feature.png" width="640" alt="Village Sim v0.32">
+
 ### v0.31 — Society depth
 Society depth. A **culture** score grows from weddings, funerals and winter story nights (and slowly fades unless kept up); culture, curious minds and a library add a little to research. With **Disasters** on, spring floods and a **plague** can strike; the council chooses between quarantine and carrying on. With coinage, five or more in one trade found a **guild** that pays dues into the treasury. Outposts of eight or more get a **council head** of their own. The council can sell lessons to a friendly neighbour, hostile neighbours send **spies** who may steal a craft (the law and watch catch some), and the council may spy on a rival. Authority is re-tuned so crises push it up less and culture pulls it down a little. New 'Culture & guilds' card in the Society tab, statistics, chronicle entries and a plague concern. Tests: `tests/culture_events.js` (28 checks) and `tests/ui_culture.js`.
 
