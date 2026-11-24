@@ -22,6 +22,7 @@ const CONCERN_KINDS = {
   unity: 'The village is divided',
   faction: 'A rival faction',
   outpost: 'An outpost is slipping away',
+  plague: 'A plague is spreading',
   defence: 'The village is poorly defended',
   army: 'The army is going hungry',
 };
@@ -116,6 +117,10 @@ function outpostRules(w, C, found) {
     found.push({ key: 'outpost:' + o.id, sev: o.loyalty < 0.2 ? 2 : 1, title: `${o.name} is slipping away`, text: `${o.name} (${o.pop} people) feels little loyalty to the village (${Math.round(o.loyalty * 100)}%).`, why: 'Outposts that feel forgotten or overtaxed break away and take their people with them.', m: { v: o.loyalty, ok: 0.3, bad: 0.1 }, fix: ['nudge_ease', 'feast'] });
 }
 
+function plagueRules(w, C, found) {
+  const n = typeof plagueSick === 'function' ? plagueSick(w) : 0; if (!n) return;
+  found.push({ key: 'plague', sev: n >= 6 ? 2 : 1, title: 'A plague is spreading', text: `${n} villagers are ill${w.cul.plague.quarantine ? ' (the sick are quarantined)' : ''}.`, why: 'Sickness spreads where people gather; the old and the very young suffer most.', m: { v: n, ok: 0, bad: 8 }, fix: ['ration'] });
+}
 function warRules(w, C, found) {
   if (!w.war || !w.settings || !w.settings.raids) return; const W = w.war, t = threatLevel(w), n = soldiersHome(w).length, tg = targetSize(w);
   if (t >= 0.35 && n < Math.max(3, tg * 0.5)) found.push({ key: 'defence', sev: t > 0.7 ? 2 : 1, title: 'The village is poorly defended', text: `Hostile neighbours are near, but only ${n} villagers stand in arms (the council wants about ${tg}).`, why: 'A raid on a village with few defenders ends in loot, burning and death.', m: { v: n, ok: Math.max(3, tg * 0.5), bad: 1 }, fix: ['nudge_ease'] });
@@ -130,7 +135,7 @@ function concernsDay(w) {
   C.pop.push(pop); if (C.pop.length > 192) C.pop.shift();
   if (w.day % 4 === 0) { C.snap.push({ d: w.day, c: { ...w.causes } }); if (C.snap.length > 12) C.snap.shift() }
   if (w.day < 12) return;
-  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found); warRules(w, C, found);
+  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found); warRules(w, C, found); plagueRules(w, C, found);
   const seen = new Set();
   for (const f of found) {
     seen.add(f.key); let c = C.list.find(x => x.key === f.key);

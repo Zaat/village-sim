@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.30 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.31 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,15 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Society depth (new in 0.31)
+- **Culture (`src/culture.js`):** weddings (a couple holds one feast), funerals (the village gathers for the dead and eases mourning) and winter story nights lift moods and build a slow 0-100 culture score that needs keeping up. Culture and curious minds, plus a library, add a little to the research in hand.
+- **Disasters** (when Disasters is on): spring floods wash out fields and spoil food; a **plague** can break out in a trading village, and the council decides between quarantine (slower spread) and carrying on. Medicine and memories of earlier fevers help. New "plague" concern.
+- **Guilds:** with coinage, five or more in one trade found a guild; members pay dues into the treasury and are steadier.
+- **Outposts with councils:** an outpost of eight or more chooses a head of its own, which steadies its loyalty and gives it a voice (it sends word when people feel forgotten).
+- **Knowledge:** the council may sell lessons to a friendly neighbour for coins, hostile neighbours send spies who may steal a craft (the law and watch catch some), and the council may send a spy to a rival (55% to succeed, a worse quarrel if caught).
+- **Authority re-tuned:** crises push authority up less, and culture pulls it down a little, so more villages stay councils and communes.
+- **Culture & guilds** card in the Society tab; new statistics and chronicle entries. Tests: `tests/culture_events.js` (28 checks) and `tests/ui_culture.js`.
 
 ## Conflict: soldiers, battles and campaigns (new in 0.30)
 Peace is still the default. Everything below needs the **Raids and war** switch in Settings (the old "Raids" switch, renamed) and a hostile neighbour the village has met.

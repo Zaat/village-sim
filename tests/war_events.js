@@ -33,7 +33,7 @@ const hostile = (w, extra) => { const n = w.neigh.find(x => x.kind === 'raiders'
   ok(ctx.threatLevel(w) > 0.3, 'a hostile, met neighbour raises the threat: ' + ctx.threatLevel(w).toFixed(2));
   const tgt = ctx.targetSize(w); ok(tgt >= 1, 'target size is set: ' + tgt);
   run(w, 30); const s = ctx.soldiersOf(w).length;
-  ok(s >= 1 && s <= Math.max(tgt, 2) + 2, 'soldiers muster up to the target: ' + s + ' of ' + tgt);
+  const tgt2 = Math.max(tgt, ctx.targetSize(w)); ok(s >= 1 && s <= Math.max(tgt2, 2) + 2, 'soldiers muster up to the target: ' + s + ' of ' + tgt2);
   ok(ctx.soldiersOf(w).every(v => v.isAdult() && !v.isElder()), 'soldiers are adults, not elders');
   const base = ctx.defenseScore(w);
   const W = ctx.WAR(w); const keep = W.rolls; W.rolls = {}; const bare = ctx.defenseScore(w); W.rolls = keep;

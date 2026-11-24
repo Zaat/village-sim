@@ -24,6 +24,7 @@
   "discovery_events",
   "voices_events",
   "war_events",
+  "culture_events",
   "perf"
  ],
  "first": [
@@ -42,7 +43,8 @@
   "ui_tree",
   "ui_voices",
   "concerns_ui",
-  "ui_war"
+  "ui_war",
+  "ui_culture"
  ],
  "ui_only": [
   "render",
@@ -88,6 +90,15 @@
    "outposts",
    "strife_events",
    "routes"
+  ],
+  "culture": [
+   "culture_events",
+   "save",
+   "living",
+   "golden",
+   "regime_events",
+   "stats_events",
+   "concerns_events"
   ]
  },
  "est": {
@@ -104,6 +115,7 @@
   "regime_events": 47,
   "concerns_events": 47,
   "perf": 60,
-  "war_events": 150
+  "war_events": 150,
+  "culture_events": 90
  }
 }

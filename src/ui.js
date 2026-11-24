@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cultCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -237,7 +237,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups(); renderCulture() }       // only the visible tab is redrawn
   if (curTab === 'stats') renderStats(); if (curTab === 'events') renderTalk(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -359,6 +359,17 @@ function renderWar() {
     html += `<div class="hint" style="margin-top:6px">Raids beaten off ${W.repelled} · campaigns won ${W.won}, lost ${W.lost}, drawn ${W.drawn} · fallen ${W.fallen} · enemies slain ${W.slain}${W.plunder ? ' · plunder ' + W.plunder : ''}${W.sacked ? ' · outposts overrun ' + W.sacked : ''}</div>`;
     if (W.battles.length) html += `<div style="margin-top:6px">${W.battles.slice(0, 5).map(b => `<div class="hint">Day ${b.d}: ${b.kind === 'campaign' ? 'campaign against' : b.kind === 'outpost' ? (b.at ? escapeHtml(b.at) + ' against' : 'outpost against') : 'raid by'} ${escapeHtml(b.foe)} · <b>${b.outcome}</b> · lost ${b.lostOurs || 0}, enemy ${b.lostTheirs || 0}</div>`).join('')}</div>`;
   }
+  el.innerHTML = html;
+}
+function renderCulture() {
+  const w = world, el = $('cultCard'), C = w.cul; if (!C) { el.innerHTML = '<div class="hint">Weddings, funerals and shared stories will build a culture here.</div>'; return }
+  const sick = plagueSick(w), sc = Math.round(C.score), col = sc >= 55 ? '#7ad07a' : sc >= 25 ? '#d9c26a' : '#e07a5a';
+  let html = `<div class="polh"><span class="hint">Culture</span><span class="hint">${sc}/100</span></div><div class="bar"><i style="background:${col};width:${sc}%"></i></div>
+    <div class="hint" style="margin-top:4px">${C.weddings} weddings · ${C.funerals} funerals · ${C.tales} story nights${C.floods ? ' · ' + C.floods + ' floods' : ''}${C.plagues ? ' · ' + C.plagues + ' plagues (' + C.plagueDead + ' dead)' : ''}</div>`;
+  if (sick) html += `<div class="hint" style="margin-top:4px">🤒 ${sick} ill${C.plague.quarantine ? ', quarantined' : ''}.</div>`;
+  if (C.guilds.length) html += C.guilds.map(g => `<div class="grp"><b>${escapeHtml(g.name)}</b> <span class="hint">${g.members} members · dues paid ${Math.round(g.dues)}</span></div>`).join(''); else html += '<div class="hint" style="margin-top:4px">No guilds yet (they need coinage and five in one trade).</div>';
+  if (C.sold || C.stolen || C.caught || C.stolenBy || C.lostSpies) html += `<div class="hint" style="margin-top:6px">Lessons sold ${C.sold} (${Math.round(C.earned)} coins) · crafts lost to spies ${C.stolen}, spies caught ${C.caught}${C.stolenBy ? ' · crafts taken ' + C.stolenBy : ''}${C.lostSpies ? ' · our spies caught ' + C.lostSpies : ''}</div>`;
+  if (w.out && w.out.list.some(o => o.head)) html += `<div class="hint" style="margin-top:6px">Outpost leaders: ${w.out.list.filter(o => o.head && o.state === 'active').map(o => escapeHtml(o.head) + ' of ' + escapeHtml(o.name)).join(', ')}</div>`;
   el.innerHTML = html;
 }
 function renderChron() {

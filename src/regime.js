@@ -96,7 +96,7 @@ function regimeDay(w) {
   // the people's own temper is the ground; the character of those in charge is felt strongly on top of it
   for (const k of AXES) T[k] = L ? 0.25 + 0.5 * P[k] + 1.7 * (L[k] - P[k]) : a[k];
   R.pop = P;
-  T.auth += 0.45 * crisis - (approval > 70 && crisis < 0.15 ? 0.12 : 0) + 0.08 * (w.gov.policy.law + w.gov.policy.defense) / 2;
+  T.auth += 0.36 * crisis - (approval > 70 && crisis < 0.15 ? 0.14 : 0) + 0.05 * (w.gov.policy.law + w.gov.policy.defense) / 2 - 0.0012 * (w.cul ? w.cul.score : 0);
   T.comm += 0.3 * wealth + 0.12 * (w.stock.food < ad.length * 2 ? 1 : 0) - 0.1 * (w.econ && w.econ.trades.length > 4 ? 1 : 0);
   T.pious += 0.25 * (lesson(w, 'famine') + lesson(w, 'fever') + lesson(w, 'cold')) / 3 + (R.prophet ? 0.18 : 0);
   T.indus += 0.5 * (roles - 0.45) + 0.02 * (techs('mining') + techs('ironwork') + techs('forestry') + techs('tools'));

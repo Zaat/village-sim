@@ -314,6 +314,7 @@ class World {
     routesDay(this);
     outpostDay(this);
     try { warDay(this) } catch (e) { this.fault('war', e) }
+    try { cultureAll(this) } catch (e) { this.fault('culture', e) }
     bridgeDay(this);
     try { terraDay(this) } catch (e) { this.fault('terra', e) }
     try { discoveryDay(this) } catch (e) { this.fault('disc', e) }
