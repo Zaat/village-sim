@@ -2,6 +2,11 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.31 — Society depth
+Society depth. A **culture** score grows from weddings, funerals and winter story nights (and slowly fades unless kept up); culture, curious minds and a library add a little to research. With **Disasters** on, spring floods and a **plague** can strike; the council chooses between quarantine and carrying on. With coinage, five or more in one trade found a **guild** that pays dues into the treasury. Outposts of eight or more get a **council head** of their own. The council can sell lessons to a friendly neighbour, hostile neighbours send **spies** who may steal a craft (the law and watch catch some), and the council may spy on a rival. Authority is re-tuned so crises push it up less and culture pulls it down a little. New 'Culture & guilds' card in the Society tab, statistics, chronicle entries and a plague concern. Tests: `tests/culture_events.js` (28 checks) and `tests/ui_culture.js`.
+
+<img src="docs/screenshots/v0.31-feature.png" width="640" alt="Village Sim v0.31">
+
 ### v0.30 — Conflict
 Conflict arrives, abstractly. With the **Raids and war** switch on (off by default; peace is still the default and the simulation is unchanged without it), a hostile neighbour the village has met makes the council muster a watch of real villagers, up to a target that grows with the danger, the defence policy and the regime. Arms follow technology (militia, spearmen, archers, swordsmen, legionaries, musketeers); soldiers wear a helmet and carry a spear on the map. A **Barracks** drills the ranks and a **Watchtower** gives early warning; both are new great projects with their own art. Upkeep comes out of the food store (cheaper under authority) and morale rises and falls with food, victories and defeats.
 
