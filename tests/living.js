@@ -2,7 +2,7 @@
 const fs=require('fs'),vm=require('vm'),path=require('path');
 const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{recordVisit,World,CFG,FEAT,TERR,serializeWorld,deserializeWorld,popularity,recordOutput,placeBuilding,soilDay,adultsOf});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
-const w=new ctx.World(777);for(let d=1;d<=110;d++){for(let t=0;t<1200;t++)w.step()}
+const w=require('./lib').loadCheckpoint(ctx,'def777_d110');       // a day-110 checkpoint (node tools/checkpoint.js make def777_d110 777 - 110)
 let ok=0,bad=0;const check=(n,c,x)=>{console.log((c?'PASS ':'FAIL ')+n+(x?'  '+x:''));c?ok++:bad++};
 // saplings start small and mature over days
 {let i=-1;for(let k=0;k<w.feat.length;k++)if(w.terr[k]===ctx.TERR.GRASS&&!w.feat[k]&&!w.bmap[k]&&!w.road[k]){i=k;break}

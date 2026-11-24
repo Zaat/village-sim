@@ -4,7 +4,7 @@ const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..',
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let bad=0; const ck=(ok,m)=>{if(!ok){bad++;console.log('FAIL',m)}else console.log('ok  ',m)};
 const adv=(w,days)=>{w.tick+=1200*days};
-const W=new ctx.World(31,{}); for(let t=0;t<1200*70;t++)W.step(); W.tech.known.carpentry=W.tech.known.carpentry||1;       // the trajectory decides when carpentry arrives; these checks are about what follows from it
+const W=require('./lib').loadCheckpoint(ctx,'def31_d70'); W.tech.known.carpentry=W.tech.known.carpentry||1;       // the trajectory decides when carpentry arrives; these checks are about what follows from it
 
 // Hardship + prosperity
 ck(ctx.HARDSHIP.length===3&&ctx.hardOf(W).name==='Normal','hardship defaults to Normal');
@@ -38,7 +38,7 @@ const out=W.vills.find(v=>v.isAdult()&&!q.includes(v)); const oh=out.home!=null?
 while(W.season!==3) adv(W,1); out.home=null; ctx.privacyDay(W); ck(out.health<80&&out.mood<70&&W.priv.out>=1,'sleeping outside in winter costs health and mood');
 
 // cabins
-const w=new ctx.World(31,{}); for(let t=0;t<1200*70;t++)w.step(); w.tech.known.carpentry=w.tech.known.carpentry||1;
+const w=require('./lib').loadCheckpoint(ctx,'def31_d70'); w.tech.known.carpentry=w.tech.known.carpentry||1;
 const natural=[...w.buildings.values()].filter(b=>b.cabin).length; console.log('natural cabins by day 70:',natural); for(const b of w.buildings.values()) delete b.cabin;
 w.stock.wood=500; w.stock.stone=100; const rec=w.vills.filter(v=>v.isAdult()); rec.forEach(v=>v.trait.soc=0.05);
 while(w.vills.length<24){const v=new ctx.Villager(w,'m',20,w.cx,w.cy); v.trait.soc=0.05; w.vills.push(v); w.assignHome(v)}

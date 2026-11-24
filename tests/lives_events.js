@@ -3,8 +3,8 @@ const fs=require('fs'),vm=require('vm');
 const code=require('./lib').SRC.map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,LV,startFeud,feudDay,feudOf,inheritFrom,propsOf,powerShares,policyTargets,serializeWorld,deserializeWorld,statusDay,wealthOf});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
-const w=new ctx.World(+process.argv[2]||555,{map:'island'});
-for(let t=0;t<1200*60;t++)w.step();
+const w=process.argv[2]?new ctx.World(+process.argv[2],{map:'island'}):require('./lib').loadCheckpoint(ctx,'isl555_d60');       // default: a day-60 checkpoint (node tools/checkpoint.js make isl555_d60 555 island 60)
+if(process.argv[2])for(let t=0;t<1200*60;t++)w.step();
 const ad=w.vills.filter(v=>v.isAdult());
 ok(ad.every(v=>v.hobby),'every adult has a hobby');ok(ctx.LV(w).stats.hobbies>0,'hobbies happened: '+ctx.LV(w).stats.hobbies);console.log('stats',JSON.stringify(ctx.LV(w).stats));
 const owners=[...w.buildings.values()].filter(b=>b.owner);ok(owners.length>0,'buildings have owners: '+owners.length);

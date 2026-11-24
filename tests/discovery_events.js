@@ -66,7 +66,7 @@ ok(ctx.SHIPS.barge&&ctx.SHIPS.barge.cap>0,'barge exists');
   const tr=ctx.worldTraits(new ctx.World(5,{map:'continent'}));ok(tr.length>=6&&tr.every(r=>r[0]&&r[1]),'world traits list: '+tr.map(r=>r[0]).join(','));ok(tr.some(r=>r[0]==='Barges'),'barge line present');
 }
 // a long run: expeditions happen, nobody breaks, save and load keep the book
-const g=new ctx.World(12,{});run(g,32*10);const D=g.disc;
+const g=require('./lib').loadCheckpoint(ctx,'def12_y6');run(g,32*4);const D=g.disc;       // year 6 from a checkpoint (node tools/checkpoint.js make def12_y6 12 - 192), then 4 more years
 ok(D.done>=3,'the village sends expeditions: '+D.done);ok(D.sites.some(s=>s.done&&ctx.SITE_KINDS[s.kind].sea)||D.sites.some(s=>s.done&&!ctx.SITE_KINDS[s.kind].sea),'at least one site visited');
 ok(Object.keys(D.mats).length>0||D.done>0,'finds recorded');ok(faults.length===0,'no faults: '+faults.slice(0,3).join(' | '));
 const s=ctx.serializeWorld(g),g2=ctx.deserializeWorld(JSON.parse(JSON.stringify(s)));

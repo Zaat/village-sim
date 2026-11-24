@@ -6,7 +6,8 @@ const seed = +process.argv[2] || 777;
 const mk = o => new ctx.World(seed, { map: 'island', ...o });
 const run = (w, days) => { for (let t = 0; t < 1200 * days; t++) w.step() };
 const adv = (w, d) => { w.tick += 1200 * d };
-const base = mk({ raids: true }); run(base, 40);
+const base = process.argv[2] ? mk({ raids: true }) : require('./lib').loadCheckpoint(ctx, 'isl777r_d40');       // default: a day-40 checkpoint (node tools/checkpoint.js make isl777r_d40 777 island 40 '--opts={"raids":true}')
+if (process.argv[2]) run(base, 40);
 const clone = o => { const w = ctx.deserializeWorld(JSON.parse(JSON.stringify(ctx.serializeWorld(base)))); if (o) Object.assign(w.settings, o); return w };
 const hostile = (w, extra) => { const n = w.neigh.find(x => x.kind === 'raiders'); Object.assign(n, { met: true, rel: -40, grudge: 0.5, tribute: 0, raids: 2, nextVisit: 9999, nextDemand: 9999, raidCd: 9999, pop: 30, strength: 24, ...extra }); return n };
 

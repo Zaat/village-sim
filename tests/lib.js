@@ -10,4 +10,7 @@ const vm = require('vm');
 /* loadSim('World,CFG,...') -> object with those names, sources run in a fresh context */
 const loadSim = names => { const ctx = { console, Buffer, performance }; vm.createContext(ctx);
   vm.runInContext(code('Object.assign(globalThis,{' + names + '});'), ctx); return ctx; };
-module.exports = { ROOT, SRC, BROWSER_ONLY, code, loadSim };
+/* checkpoint(S, name) -> a world loaded from tests/checkpoints/NAME.json.gz (made by tools/checkpoint.js); S needs deserializeWorld */
+const checkpoint = (S, name) => JSON.parse(require('zlib').gunzipSync(fs.readFileSync(path.join(ROOT, 'tests', 'checkpoints', name + '.json.gz'))));
+const loadCheckpoint = (S, name) => S.deserializeWorld(checkpoint(S, name));
+module.exports = { ROOT, SRC, BROWSER_ONLY, code, loadSim, checkpoint, loadCheckpoint };

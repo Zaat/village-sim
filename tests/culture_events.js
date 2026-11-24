@@ -3,7 +3,7 @@ const { loadSim } = require('./lib');
 const ctx = loadSim('World,CFG,serializeWorld,deserializeWorld,CUL,cultureAll,cultureDay,scienceDay,disasterDay,startPlague,plagueDay,plagueSick,guildDay,outpostCouncils,knowledgeDay,culR,warR,TECHS,plagueRules,CONCERN_KINDS');
 let pass = 0, fail = 0; const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m) } };
 const run = (w, d) => { for (let t = 0; t < 1200 * d; t++) w.step() }, adv = (w, d) => { w.tick += 1200 * d };
-const base = new ctx.World(777, { map: 'island' }); run(base, 32 * 3);
+const base = require('./lib').loadCheckpoint(ctx, 'isl777_d96');       // a day-96 checkpoint (node tools/checkpoint.js make isl777_d96 777 island 96)
 const clone = o => { const w = ctx.deserializeWorld(JSON.parse(JSON.stringify(ctx.serializeWorld(base)))); if (o) Object.assign(w.settings, o); return w };
 const errs = w => [...w.dbg.errors.values()].map(e => e.where + ' ' + e.msg).join(';');
 

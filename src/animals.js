@@ -54,8 +54,7 @@ class Animal {
       let best = null, bd = 1e9;
       for (const v of w.vills) {
         if (v.sleeping && v.home != null) continue; const d = Math.hypot(v.x - this.x, v.y - this.y);
-        const alone = !w.vills.some(o => o !== v && !o.isChild() && Math.hypot(o.x - v.x, o.y - v.y) < 4);
-        if (d < 9 && (v.isChild() || alone || w.season === 3 || this.hunger > 90) && d < bd) { bd = d; best = v }
+        if (d < 9 && d < bd && (v.isChild() || w.season === 3 || this.hunger > 90 || !w.vills.some(o => o !== v && !o.isChild() && Math.hypot(o.x - v.x, o.y - v.y) < 4))) { bd = d; best = v }       // the "alone" scan only for the few villagers in range
       }
       for (const a of w.animals) if (a.alive && (a.kind === 'deer' || a.kind === 'rabbit')) { const d = Math.hypot(a.x - this.x, a.y - this.y); if (d < 12 && d * 0.7 < bd) { bd = d * 0.7; best = a } }
       this.target = best;

@@ -4,8 +4,8 @@ const code=require('./lib').SRC.map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
 const seed=+process.argv[2]||777, map=process.argv[3]||'island';
-const w=new ctx.World(seed,{map});
-for(let t=0;t<1200*70;t++)w.step();
+const w=process.argv[2]||process.argv[3]?new ctx.World(seed,{map}):require('./lib').loadCheckpoint(ctx,'isl777_d70');       // default: a day-70 checkpoint (node tools/checkpoint.js make isl777_d70 777 island 70)
+if(process.argv[2]||process.argv[3])for(let t=0;t<1200*70;t++)w.step();
 console.log('pop',w.vills.length,'day',w.day,'dbg',w.dbg.total);
 const sites=ctx.findOutpostSites(w);ok(sites.length>0,'finds sites');console.log('sites',sites.map(s=>s.role+'@'+s.x+','+s.y+' d'+Math.round(s.d)+(s.same?' land':' sea')).join(' | '));
 const p=ctx.planOutpost(w);ok(!!p,'plan');console.log('plan',p&&{role:p.role,mode:p.mode,days:p.days,ratio:p.cb.ratio.toFixed(2),go:p.cb.go});

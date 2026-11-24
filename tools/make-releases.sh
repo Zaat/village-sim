@@ -84,3 +84,5 @@ sha=$(grep "^v0.33 " tools/release-commits.txt | cut -d" " -f2)
 mk v0.33 --repo $R --target "$(git rev-parse "$sha")" --title "v0.33 — City structure" --notes-file docs/releases/v0.33.md
 sha=$(grep "^v0.34 " tools/release-commits.txt | cut -d" " -f2)
 mk v0.34 --repo $R --target "$(git rev-parse "$sha")" --title "v0.34 — Crowds" --notes-file docs/releases/v0.34.md
+sha=$(grep "^v0.34.1 " tools/release-commits.txt | cut -d" " -f2)
+mk v0.34.1 --repo $R --target "$(git rev-parse "$sha")" --title "v0.34.1 — Faster and launch-ready" --notes-file docs/releases/v0.34.1.md
