@@ -14,7 +14,9 @@ const { chromium } = require('playwright');
   await p.click('[data-mode=play]'); await p.waitForTimeout(150);
   ok(await vis('ptools') && await ev(() => world.play.on), 'Play shows the toolbar and marks the world');
   ok(await ev(() => document.querySelector('[data-tool=select]').classList.contains('on')), 'Select is the tool you start in');
-  ok(await ev(() => world.play.auto.build === false), 'first time in Play the council stops building'); ok(await ev(() => document.getElementById('pnote').textContent.includes('stopped building')), 'and a note says so');
+  ok(await ev(() => world.play.auto.build === false), 'first time in Play the council stops building'); ok(await vis('tip') && await ev(() => document.getElementById('tip').textContent.includes('stopped building')), 'and a tip says so');
+  await p.click('[data-tip=ok]'); ok(!(await vis('tip')), 'Got it closes the tip'); await p.click('[data-mode=watch]'); await p.click('[data-mode=play]'); await p.waitForTimeout(100); ok(await vis('tip'), 'the tip comes back next time you enter Play');
+  await p.click('[data-tip=never]'); ok(!(await vis('tip')), 'Don\'t show again closes it'); await p.click('[data-mode=watch]'); await p.click('[data-mode=play]'); await p.waitForTimeout(100); ok(!(await vis('tip')), 'and it stays away'); await ev(() => tipsReset()); await p.click('[data-mode=watch]'); await p.click('[data-mode=play]'); await p.waitForTimeout(100); ok(await vis('tip'), 'Show tips again brings it back'); await p.click('[data-tip=ok]');
   { const z0 = await ev(() => { R.cam.z = 1.5; return R.cam.z });   // two fingers apart zoom in, together zoom out
     const pinch = (a0, a1) => ev(([a0, a1]) => { const mk = (t, id, x, y) => cv.dispatchEvent(new PointerEvent(t, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, isPrimary: id === 1 })), r = cv.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; mk('pointerdown', 1, cx - a0, cy); mk('pointerdown', 2, cx + a0, cy); mk('pointermove', 1, cx - a1, cy); mk('pointermove', 2, cx + a1, cy); mk('pointerup', 1, cx - a1, cy); mk('pointerup', 2, cx + a1, cy); return R.cam.z }, [a0, a1]);
     const z1 = await pinch(40, 80), z2 = await pinch(80, 40); ok(z1 > z0 * 1.5, 'pinching out zooms in: ' + z0 + ' to ' + z1); ok(z2 < z1 * 0.7, 'pinching in zooms out: ' + z1 + ' to ' + z2); ok(await ev(() => !world.play.paint && !PU.paint), 'a pinch starts no brush stroke or order'); }
@@ -66,6 +68,7 @@ const { chromium } = require('playwright');
   const spot = await ev(() => { for (let r = 3; r < 30; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = world.cx + dx, y = world.cy + dy; if (playCanPlace(world, 'house', x, y, false).ok) return [x, y] } return null });
   const sp = await scr(spot[0] + 1, spot[1] + 1); await p.mouse.move(sp[0], sp[1]); await p.waitForTimeout(100);
   ok(await ev(() => PU.ok && PU.ok.ok) && await ev(() => document.getElementById('pghost').className === 'ok'), 'over open grass the ghost is green');
+  { const edge = await ev(() => { PU.hover = { x: 3, y: 3, sx: cv.clientWidth - 2, sy: cv.clientHeight - 2 }; PU.ok = { ok: false, why: 'Something is already here, so this is a long reason that needs room' }; puGhostTip(); const g = document.getElementById('pghost').getBoundingClientRect(), c = cv.getBoundingClientRect(); return g.right <= c.right + 1 && g.bottom <= c.bottom + 1 }); ok(edge, 'the ghost tip stays on screen at the edge of the map'); await ev(() => { PU.hover = { x: 3, y: 3, sx: 100, sy: 100 }; PU.ok = { ok: false, why: 'Something is already here' }; puGhostTip() }); }
   const n0 = await ev(() => world.bps.filter(b => b.player).length); await p.mouse.click(sp[0], sp[1]); await p.waitForTimeout(150);
   ok(await ev(n => world.bps.filter(b => b.player).length === n + 1, n0), 'a click places a player site');
   await p.mouse.click(sp[0], sp[1]); await p.waitForTimeout(100); ok(await ev(n => world.bps.filter(b => b.player).length === n + 1, n0), 'the same spot cannot be placed twice');
@@ -94,7 +97,7 @@ const { chromium } = require('playwright');
   // saving keeps Play; Watch hides the tools again and drawing carries on with no errors
   await ev(() => { __sim.setSpeed(10) }); await p.waitForTimeout(1200);
   const saved = await ev(() => { const j = JSON.stringify(serializeWorld(world)); const w2 = deserializeWorld(JSON.parse(j)); return !!(w2.play && w2.play.on && w2.play.nz === world.play.nz && w2.bps.some(b => b.player)) }); ok(saved, 'a save keeps the play state, zones and player sites');
-  await p.click('[data-mode=watch]'); await p.waitForTimeout(200); ok(!(await vis('ptools')) && await ev(() => !world.play.on), 'Watch hides the tools again'); await p.waitForTimeout(600);
+  await p.click('[data-mode=watch]'); await p.waitForTimeout(200); ok(!(await vis('pghost')), 'going back to Watch clears a red build tooltip'); ok(!(await vis('ptools')) && await ev(() => !world.play.on), 'Watch hides the tools again'); await p.waitForTimeout(600);
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 2).join(' | '));
   // a phone: the toolbar fits and the page still works
   const q = await b.newPage({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true }); await q.goto('file:///' + __dirname.replace(/\\/g, '/') + '/../index.html'); await q.waitForTimeout(700);

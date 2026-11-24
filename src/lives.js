@@ -210,7 +210,7 @@ function lifeMood(v) {
    Some people want a house to themselves, some want company. The preference is the opposite of sociability (trait soc). Private people pick
    empty houses, suffer when strangers share their roof, and the most private build a cabin away from the village. Sleeping outside is hard on
    everyone, worst in winter (and less bothersome before carpentry, when nobody has a proper roof). */
-const privOf = v => clamp(1 - v.trait.soc, 0, 1);
+const privOf = v => clamp(1 - v.trait.soc, 0, 1) * 0.85;      // privacy matters a lot, but nobody is entirely unable to share a roof (v0.35.1)
 const isKin = (v, id) => v.partner === id || (v.kids && v.kids.includes(id)) || (v.parentIds && v.parentIds.includes(id));
 function privacyDay(w) {
   const early = w.has('carpentry') ? 1 : 0.4, pen = [0.3, 0.1, 0.6, 1.8][w.season] * early, P = w.priv = { out: 0, crowd: 0, lonely: 0, list: [] };
@@ -219,7 +219,8 @@ function privacyDay(w) {
     const h = v.home != null ? w.buildings.get(v.home) : null;
     if (!h) { if (w.houses().length) { P.out++; v.mood = Math.max(0, v.mood - 1.2 * pen); if (w.season === 3 && early === 1) v.health = Math.max(1, v.health - 1.2) } continue }
     const pv = privOf(v), others = h.occ.filter(id => id !== v.id && !isKin(v, id)).length, over = Math.max(0, others - Math.round((1 - pv) * (bedsOf(h) - 1)));
-    if (over) { P.crowd++; P.list.push(v.id); v.mood = Math.max(0, v.mood - 0.35 * over * (0.4 + pv)) }
+    if (v.hunger < 40 || v.health < 60 || v.energy < 20) continue;       // survival first: someone who is starving, ill or exhausted does not mind who they share with
+    if (over) { P.crowd++; P.list.push(v.id); v.mood = Math.max(0, v.mood - 0.35 * Math.min(over, 2) * (0.4 + pv)) }
     else if (pv < 0.25 && h.occ.length === 1 && v.partner == null) { P.lonely++; v.mood = Math.max(0, v.mood - 0.25) }
   }
   rehomeDay(w);

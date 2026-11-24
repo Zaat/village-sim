@@ -19,13 +19,13 @@ function puNote(t) { PU.note = t; PU.noteT = performance.now(); const el = $('pn
 
 /* ---------- the mode ---------- */
 function puMode(on) {
-  if (!world) return; playSet(world, 'on', on); if (!on) { PU.tool = 'select'; PU.panel = null; PU.sel = []; PU.menu = null }
+  if (!world) return; playSet(world, 'on', on); if (!on) { PU.tool = 'select'; PU.panel = null; PU.sel = []; PU.menu = null; PU.hover = null; PU.ok = null; puGhostTip() }
   document.body.classList.toggle('playing', !!on); $('ptool').scrollLeft = 0; puRefresh(); if (typeof updateUI === 'function') updateUI();
-  if (on) { const A = world.play.auto; puNote(A.build ? 'Play: you give orders; the village still plans its buildings.' : 'Play: the council has stopped building. You place the buildings now (B).'); let seen = true; try { seen = !!localStorage.getItem(PLAYTIP_KEY) } catch (e) { } if (!seen && !navigator.webdriver && typeof playTipOpen === 'function') playTipOpen() }
-  else puNote('Watch: the council plans and builds again.');
+  if (on) { if (!world.play.auto.build && typeof tipShow === 'function') tipShow('playmode', '<b>You are in charge.</b> The council has stopped building: you place the buildings, roads and fields (Build B, Road R, Zone Z in the bar below) or give villagers orders. Research and jobs stay automatic until you switch them in Village plan. Switch back to Watch and the council takes over again; your choices are kept.', true) }
+  else if (typeof tipHide === 'function') tipHide();
 }
 function puWorld() { PU.sel = []; PU.tool = 'select'; PU.panel = null; PU.menu = null; document.body.classList.toggle('playing', puOn()); puRefresh() }
-function puTool(t) { PU.tool = t; PU.menu = null; PU.paint = null; PU.box = null; PU.panel = t === 'select' ? null : t; if (t === 'zone') PU.panel = 'zone'; puRefresh() }
+function puTool(t) { PU.tool = t; PU.menu = null; PU.paint = null; PU.box = null; if (t !== 'build') { PU.ok = null; puGhostTip() } PU.panel = t === 'select' ? null : t; if (t === 'zone') PU.panel = 'zone'; puRefresh() }
 
 /* ---------- giving orders ---------- */
 function puOrder(o, label) {
@@ -129,9 +129,11 @@ function puLine(a, b, out) { let x0 = a[0], y0 = a[1]; const x1 = b[0], y1 = b[1
 function puBrushTiles(x, y, r) { const out = []; if (r <= 1) return [[x, y]]; const k = r - 1; for (let dy = -k; dy <= k; dy++) for (let dx = -k; dx <= k; dx++) if (dx * dx + dy * dy <= k * k + k) out.push([x + dx, y + dy]); return out }
 function puPaintMode() { return puOn() && (PU.tool === 'road' || PU.tool === 'zone') && !PU.pan && !puKeysDown[' '] }
 function puDown(e) {
+  PU.touch = !!(e.pointerType && e.pointerType !== 'mouse'); clearTimeout(PU._gt);
   if (!puOn()) return false;
   if (e.button === 2) return true;
   const [sx, sy] = puCanvasXY(e), t = puTile(sx, sy); PU.menu = null; $('pmenu').style.display = 'none';
+  if (PU.touch) { PU.hover = { x: t.x, y: t.y, sx, sy }; if (PU.tool === 'build') puGhostCheck() }          // a tap goes where the finger is, not where the last move left the ghost
   if (puPaintMode()) { PU.paint = { tiles: [], last: [t.x, t.y], seen: new Set() }; puPaintAdd(t.x, t.y); try { cv.setPointerCapture(e.pointerId) } catch (_) { } return true }
   if (PU.tool === 'select' && e.shiftKey && e.pointerType === 'mouse') { PU.box = { x0: sx, y0: sy, x1: sx, y1: sy }; try { cv.setPointerCapture(e.pointerId) } catch (_) { } return true }
   if (PU.tool === 'select' && e.pointerType !== 'mouse' && puGroup().length) { PU.hold = setTimeout(() => { PU.hold = null; PU.holdFired = true; puMenuAt(sx, sy, e.clientX, e.clientY) }, 520) }
@@ -153,13 +155,16 @@ function puMove(e) {
 function puGhostCheck() { const h = PU.hover; if (!h || PU.tool !== 'build') { PU.ok = null; return } const [bw, bh] = CFG.SIZE[PU.type]; PU.ok = playCanPlace(world, PU.type, h.x - (bw >> 1), h.y - (bh >> 1), false); PU.gx = h.x - (bw >> 1); PU.gy = h.y - (bh >> 1); puGhostTip() }
 function puGhostTip() {
   const el = $('pghost'), h = PU.hover; if (!el) return; if (!h || PU.tool !== 'build' || !PU.ok) { el.style.display = 'none'; return }
-  el.style.display = 'block'; el.style.left = (h.sx + 14) + 'px'; el.style.top = (h.sy + 14) + 'px'; el.className = PU.ok.ok ? 'ok' : 'bad'; el.textContent = PU.ok.ok ? (PU.ok.note || PU_NAMES[PU.type] + ': ' + puCost(PU.ok.cost)) : PU.ok.why;
+  el.style.display = 'block'; el.className = PU.ok.ok ? 'ok' : 'bad'; el.textContent = PU.ok.ok ? (PU.ok.note || PU_NAMES[PU.type] + ': ' + puCost(PU.ok.cost)) : PU.ok.why;
+  const vw = cv.clientWidth, vh = cv.clientHeight, ew = el.offsetWidth, eh = el.offsetHeight, touch = PU.touch;       // keep it on screen, and above the finger on a touchscreen
+  el.style.left = Math.max(4, Math.min(vw - ew - 4, h.sx + (touch ? -ew / 2 : 14))) + 'px'; el.style.top = Math.max(4, Math.min(vh - eh - 4, touch ? h.sy - eh - 44 : h.sy + 14)) + 'px';
 }
 function puPlaceAt() {
   if (PU.gx == null) return; const r = playPlace(world, PU.type, PU.gx, PU.gy);
   if (r.ok) { puNote(`${PU_NAMES[PU.type]} marked. Builders will start soon.`); PU.fx.push({ x: PU.gx + 0.5, y: PU.gy + 0.5, t: performance.now() }); puGhostCheck(); puRefresh() } else puNote(r.why);
 }
 function puUp(e) {
+  if (e.pointerType && e.pointerType !== 'mouse') { clearTimeout(PU._gt); PU._gt = setTimeout(() => { const g = $('pghost'); if (g) g.style.display = 'none' }, 1800) }
   if (!puOn()) return false;
   if (PU.hold) { clearTimeout(PU.hold); PU.hold = null } PU.holdMoved = 0;
   if (PU.holdFired) { PU.holdFired = false; cv.classList.remove('drag'); return true }

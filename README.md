@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.34.1 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.35.1 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
 <p align="center"><img src="docs/village-timelapse.gif" width="760" alt="Five years of one village, a frame every four days"></p>
 <p align="center"><sub>Five years of one village in 44 frames. Nobody is steering: the people plan, build, trade, argue and grow.</sub></p>
@@ -17,7 +17,8 @@
 - **Tools to understand it.** A Concerns panel that warns you, a Stats tab with charts and export, a chronicle, an inspector for every villager, animal and building.
 
 ## What's new
-**[v0.34 Crowds](docs/releases/v0.34.md):** a growing town no longer slows down. The 160 people with the most story stay simulated one by one; everyone else lives on as numbers by age and is drawn as small figures at the houses. **v0.34.1:** faster tests (checkpoint worlds, a quicker wolf scan), this redesigned page, an MIT license. Next is v0.35, the first public release.
+**[v0.35 Play](docs/releases/v0.35.md) and [v0.35.1](docs/releases/v0.35.1.md):** the first version you can play, not only watch. A Watch / Play switch lets you take the lead: select villagers and give orders, place buildings, lay roads, paint zones, choose the research and decide what the village still plans for itself. Villagers live longer lives, a village that dies ends with a story, and there is a manual, a menu and an About card. v0.35.1 makes switching modes seamless, fixes the endless homes concern, and adds pinch to zoom.
+**[v0.34 Crowds](docs/releases/v0.34.md):** a growing town no longer slows down. The 160 people with the most story stay simulated one by one; everyone else lives on as numbers by age and is drawn as small figures at the houses. **v0.34.1:** faster tests, this redesigned page, an MIT license.
 
 <p align="center"><img src="docs/screenshots/v0.34-feature.png" width="860" alt="A crowded town in v0.34"></p>
 
@@ -108,7 +109,7 @@ Open the **Diagnostics** panel and use **Copy report**. It holds timings, state 
 </details>
 
 ## Roadmap
-v0.35 **Control and mobile** is the first public release: more control for the player, a manual with an in-game Help button, mobile play. Then events, wildlife and ecology, and scenarios. See the [changelog](CHANGELOG.md).
+v0.36 **Look and sound** is the first public release: a variety audit, sound and music, scenarios, a tales-of-the-village game over, and launch preparation. Then a metropolis-scale population, resources and energy, and the late ages. See the [changelog](CHANGELOG.md).
 
 ## License
 [MIT](LICENSE).

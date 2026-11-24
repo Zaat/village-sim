@@ -42,7 +42,7 @@ const hostile = (w, extra) => { const n = w.neigh.find(x => x.kind === 'raiders'
   ok(ctx.armyPower(w) > 0, 'army power counts');
   ok(w.stock.food >= 0, 'food never negative');
   // the threat fades
-  n.rel = 60; n.kind = 'traders'; n.grudge = 0; W.alertUntil = 0; w.gov.policy.defense = 0;
+  for (const m of w.neigh) { m.rel = 60; m.kind = 'traders'; m.grudge = 0 } W.alertUntil = 0; w.gov.policy.defense = 0;
   run(w, 90); ok(ctx.soldiersOf(w).length < s || s <= 1, 'the army is stood down when the danger passes: ' + ctx.soldiersOf(w).length + ' from ' + s);
   ok(w.dbg.total === 0, 'no errors in muster run: ' + [...w.dbg.errors.values()].map(e => e.where + ' ' + e.msg).join(';'));
 }

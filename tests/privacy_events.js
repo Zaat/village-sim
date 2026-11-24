@@ -31,7 +31,9 @@ W.assignHome(soc); const sh=W.buildings.get(soc.home); ck(sh&&sh.occ.length>=1&&
 // crowding mood
 const room=W.houses().find(h=>h.occ.length===0)||far; room.occ.length=0; const q=[priv,...W.vills.filter(v=>v.isAdult()&&v!==priv).slice(0,3)];
 for(const v of q){v.home=room.id;room.occ.push(v.id);v.partner=null;v.kids=[];v.parentIds=[]}
-q[0].mood=70; ctx.privacyDay(W); ck(q[0].mood<70&&W.priv.crowd>=1,'crowding against their nature costs mood ('+q[0].mood.toFixed(2)+')');
+for(const v of q){v.hunger=80;v.health=100;v.energy=80} q[0].mood=70; ctx.privacyDay(W); ck(q[0].mood<70&&W.priv.crowd>=1,'crowding against their nature costs mood ('+q[0].mood.toFixed(2)+')');
+// survival first (v0.35.1): the same crowding costs nothing to someone who is starving, and is not counted
+q[0].mood=70; q[0].hunger=10; const c0=W.priv.crowd; ctx.privacyDay(W); ck(q[0].mood>=70-1e-9,'a starving person does not mind the crowding ('+q[0].mood.toFixed(2)+')'); q[0].hunger=80;
 
 // sleeping outside
 const out=W.vills.find(v=>v.isAdult()&&!q.includes(v)); const oh=out.home!=null?W.buildings.get(out.home):null; if(oh){const k=oh.occ.indexOf(out.id);if(k>=0)oh.occ.splice(k,1)} out.home=null; out.health=80; out.mood=70;

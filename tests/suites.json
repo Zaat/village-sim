@@ -70,6 +70,8 @@
   "helpui"
  ],
  "touch": {
+    "lives": ["lives_events", "privacy_events", "housing_events", "crowd_events", "city_events", "concerns_events", "livelihoods_events", "living", "play_events", "stats_events", "save", "golden", "perf"],
+    "society": ["regime_events", "strife_events", "culture_events", "war_events", "concerns_events", "tech_events", "play_events", "save", "golden", "perf"],
   "voices": [
    "voices_events",
    "save",

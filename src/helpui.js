@@ -29,13 +29,19 @@ function aboutOpen() {
   $('ab_help').onclick = helpOpen;
   $('ab_report').onclick = async () => { let ok = false; try { await navigator.clipboard.writeText(JSON.stringify(dbgReport(world, speed), null, 2)); ok = true } catch (e) { } $('ab_note').textContent = ok ? 'Report copied. Paste it into the issue.' : 'Your browser blocked copying: use Settings, Diagnostics, Download report.'; window.open(a.issues, '_blank', 'noopener') };
 }
-const PLAYTIP_KEY = 'villagesim.playtip';
-/* first time in Play: the village waits while the tip is open */
-function playTipOpen() {
-  const was = speed; setSpeed(0);
-  modal('You are in charge', `<p>The council has stopped building. From now on <b>you</b> place the buildings, roads and fields: pick <b>Build</b> (B), <b>Road</b> (R) or <b>Zone</b> (Z) in the bar below, or right-click a villager's target to give an order.</p><p>Research and jobs are still automatic until you switch them in <b>Village plan</b>.</p><p class="hint">Switch back to Watch at any time and the council takes over again. Your choices are kept for next time.</p><div class="btnrow"><button id="pt_ok" class="on">Got it</button></div>`, () => { if (speed === 0) setSpeed(was || 10) });
-  $('pt_ok').onclick = modalClose; try { localStorage.setItem(PLAYTIP_KEY, '1') } catch (e) { }
+/* tips: a small bar that never covers the play area for long. "Got it" closes it for now (it may come back), "Don't show again" silences that tip for good; Menu > Show tips again brings them all back. */
+const TIPS_KEY = 'villagesim.tips';
+const tipOff = () => { try { return JSON.parse(localStorage.getItem(TIPS_KEY) || '{}') } catch (e) { return {} } };
+function tipShow(id, html, pause) {
+  const off = tipOff(); if (off[id]) return; const el = $('tip'); if (!el) return;
+  const was = speed, hold = pause && !off['seen:' + id] && !navigator.webdriver && speed > 0;          // the very first time, the village waits until you have read it
+  if (hold) setSpeed(0);
+  el.innerHTML = html + '<div class="tipbtns"><button class="on" data-tip="ok">Got it</button><button data-tip="never" title="This tip will not appear again (Menu > Show tips again)">Don\u2019t show again</button></div>'; el.style.display = 'block';
+  const done = never => { el.style.display = 'none'; const o = tipOff(); o['seen:' + id] = 1; if (never) o[id] = 1; try { localStorage.setItem(TIPS_KEY, JSON.stringify(o)) } catch (e) { } if (hold && speed === 0) setSpeed(was || 10) };
+  el.querySelector('[data-tip=ok]').onclick = () => done(false); el.querySelector('[data-tip=never]').onclick = () => done(true);
 }
+function tipHide() { const el = $('tip'); if (el) el.style.display = 'none' }
+function tipsReset() { try { localStorage.removeItem(TIPS_KEY) } catch (e) { } }
 const WELCOME_KEY = 'villagesim.welcomed';
 function welcomeOpen() {
   modal('Welcome to Village Sim', `<p>A small village, a few hands, a lot of time. Watch it grow, or take the lead.</p><div class="btnrow" style="flex-wrap:wrap"><button id="wl_play" class="on">Start a village</button><button id="wl_help">How to play</button><button id="wl_about">About</button></div>`);
@@ -46,7 +52,7 @@ function menuInit() {
   const mb = $('menuBtn'), menu = $('menu'), close = () => { menu.style.display = 'none'; mb.classList.remove('on') };
   mb.onclick = e => { e.stopPropagation(); const open = menu.style.display === 'block'; if (open) close(); else { menu.style.display = 'block'; mb.classList.add('on'); $('mn_load').disabled = $('loadSave').disabled } };
   document.addEventListener('click', e => { if (!e.target.closest('#menu') && e.target !== mb) close() });
-  menu.onclick = e => { const b = e.target.closest('[data-mn]'); if (!b) return; close(); ({ resume: () => { if (speed === 0) setSpeed(lastSpeed || 10) }, new: () => nwOpen(), save: () => saveToStorage(true), load: () => $('loadSave').click(), settings: () => toggleDrawer(true), help: helpOpen, about: aboutOpen })[b.dataset.mn]() };
+  menu.onclick = e => { const b = e.target.closest('[data-mn]'); if (!b) return; close(); ({ resume: () => { if (speed === 0) setSpeed(lastSpeed || 10) }, new: () => nwOpen(), save: () => saveToStorage(true), load: () => $('loadSave').click(), settings: () => toggleDrawer(true), tips: () => { tipsReset(); if (typeof puNote === 'function') puNote('Tips are back on.') }, help: helpOpen, about: aboutOpen })[b.dataset.mn]() };
   $('modal_x').onclick = modalClose; $('modal').addEventListener('pointerdown', e => { if (e.target === $('modal')) modalClose() });
   addEventListener('keydown', e => { if (e.key === 'Escape' && $('modal').style.display !== 'none') { modalClose(); e.stopPropagation() } if (e.key === '?' && !(e.target && e.target.tagName === 'INPUT')) helpOpen() }, true);
 }
