@@ -42,11 +42,12 @@ ms "v0.40 Generative minds" open "Proposed: villagers compose thoughts from a sm
 # issues
 iss() { # title, labels, milestone ("" for none), state (open|closed), body
   if gh issue list -R $R --state all --search "\"$1\" in:title" --json title --jq '.[].title' | grep -Fxq "$1"; then echo "issue exists: $1"; return; fi
-  args=(-R $R --title "$1" --label "$2" --body "$5")
-  [ -n "$3" ] && args+=(--milestone "$3")
-  url=$(gh issue create "${args[@]}") || return
+  mnum=""
+  [ -n "$3" ] && mnum=$(gh api "repos/$R/milestones?state=all&per_page=100" --jq ".[] | select(.title==\"$3\") | .number")
+  labels=$(echo "$2" | tr ',' '\n' | sed 's/.*/-f labels[]=&/' | tr '\n' ' ')
+  url=$(gh api "repos/$R/issues" -f title="$1" -f body="$5" ${mnum:+-F milestone=$mnum} $labels --jq .html_url) || return
   echo "issue $url"
-  [ "$4" = closed ] && gh issue close "$url" -R $R >/dev/null
+  [ "$4" = closed ] && gh api -X PATCH "repos/$R/issues/${url##*/}" -f state=closed >/dev/null
 }
 M32=$(grep -o '^v0.32 [^"]*' <(grep '^mk v0.32 ' tools/make-releases.sh | sed -n 's/.*--title "\([^"]*\)".*/\1/p' | sed 's/ — / /'))
 M33="v0.33 City structure"
