@@ -75,7 +75,7 @@ function polarization(ad) {
   if (ad.length < 6) return 0; let s = 0; for (const k of ISSUES) { const m = ad.reduce((x, v) => x + v.op[k], 0) / ad.length; s += Math.sqrt(ad.reduce((x, v) => x + (v.op[k] - m) * (v.op[k] - m), 0) / ad.length) } return s / ISSUES.length;
 }
 function crisisIndex(w) {
-  const pop = w.vills.length, crime = w.settings.crime ? clamp(crimeRate(w, 8) / Math.max(3, pop * 0.08), 0, 1) : 0;
+  const pop = w.pop, crime = w.settings.crime ? clamp(crimeRate(w, 8) / Math.max(3, pop * 0.08), 0, 1) : 0;
   return clamp(0.5 * crime + 0.9 * Math.max(lesson(w, 'famine'), 1.1 * lesson(w, 'raids'), 0.7 * lesson(w, 'wolves'), 0.7 * lesson(w, 'cold'), 0.6 * lesson(w, 'fever')), 0, 1);
 }
 

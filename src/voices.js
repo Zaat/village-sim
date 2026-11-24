@@ -28,7 +28,7 @@ const PLAN_LINES = {
 };
 const MASTER_WORD = { wood: 'woodcutter', stone: 'stonecutter', farm: 'farmer', build: 'builder', hunt: 'hunter', fish: 'fisher' };
 
-const foodPer = w => (w.stock && w.stock.food || 0) / Math.max(1, w.vills.length);
+const foodPer = w => (w.stock && w.stock.food || 0) / Math.max(1, w.pop);
 const lc = s => String(s || '').toLowerCase();
 const cap1 = s => s ? s.charAt(0).toUpperCase() + s.slice(1) : s;
 
@@ -84,7 +84,7 @@ const VCATS = [
   { id: 'feud', label: 'quarrels', sc: (w, v) => v.enemies > 0 ? 1.5 + Math.min(3, v.enemies) : 0, lines: () => [['There are people here I simply cannot stand.', 'Grr', '!'], ['Some folk never forget an old quarrel.', 'Grudge', '!']] },
   { id: 'friends', label: 'friendship', sc: (w, v) => v.friends >= 3 ? 1.8 : 0, lines: () => [['I am grateful for my friends.', 'Friends', '♥'], ['Good company makes the hardest day easy.', 'Friends', '♥']] },
   { id: 'coins', label: 'money', sc: (w, v, c) => c.adult && w.has && w.has('coinage') ? ((v.coins || 0) < 6 ? 2.4 : (v.coins || 0) > 60 ? 2 : 0) : 0, lines: (w, v) => (v.coins || 0) < 6 ? [['Coins are scarce this month.', 'Coins', '$'], ['How will I pay my way?', 'Pay?', '$']] : [['A few more coins and I could buy something fine.', 'Coins', '$']] },
-  { id: 'elder', label: 'old days', sc: (w, v, c) => c.elder ? 2.5 : 0, lines: w => [['In my day the village was half this size.', 'Old days', '…'], ['I have seen many winters. Each one is a gift.', 'Winters', '…'], [w.vills.length > 60 ? 'So many new faces. I hardly know them all.' : 'The young ones will carry things on.', 'Old days', '…']] },
+  { id: 'elder', label: 'old days', sc: (w, v, c) => c.elder ? 2.5 : 0, lines: w => [['In my day the village was half this size.', 'Old days', '…'], ['I have seen many winters. Each one is a gift.', 'Winters', '…'], [w.pop > 60 ? 'So many new faces. I hardly know them all.' : 'The young ones will carry things on.', 'Old days', '…']] },
 ];
 const VCAT = {}; for (const c of VCATS) VCAT[c.id] = c;
 const WORRY = new Set(['hunger', 'tired', 'lonely', 'sick', 'cold', 'home', 'low', 'grief', 'winter', 'drought', 'harsh', 'concern', 'feud', 'quiet']);

@@ -112,13 +112,13 @@ function sitePath(w, s, boat) {
 const PARTY = 3;
 function planExpeditions(w) {
   const D = DISC(w); if (w.day < D.nextPlan) return; D.nextPlan = w.day + 6 + ((w.r() * 4) | 0);
-  const act = D.exped.filter(e => e.state !== 'done'); if (act.length >= 2 || w.vills.length < 30 || w.day < 40 || w.stock.food < w.vills.length * 3.5) return;
+  const act = D.exped.filter(e => e.state !== 'done'); if (act.length >= 2 || w.pop < 30 || w.day < 40 || w.stock.food < w.pop * 3.5) return;
   const app = w.rx ? clamp(1 + 0.6 * w.rx.O + 0.4 * w.rx.C - 0.5 * w.rx.P - 0.3 * w.rx.A, 0.3, 2) : 1; if (app < 0.5) return;
   const E = w.econ, coin = money(w), best = [];
   for (const s of D.sites) {
     const K = SITE_KINDS[s.kind]; if (!s.known || s.done || s.unreach || (K.tech && !w.has(K.tech)) || act.some(e => e.site === s.id)) continue;
     if (s.seen && s.mat && !D.mats[s.mat] && !w.has(SURVEY[s.mat])) continue;                       // seen, not understood yet
-    const sea = !!K.sea; if (sea && (!w.has('boats') || w.season === 3 || w.vills.length < 45)) continue; if (act.some(e => e.mode === (sea ? 'sea' : 'land'))) continue;
+    const sea = !!K.sea; if (sea && (!w.has('boats') || w.season === 3 || w.pop < 45)) continue; if (act.some(e => e.mode === (sea ? 'sea' : 'land'))) continue;
     let boat = null; if (sea) { boat = w.boats.find(b => b.crew == null && b.state === 'moored' && !b.noSea && (b.kind || 'fishing') === 'fishing' && w.buildings.get(b.dock) && sitePath(w, s, b)); if (!boat) continue }
     const path = sea ? sitePath(w, s, boat) : sitePath(w, s); if (!path) { if (!sea) s.unreach = true; continue }
     const len = path.length, speed = sea ? 0.07 : 0.1, days = Math.max(2, (2 * len / speed + 160) / CFG.TPD);
@@ -238,7 +238,7 @@ const deerNear = (w, r = 25) => { let n = 0; for (const a of w.animals) if (a.al
 
 /* ----- river barges: bulk goods to a neighbour reached by water but not by sea trade ----- */
 function bargeDay(w) {
-  const D = DISC(w), t = w.trade2; if (!t || !w.neigh || w.day < D.nextBarge || !w.has('trade') || !w.has('carpentry') || w.vills.length < 40) return; D.nextBarge = w.day + 12;
+  const D = DISC(w), t = w.trade2; if (!t || !w.neigh || w.day < D.nextBarge || !w.has('trade') || !w.has('carpentry') || w.pop < 40) return; D.nextBarge = w.day + 12;
   if (w.boats.some(b => b.kind === 'barge') || t.yard.some(y => y.kind === 'barge') || t.yard.length) return;
   const coin = money(w), E = w.econ, wood = 35, coins = 8; if (w.stock.wood < wood + 20 || (coin && E.treasury < coins)) return;
   const ns = w.neigh.filter(n => n.found && n.met && n.reach === 'land' && !isHostile(n)); if (!ns.length) return;

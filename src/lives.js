@@ -37,7 +37,7 @@ function ensureHobby(w, v) {
 function leisureWanted(w, v) {
   if (!v.isAdult() || w.tod < 0.38 || w.tod > 0.55 || (v.leisureUntil || 0) > w.tick) return false;
   if (w.concerns && ordersOf(w).allhands) return false; if (overtimeMode(w)) return false;
-  if (v.hunger < 40 || v.energy < 30 || w.festival || w.cold || v.duty > w.tick || v.stocksUntil > w.tick || v.strikeUntil > w.tick || w.stock.food < w.vills.length * 1.2) return false;
+  if (v.hunger < 40 || v.energy < 30 || w.festival || w.cold || v.duty > w.tick || v.stocksUntil > w.tick || v.strikeUntil > w.tick || w.stock.food < w.pop * 1.2) return false;
   const p = 0.12 + 0.25 * Math.max(0, w.gov.policy.labor) + 0.08 * (v.mood < 60 ? 1 : 0) + (v.isElder() ? 0.15 : 0) - 0.1 * Math.max(0, -w.gov.policy.labor);
   return w.r() < p;
 }
@@ -213,20 +213,41 @@ function lifeMood(v) {
 const privOf = v => clamp(1 - v.trait.soc, 0, 1);
 const isKin = (v, id) => v.partner === id || (v.kids && v.kids.includes(id)) || (v.parentIds && v.parentIds.includes(id));
 function privacyDay(w) {
-  const early = w.has('carpentry') ? 1 : 0.4, pen = [0.3, 0.1, 0.6, 1.8][w.season] * early, P = w.priv = { out: 0, crowd: 0, lonely: 0 };
+  const early = w.has('carpentry') ? 1 : 0.4, pen = [0.3, 0.1, 0.6, 1.8][w.season] * early, P = w.priv = { out: 0, crowd: 0, lonely: 0, list: [] };
   for (const v of w.vills) {
     if (v.isChild()) continue;
     const h = v.home != null ? w.buildings.get(v.home) : null;
     if (!h) { if (w.houses().length) { P.out++; v.mood = Math.max(0, v.mood - 1.2 * pen); if (w.season === 3 && early === 1) v.health = Math.max(1, v.health - 1.2) } continue }
     const pv = privOf(v), others = h.occ.filter(id => id !== v.id && !isKin(v, id)).length, over = Math.max(0, others - Math.round((1 - pv) * (bedsOf(h) - 1)));
-    if (over) { P.crowd++; v.mood = Math.max(0, v.mood - 0.35 * over * (0.4 + pv)) }
+    if (over) { P.crowd++; P.list.push(v.id); v.mood = Math.max(0, v.mood - 0.35 * over * (0.4 + pv)) }
     else if (pv < 0.25 && h.occ.length === 1 && v.partner == null) { P.lonely++; v.mood = Math.max(0, v.mood - 0.25) }
   }
+  rehomeDay(w);
   cabinDay(w);
+}
+/* a crowded household moves into an empty house, a few per day (a new one is built ahead when there is none: planTown) */
+function rehomeDay(w) {
+  const P = w.priv; if (!P.list.length || w.day < 12) return;
+  const empty = w.houses().filter(h => h.occ.length === 0 && !(h.cabin && h.owner != null));
+  let moved = 0;
+  for (const id of P.list) {
+    if (moved >= 3 || !empty.length) break;
+    if ((w.day + id) % 4) continue;
+    const v = vById(w, id); if (!v || v.home == null || !v.isAdult()) continue;
+    const old = w.buildings.get(v.home); if (!old) continue;
+    const unit = [v]; const p = v.partner != null ? vById(w, v.partner) : null; if (p && p.home === v.home) unit.push(p);
+    for (const k of v.kids || []) { const c = vById(w, k); if (c && c.home === v.home && !c.isAdult()) unit.push(c) }
+    let best = null, bs = 1e9;
+    for (const h of empty) { const bd = bedsOf(h); if (bd < unit.length) continue; const sc = (bd - unit.length) * 6 + Math.abs(h.x - w.cx) + Math.abs(h.y - w.cy); if (sc < bs) { bs = sc; best = h } }
+    if (!best) continue;
+    empty.splice(empty.indexOf(best), 1);
+    for (const m of unit) { const i = old.occ.indexOf(m.id); if (i >= 0) old.occ.splice(i, 1); if (old.owner === m.id) old.owner = null; best.occ.push(m.id); m.home = best.id }
+    claimHome(w, best, v); v.mood = Math.min(100, v.mood + 4); v.story('Moved into a house with more room.'); moved++
+  }
 }
 /* a very private adult builds a cabin out in the trees (a few at most) */
 function cabinDay(w) {
-  const pop = w.vills.length; if (pop < 20 || w.day < 40 || !w.has('carpentry')) return;
+  const pop = w.pop; if (pop < 20 || w.day < 40 || !w.has('carpentry')) return;
   const have = [...w.buildings.values()].filter(b => b.cabin).length + w.bps.filter(b => b.cabin).length;
   if (have >= Math.floor(pop / 30) || w.stock.wood < 40 || w.stock.stone < 8 || w.r() > 0.25) return;
   const c = w.vills.filter(v => v.isAdult() && v.home != null && privOf(v) >= 0.72 && !propsOf(w, v).some(b => b.cabin) && !w.bps.some(b => b.forId === v.id));

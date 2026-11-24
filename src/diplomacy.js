@@ -75,7 +75,7 @@ function proposeTreaty(w, n, level) {
 /* ----- a neighbour in need ----- */
 function aidRequest(w, n) {
   n.nextAid = w.day + 45 + ((w.r() * 50) | 0); n.crisis = w.day + 20;
-  const need = { food: Math.round(15 + w.vills.length * 0.4), wood: 12 }, can = w.stock.food >= need.food * 2.2 && w.stock.wood >= need.wood * 2;
+  const need = { food: Math.round(15 + w.pop * 0.4), wood: 12 }, can = w.stock.food >= need.food * 2.2 && w.stock.wood >= need.wood * 2;
   const warm = avgTrait(w, 'kind'), def = can && (warm > 0.45 || n.rel > 25) ? 'aid' : 'refuse';
   const why = n.kind === 'farmers' ? 'a blight has taken their harvest' : n.kind === 'raiders' ? 'a hard winter has thinned their stores' : n.kind === 'scholars' ? 'fire has destroyed their library and workshops' : 'a storm has wrecked their harbor and warehouses';
   ask(w, { kind: 'diplomacy', topic: `Envoys from ${n.name} ask for help: ${why}. They beg ${need.food} food and ${need.wood} firewood. The village holds ${w.stock.food} food and ${w.stock.wood} firewood. Will the council send aid?`,
@@ -103,7 +103,7 @@ function envoyVisit(w, n) {
   dlog(w, n, `An envoy from ${n.name} arrives with greetings and a gift of ${gift[1]} ${gift[0]}.`, 'envoy');
 }
 function migrantVisit(w, n) {
-  const free = w.beds() - w.vills.length; if (free < 2) return false; const dock = byLand(n) ? ringSpot(w, 22, 30) : w.of('dock')[0]; if (!dock) return false;
+  const free = w.beds() - w.pop; if (free < 2) return false; const dock = byLand(n) ? ringSpot(w, 22, 30) : w.of('dock')[0]; if (!dock) return false;
   startVisit(w, n, 'migrants', 2); const k = Math.min(free, 2 + ((w.r() * 3) | 0)), names = [];
   for (let i = 0; i < k; i++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 14 + w.r() * 22, dock.x, dock.y); v.hunger = 85; v.story(`${byLand(n) ? 'Walked' : 'Sailed'} from ${n.name} to make a new home here.`); w.vills.push(v); names.push(v.name) }
   n.pop = Math.max(6, n.pop - k); n.rel += 2; noteFlow(w, 'arrived', k);
@@ -206,10 +206,10 @@ function neighbourDay(w) {
     // treaties, then pleas for help, then visits
     if (n.pact === 0 && n.rel >= 35 && w.day >= n.nextTreaty) { proposeTreaty(w, n, 1); busy = true; w.dipDay = w.day; continue }
     if (n.pact === 1 && n.rel >= 62 && w.day >= n.nextTreaty) { proposeTreaty(w, n, 2); busy = true; w.dipDay = w.day; continue }
-    if (n.rel > -10 && w.day >= n.nextAid && w.vills.length >= 24) { aidRequest(w, n); busy = true; w.dipDay = w.day; continue }
+    if (n.rel > -10 && w.day >= n.nextAid && w.pop >= 24) { aidRequest(w, n); busy = true; w.dipDay = w.day; continue }
     // a friend in need of nothing sends help when the village starves
-    if ((n.pact === 2 || n.owes > 0) && n.rel > 20 && w.stock.food < w.vills.length * 1.2 && w.day >= n.aidCd) {
-      n.aidCd = w.day + 30; n.owes = Math.max(0, n.owes - 1); const f = Math.min(70, Math.round(w.vills.length * 1.6)); w.stock.food = Math.min(w.cap(), w.stock.food + f); n.rel += 3; startVisit(w, n, 'aid', 2);
+    if ((n.pact === 2 || n.owes > 0) && n.rel > 20 && w.stock.food < w.pop * 1.2 && w.day >= n.aidCd) {
+      n.aidCd = w.day + 30; n.owes = Math.max(0, n.owes - 1); const f = Math.min(70, Math.round(w.pop * 1.6)); w.stock.food = Math.min(w.cap(), w.stock.food + f); n.rel += 3; startVisit(w, n, 'aid', 2);
       dlog(w, n, `${n.name} sends ${f} food ${byLand(n) ? 'by wagon' : 'by ship'} to ease the hunger. Friends remember friends.`, 'aid'); busy = true; w.dipDay = w.day; continue
     }
     if ((!docks && !byLand(n)) || w.day < n.nextVisit || (w.season === 3 && w.r() < 0.6)) continue;

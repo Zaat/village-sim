@@ -233,10 +233,10 @@ function updateUI() {
   $('hudDate').textContent = `Year ${w.year} · ${SEASONS[s]} · Day ${w.seasonDay}`;
   $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''} · ${AGES[techEra(w)]}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
   const cap = w.cap(), an = {}; for (const a of w.animals) if (a.alive) an[a.kind] = (an[a.kind] || 0) + 1;
-  const stg = {}; for (const v of w.vills) stg[v.stage()] = (stg[v.stage()] || 0) + 1;
+  const stg = {}; for (const v of w.vills) stg[v.stage()] = (stg[v.stage()] || 0) + 1; if (w.crowd) { stg.child = (stg.child || 0) + w.crowd.kids; stg.adult = (stg.adult || 0) + w.crowd.adults; stg.elder = (stg.elder || 0) + w.crowd.elders }
   const roles = {}; for (const v of w.vills) if (v.age >= CFG.CHILD_DAYS && !v.isElder()) roles[v.role || 'forager'] = (roles[v.role || 'forager'] || 0) + 1;
   const ad = w.vills.filter(v => v.isAdult()), mood = ad.length ? ad.reduce((a, v) => a + v.mood, 0) / ad.length : 0;
-  $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.vills.length}</div><div class="hint">mood ${moodWord(mood)}</div></div>
+  $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.pop}${w.crowd && w.crowd.n ? `<span class="hint" style="font-weight:400;font-size:12px"> (${w.vills.length} in play)</span>` : ''}</div><div class="hint">mood ${moodWord(mood)}</div></div>
     ${flowLine(w)}
     <div class="hint" style="margin-bottom:4px">${stg.infant || 0} infants · ${stg.child || 0} children · ${stg.youth || 0} youths · ${stg.adult || 0} adults · ${stg.elder || 0} elders</div>
     ${resRow('Food', w.stock.food, cap, '#e0a458')}${resRow('Wood', w.stock.wood, cap, '#a8743c')}${resRow('Stone', w.stock.stone, cap, '#9aa3ab')}
@@ -308,7 +308,7 @@ const LOY_WORDS = l => l >= 0.75 ? 'devoted' : l >= 0.55 ? 'loyal' : l >= 0.4 ? 
 const loyCol = l => l >= 0.55 ? '#7ad07a' : l >= 0.4 ? '#d9c26a' : '#e07a5a';
 function renderOutposts() {
   const w = world, el = $('outCard'), box = $('outBox'), S = w.out; const live = S ? S.list.filter(o => o.state !== 'gone') : [], gone = S ? S.list.filter(o => o.state === 'gone') : [];
-  const show = !!(S && (live.length || gone.length || S.lastPlan) && w.vills.length >= 1); box.style.display = show ? '' : 'none'; if (!show) return;
+  const show = !!(S && (live.length || gone.length || S.lastPlan) && w.pop >= 1); box.style.display = show ? '' : 'none'; if (!show) return;
   const app = expandAppetite(w); let h = '';
   h += live.map(o => {
     const role = OUT_ROLES[o.role], st = o.state === 'travelling' ? `on the road, arriving in ${Math.max(0, o.arrive - w.day)} day${o.arrive - w.day === 1 ? '' : 's'}` : `${OUT_STAGES[o.stage]} · ${o.pop} people`;
@@ -328,7 +328,7 @@ function neighPanel(w, n) {
   const ageOf = kn && kn.length ? Math.max(...kn.map(id => TECHS[id].age)) : null;
   const land = n.reach === 'land', trav = land ? Math.max(1, Math.round(n.dist / 108 * 10) / 10) + ' days on foot' : Math.max(1, Math.round(n.dist / 84 * 10) / 10) + ' days by boat';
   const temper = n.temper == null ? '—' : n.temper > 0.6 ? 'fierce' : n.temper > 0.35 ? 'proud' : 'peaceable';
-  const rows = [['People', 'about ' + n.pop + (n.pop > w.vills.length ? ' (more than us)' : n.pop < w.vills.length * 0.6 ? ' (fewer than us)' : ' (about as many as us)')], ['Kind', NEIGH_KINDS[n.kind].label], ['Temper', temper], ['Strength', n.strength != null ? Math.round(n.strength) + (w.war && w.settings.raids ? ' fighters, roughly' : '') : '—'], ['Found', 'day ' + (n.foundDay != null ? n.foundDay : '?')], ['Distance', compass(w, n.x, n.y) + ', ' + trav]];
+  const rows = [['People', 'about ' + n.pop + (n.pop > w.pop ? ' (more than us)' : n.pop < w.pop * 0.6 ? ' (fewer than us)' : ' (about as many as us)')], ['Kind', NEIGH_KINDS[n.kind].label], ['Temper', temper], ['Strength', n.strength != null ? Math.round(n.strength) + (w.war && w.settings.raids ? ' fighters, roughly' : '') : '—'], ['Found', 'day ' + (n.foundDay != null ? n.foundDay : '?')], ['Distance', compass(w, n.x, n.y) + ', ' + trav]];
   const dips = [['Treaty', PACT_NAMES[n.pact || 0]], ['Trades done', n.tradeCount || 0], ['Gifts and aid', n.gifts || 0], ['Favours owed to us', n.owes || 0], ['Raids on us', n.raids || 0]];
   if (n.grudge > 0.05) dips.push(['Grudge', n.grudge > 0.5 ? 'deep' : 'some']); if (n.tribute > w.day) dips.push(['Paid for peace until', 'day ' + n.tribute]);
   const knowHtml = kn ? `<div class="hint">Knows ${kn.length} crafts${ageOf != null ? ', as far as the ' + AGES[ageOf] : ''}.</div>${theyOnly.length ? `<div class="hint"><b>They know, we do not:</b> ${names(theyOnly)}</div>` : ''}${weOnly.length ? `<div class="hint"><b>We know, they do not:</b> ${names(weOnly)}</div>` : ''}` : '<div class="hint">What they know is a mystery to us so far.</div>';
@@ -378,7 +378,7 @@ function renderCity() {
   if (s.hamlets.length) html += `<div class="grp">${s.hamlets.map(h => `<div class="hint"><b>${escapeHtml(h.name)}</b> · ${h.n} homes, ${h.p} people · founded ${cnYear(h.day)}</div>`).join('')}</div>`;
   const bits = []; if (s.cleared.farm) bits.push(`${s.cleared.farm} field${s.cleared.farm === 1 ? '' : 's'} given up to building`); if (s.cleared.ruin) bits.push(`${s.cleared.ruin} ruin${s.cleared.ruin === 1 ? '' : 's'} cleared`); if (s.paved) bits.push(`${s.paved} path tiles paved where people walk`); if (s.surfaced) bits.push(`${s.surfaced} busy road tiles improved`);
   if (bits.length) html += `<div class="hint" style="margin-top:4px">So far: ${bits.join(', ')}.</div>`;
-  const hd = w.hdiag; if (hd && hd.why.length && w.beds() < w.vills.length + 2) html += `<div class="hint" style="margin-top:4px;color:#e0b86a">Housing is held up: ${escapeHtml(hd.why.join('; '))}.</div>`;
+  const hd = w.hdiag; if (hd && hd.why.length && w.beds() < w.pop + 2) html += `<div class="hint" style="margin-top:4px;color:#e0b86a">Housing is held up: ${escapeHtml(hd.why.join('; '))}.</div>`;
   html += `<div style="margin-top:6px"><button id="lvBtn" class="btn">${R.lvShow ? 'Hide' : 'Show'} land value on the map</button></div>`;
   el.innerHTML = html; const bt = $('lvBtn'); if (bt) bt.onclick = () => { R.lvShow = !R.lvShow; renderCity() };
 }
@@ -747,7 +747,7 @@ let tt = null;
 function startTimeTravel(days) {
   if (tt || !world) return; const w = world;
   try { localStorage.setItem('villagesim.pretravel', JSON.stringify(serializeWorld(w))) } catch (e) { $('ttInfo').textContent = 'Could not keep a copy to undo with, so nothing was skipped. Use Export file, then try again.'; return }
-  tt = { target: w.tick + days * CFG.TPD, start: w.tick, days, prevSpeed: speed, t0: performance.now(), day0: w.day, pop0: w.vills.length, deaths0: w.deaths, chron0: w.chron ? w.chron.events.length : 0, known0: new Set(Object.keys(w.tech.known)), done0: new Set(Object.keys(w.proj.done)), logMark: (w.chron && w.chron.events[0]) || null };
+  tt = { target: w.tick + days * CFG.TPD, start: w.tick, days, prevSpeed: speed, t0: performance.now(), day0: w.day, pop0: w.pop, deaths0: w.deaths, chron0: w.chron ? w.chron.events.length : 0, known0: new Set(Object.keys(w.tech.known)), done0: new Set(Object.keys(w.proj.done)), logMark: (w.chron && w.chron.events[0]) || null };
   setSpeed(0); $('ttGo').disabled = true; $('ttCancel').disabled = false; $('ttSel').disabled = true; $('ttResult').innerHTML = '';
 }
 function stepTimeTravel() {
@@ -764,7 +764,7 @@ function finishTimeTravel() {
   const evs = w.chron ? w.chron.events.slice(0, Math.max(0, w.chron.events.length - T.chron0)).filter(e => e.kind === 'event' || e.kind === 'faction' || e.kind === 'era' || e.kind === 'diplomacy' || e.kind === 'voyage' || e.kind === 'regime').slice(0, 5) : [];
   const spanDays = w.day - T.day0, esc = escapeHtml;
   $('ttInfo').textContent = T.cancel ? 'Stopped early.' : 'Done.';
-  $('ttResult').innerHTML = `<b>${spanDays} days passed.</b> Population ${T.pop0} → ${w.vills.length}, ${w.deaths - T.deaths0} died.${newTech.length ? `<br>Discovered: ${esc(newTech.join(', '))}.` : ''}${newProj.length ? `<br>Built: ${esc(newProj.join(', '))}.` : ''}${w.gov.ruling ? `<br>${esc(w.gov.ruling.name)} leads the council.` : ''}${evs.length ? '<br>' + evs.map(e => '· ' + esc(e.text.length > 90 ? e.text.slice(0, 87) + '…' : e.text)).join('<br>') : ''}`;
+  $('ttResult').innerHTML = `<b>${spanDays} days passed.</b> Population ${T.pop0} → ${w.pop}, ${w.deaths - T.deaths0} died.${newTech.length ? `<br>Discovered: ${esc(newTech.join(', '))}.` : ''}${newProj.length ? `<br>Built: ${esc(newProj.join(', '))}.` : ''}${w.gov.ruling ? `<br>${esc(w.gov.ruling.name)} leads the council.` : ''}${evs.length ? '<br>' + evs.map(e => '· ' + esc(e.text.length > 90 ? e.text.slice(0, 87) + '…' : e.text)).join('<br>') : ''}`;
   w.say(`Time travel: ${spanDays} days passed.`); $('ttResult').innerHTML += '<div style="margin-top:6px"><button id="ttUndo">Undo: go back to before</button></div>'; $('ttUndo').onclick = undoTimeTravel;
 }
 function undoTimeTravel() {

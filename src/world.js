@@ -4,6 +4,7 @@
    ========================================================================== */
 const SEARCH_BUDGET = 150000;                       // path-search nodes allowed per tick (a full flood of the biggest map is about 80000)
 const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+const TPD_ = CFG.TPD, DPS_ = CFG.DPS;                  // cached for the hot day and season getters
 class World {
   constructor(seed, settings = {}, dims) {
     const [mw, mh] = dims || CFG.MAP_NEW; CFG.W = mw; CFG.H = mh; this.arch = (settings && settings.map && mw >= 200) ? settings.map : 'island'; this.full = FULL_MAPS.has(this.arch);
@@ -29,9 +30,10 @@ class World {
     this.say('A small band of settlers makes camp beside the water.');
   }
   /* ----- time ----- */
-  get day() { return Math.floor(this.tick / CFG.TPD) + 1 }
-  get tod() { return (this.tick % CFG.TPD) / CFG.TPD }            // 0 = sunrise
-  get season() { return Math.floor((this.day - 1) / CFG.DPS) % 4 }
+  get day() { return ((this.tick / TPD_) | 0) + 1 }
+  get pop() { return this.vills.length + (this.crowd ? this.crowd.n : 0) }          // everybody: the villagers in play plus the crowd (crowd.js)
+  get tod() { return (this.tick % TPD_) / TPD_ }            // 0 = sunrise
+  get season() { return ((((this.tick / TPD_) | 0) / DPS_) | 0) % 4 }
   get seasonDay() { return (this.day - 1) % CFG.DPS + 1 }
   get year() { return Math.floor((this.day - 1) / (CFG.DPS * 4)) + 1 }
   isNight() { return this.tod > 0.72 }
@@ -258,15 +260,16 @@ class World {
   tryConceive(f, m) {
     if (!f.isAdult() || !m.isAdult() || f.partner !== m.id) return;
     if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX * (this.lifeScale || 1)) return;
-    if (this.vills.length + 1 > this.beds()) return;
-    const gp = this.gov.policy.growth; if (this.stock.food < this.vills.length * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
+    if (this.pop + 1 > this.beds()) return;
+    const gp = this.gov.policy.growth; if (this.stock.food < this.pop * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
     if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
   }
   birth(f) {
+    if (this.vills.length >= CROWD.focus) { const C = crowdState(this); C.kids++; C.n++; C.born++; this.births++; this.abirths = (this.abirths || 0) + 1; noteFlow(this, 'born'); f.lastBirth = this.tick; f.story('Gave birth to a child who will grow up among the townsfolk.'); return }       // the focus is full: the child joins the crowd
     const dad = this.vills.find(v => v.id === f.father), c = new Villager(this, this.r() < 0.5 ? 'f' : 'm', 0, f.tx, f.ty, null, [f, dad]);
     c.home = f.home; c.parentIds = [f.id, dad ? dad.id : null]; if (f.home != null) { const h = this.buildings.get(f.home); if (h) h.occ.push(c.id) }
     f.kids.push(c.id); if (dad) dad.kids.push(c.id); c.story(`Born to ${f.name}${dad ? ' and ' + dad.name : ''} of House ${c.family}.`); f.story(`Gave birth to ${c.name}.`); if (dad) dad.story(`Became a father to ${c.name}.`);
-    this.vills.push(c); f.lastBirth = this.tick; this.births++; noteFlow(this, 'born');
+    this.vills.push(c); f.lastBirth = this.tick; this.births++; this.abirths = (this.abirths || 0) + 1; noteFlow(this, 'born');
     this.emit('birth', `${c.name} ${c.family} was born to ${f.name}${dad ? ' and ' + dad.name : ''}.`, { c, f });
   }
   kill(v, why) {
@@ -290,7 +293,7 @@ class World {
 
   /* ----- calendar hooks ----- */
   onNewDay() {
-    const s = this.season, pop = this.vills.length;
+    const s = this.season, pop = this.pop;
     if (this.seasonDay === 1 && this.day > 1) {
       if (s === 0) { this.harsh = false; this.say('Spring arrives. The snow melts and the fields stir.') }
       if (s === 1) this.say('Summer begins. Long warm days.')
@@ -323,6 +326,7 @@ class World {
     neighbourDay(this);
     buildingDay(this);
     try { cityDay(this) } catch (e) { this.fault('city', e) }
+    try { crowdDay(this) } catch (e) { this.fault('crowd', e) }
     characterDay(this);
     regimeDay(this);
     strifeDay(this);
@@ -413,7 +417,7 @@ class World {
     if (this.tick % 240 === 0) this.section('roles', () => assignRoles(this));
     if (this.fog && this.tick % 40 === 0) this.section('fog', () => revealTick(this));
     if (this.tick % 100 === 0) {
-      this.hist.push({ pop: this.vills.length, food: this.stock.food, wood: this.stock.wood, stone: this.stock.stone, season: this.season });
+      this.hist.push({ pop: this.pop, food: this.stock.food, wood: this.stock.wood, stone: this.stock.stone, season: this.season });
       if (this.hist.length > 1500) this.hist.shift();
     }
     const dt = nowMs() - t0; d.ticks++; d.tickMs += dt; if (dt > d.tickMax) d.tickMax = dt; d.lastTickAt = nowMs();

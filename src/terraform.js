@@ -36,7 +36,7 @@ function terraSite(w, K) {
 function landScarcity(w) {
   const { W, H } = CFG; let free = 0;
   for (let y = Math.max(3, w.cy - 26); y < Math.min(H - 3, w.cy + 26); y++) for (let x = Math.max(3, w.cx - 26); x < Math.min(W - 3, w.cx + 26); x++) { const i = y * W + x; if (w.terr[i] === TERR.GRASS && bareAt(w, i)) free++ }
-  const housing = w.beds() - w.vills.length < 4 ? 0.2 : 0; return clamp(1 - free / (Math.max(20, w.vills.length) * 16) + housing, 0, 1);
+  const housing = w.beds() - w.pop < 4 ? 0.2 : 0; return clamp(1 - free / (Math.max(20, w.pop) * 16) + housing, 0, 1);
 }
 function terraValue(w, K, tiles) {
   const sc = landScarcity(w), gain = tiles.length * (8 + 55 * sc), wood = K.per.wood * tiles.length, stone = K.per.stone * tiles.length, cost = wood * 3 + stone * 4 + 4;
@@ -51,7 +51,7 @@ function terraDay(w) {
     w.emit('terraform', `The works are done: ${TERRA[wk.kind].what}. ${wk.tiles.length} tiles of new ground.`, { kind: wk.kind, tiles: wk.tiles.length }); return;
   }
   if (w.day < T.next) return; T.next = w.day + 12;
-  if (w.vills.length < 20 || (w.stock.wood < 60 && w.stock.stone < 30)) return;
+  if (w.pop < 20 || (w.stock.wood < 60 && w.stock.stone < 30)) return;
   let best = null;
   for (const k in TERRA) {
     const K = TERRA[k]; if (!w.has(K.tech) || (T.skip[k] || 0) > w.day) continue;

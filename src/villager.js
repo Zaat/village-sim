@@ -213,7 +213,7 @@ class Villager {
     if (this.social < 40 + 30 * this.trait.soc && this.planSocial()) return;
     if (this.social < 80 && w.r() < 0.3 && this.planMarket()) return;
     const lw = livelihoodWanted(w, this), first = !this.role ? this.trade : this.side;
-    if (lw && first && w.stock.food >= w.vills.length * 1.5 && w.r() < (overtimeMode(w) ? 0.95 : !this.role ? 0.85 : 0.3) * tradeSlack(w) && planLivelihood(w, this, !!this.role)) return;
+    if (lw && first && w.stock.food >= w.pop * 1.5 && w.r() < (overtimeMode(w) ? 0.95 : !this.role ? 0.85 : 0.3) * tradeSlack(w) && planLivelihood(w, this, !!this.role)) return;
     if (this.planWork()) return;
     if (lw && planLivelihood(w, this, !this.trade)) return;
     if (this.social < 90 && this.planSocial()) return;
@@ -281,7 +281,7 @@ class Villager {
 
   /* ----- work: role first, then whatever the village lacks ----- */
   planWork() {
-    const w = this.w, pop = w.vills.length, s = w.season, autumn = s === 2, winter = s === 3, { tgt, eff } = resourceTargets(w);
+    const w = this.w, pop = w.pop, s = w.season, autumn = s === 2, winter = s === 3, { tgt, eff } = resourceTargets(w);
     const def = {}; for (const k in tgt) def[k] = (tgt[k] - eff[k]) / tgt[k];
     const tries = [], T = (name, fn) => tries.push([name, fn]);
     const foodAny = () => this.planFarm() || (this.role === 'fisher' ? this.planBoatFish() || this.planFish() || this.planHunt() : this.planHunt() || this.planBoatFish() || this.planFish()) || this.planGather('food');
@@ -300,7 +300,7 @@ class Villager {
       case 'fisher': T('fish', () => def.food > -0.2 && (this.planBoatFish() || this.planFish())); break;
     }
     const builders = w.vills.filter(v => v.jobKind === 'build' || v.jobKind === 'haul').length;
-    if (builders < Math.max(1, Math.ceil(w.vills.length / 6))) T('build2', () => this.planBuild());
+    if (builders < Math.max(1, Math.ceil(w.pop / 6))) T('build2', () => this.planBuild());
     const order = Object.keys(def).sort((a, b) => def[b] - def[a]);
     for (const k of order) if (def[k] > 0) T(k, () => k === 'food' ? foodAny() : this.planGather(k));
     for (const [name, fn] of tries) {
@@ -325,7 +325,7 @@ class Villager {
       } return false;
     };
     let path = w.search(this.tx, this.ty, goal, kind === 'wood' ? 110 : 75);
-    if (!path && kind === 'stone' && w.stock.stone < 8 && w.beds() < w.vills.length + 4) path = w.search(this.tx, this.ty, goal, 140, true);       // the only rock may lie behind thick woods: cut a way through
+    if (!path && kind === 'stone' && w.stock.stone < 8 && w.beds() < w.pop + 4) path = w.search(this.tx, this.ty, goal, 140, true);       // the only rock may lie behind thick woods: cut a way through
     if (!path || tgt < 0) return kind === 'wood' ? this.planReplant() : false;       // no trees within reach: plant some
     w.claim[tgt] = this.id; this.claim = tgt; this.jobKind = 'gather';
     const camp = w.campNear(kind, tgt % CFG.W, (tgt / CFG.W) | 0), load = CFG.CARRY + (camp && kind === 'stone' ? 2 : 0), bonus = camp ? 1.25 : 1;       // a camp nearby: bigger loads, better yield, shorter trips
@@ -340,7 +340,7 @@ class Villager {
   }
   /* when the woods within reach are gone, woodcutters plant saplings near the village (they sprout into trees in a few days) */
   planReplant() {
-    const w = this.w; if (w.stock.wood >= w.vills.length * 4 || (w.season >= 3)) return false;
+    const w = this.w; if (w.stock.wood >= w.pop * 4 || (w.season >= 3)) return false;
     if (w.regrow.reduce((n, g) => n + (g.tree ? 1 : 0), 0) >= 60) return false;
     for (let k = 0; k < 14; k++) {
       const a = w.r() * 6.28, d = 6 + w.r() * 8, gx = Math.round(w.cx + Math.cos(a) * d), gy = Math.round(w.cy + Math.sin(a) * d), i = gy * CFG.W + gx;
@@ -390,7 +390,7 @@ class Villager {
       if (w.claim[i] >= 0) return false;
       for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false;
     }, 80);
-    if ((!path || spot < 0) && w.stock.food < w.vills.length * 4) { spot = -1; path = w.search(this.tx, this.ty, (x, y, i) => { if (w.claim[i] >= 0) return false; for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false }, 130, true) }      // the only shore may lie behind thick woods: cut a way through
+    if ((!path || spot < 0) && w.stock.food < w.pop * 4) { spot = -1; path = w.search(this.tx, this.ty, (x, y, i) => { if (w.claim[i] >= 0) return false; for (const [dx, dy] of NB) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < CFG.W && ny < CFG.H) { const j = ny * CFG.W + nx; if (w.terr[j] === TERR.SHALLOW && w.fish[j] > 0) { spot = i; wt = j; return true } } } return false }, 130, true) }      // the only shore may lie behind thick woods: cut a way through
     if (!path || spot < 0) return false;
     w.claim[spot] = this.id; this.claim = spot; this.jobKind = 'fish'; const amt = 2 + (this.skill.fish > 0.6 ? 1 : 0) + (w.has('nets') ? 1 : 0) + Math.round(2 * techFx(w, 'sea')); this.inb = { kind: 'food', amt }; w.inbound.food += amt;
     this.steps = [go(null, path, 'To the shore'), work(this.wt(100, 'fish'), 'Fishing', () => { if (w.fish[wt] > 0) { w.fish[wt]--; this.carry = { kind: 'food', amt }; this.gain('fish') } }), ...this.deliverSteps()];
@@ -427,7 +427,7 @@ class Villager {
   }
   /* an expedition on foot to the nearest settlement nobody here has seen yet */
   planExplore() {
-    const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.vills.length < 16 || w.day < 24 || this.age > 55 || this.energy < 50) return false;
+    const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.pop < 16 || w.day < 24 || this.age > 55 || this.energy < 50) return false;
     const tgt = N.filter(n => !n.found && n.reach === 'land').sort((a, b) => a.dist - b.dist)[0]; if (!tgt) return false;
     const goal = (x, y) => Math.hypot(x - tgt.x, y - tgt.y) <= 8; let path = w.search(this.tx, this.ty, goal, 520);
     if (!path) path = w.search(this.tx, this.ty, goal, 520, true); if (!path) { w.voyageCd = w.day + 20; return false }
@@ -439,7 +439,7 @@ class Villager {
   }
   /* an expedition to the nearest island nobody here has seen yet */
   planVoyage() {
-    const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.vills.length < 22 || !w.has('boats') || this.age > 55) return false;
+    const w = this.w, N = w.neigh; if (!N || w.voyage || w.day < w.voyageCd || w.season === 3 || w.pop < 22 || !w.has('boats') || this.age > 55) return false;
     const tgt = N.find(n => !n.found && n.reach !== 'land' && (n.reach === 'boats' || w.has('navigation'))); if (!tgt) return false;
     let boat = null, path = null;
     for (const bt of w.boats) { if (bt.crew != null || bt.state !== 'moored' || bt.noSea) continue; const p = seaPath(w, bt, tgt); if (p) { boat = bt; path = p; break } bt.noSea = true }       // docks on an inland pond cannot reach the sea

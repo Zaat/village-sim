@@ -11,7 +11,7 @@ function makeBp(w, type, x, y, extra) {
   return bp;
 }
 function placeBuilding(w, type, wide, at) {       // `at` (a hamlet) restricts the search to the ground around it
-  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, k = wide ? 1.9 : 1, dmax = at ? 200 : wide ? 74 : 40, pop = w.vills.length;
+  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, k = wide ? 1.9 : 1, dmax = at ? 200 : wide ? 74 : 40, pop = w.pop;
   const ax0 = at ? at.x - 10 : w.cx - Math.round(45 * k), ax1 = at ? at.x + 10 : w.cx + Math.round(45 * k), ay0 = at ? at.y - 8 : w.cy - Math.round(36 * k), ay1 = at ? at.y + 8 : w.cy + Math.round(36 * k);
   for (let y = ay0; y <= ay1; y += L) for (let x = ax0; x <= ax1; x += L) {
     if (x < 2 || y < 2 || x + bw >= W - 2 || y + bh >= H - 2) continue;
@@ -61,7 +61,7 @@ function placeFunnel(w, type, wide) {
 /* the housing diagnosis: when beds run short, what is actually in the way? Cached for six days; also kept in w.hdiag for the diagnostics report. */
 function housingDiag(w) {
   if (w.hdiag && w.day - w.hdiag.day < 6) return w.hdiag;
-  const pop = w.vills.length, bps = w.bps.filter(b => b.type !== 'road'), cap = 2 + Math.floor(pop / 8) + (ordersOf(w).build ? 4 : 0), hb = bps.filter(b => b.type === 'house'), cost = CFG.COST.house, why = [];
+  const pop = w.pop, bps = w.bps.filter(b => b.type !== 'road'), cap = 2 + Math.floor(pop / 8) + (ordersOf(w).build ? 4 : 0), hb = bps.filter(b => b.type === 'house'), cost = CFG.COST.house, why = [];
   const wait = bps.filter(b => !b.ready()).length, f = placeFunnel(w, 'house', true), fc = placeFunnel(w, 'house', false);
   if (bps.length >= cap) why.push(`${bps.length} building projects are already open, which is as many as the village can run at once (${cap})${wait ? `; ${wait} of them still wait for materials` : ''}`);
   if (w.stock.wood < cost.wood || w.stock.stone < cost.stone) why.push(`there is not enough ${w.stock.wood < cost.wood ? 'wood' : 'stone'} in store for another home`);
@@ -95,7 +95,7 @@ function placeCamp(w, type) {
   return null;
 }
 function planCamps(w) {
-  const pop = w.vills.length, count = type => w.bps.filter(b => b.type === type).length;
+  const pop = w.pop, count = type => w.bps.filter(b => b.type === type).length;
   for (const type of Object.keys(CAMP_INFO)) {
     const info = CAMP_INFO[type]; if (!w.has(info.tech) || w.day < (w['next_' + type] || 0)) continue;
     if (w.of(type).length + count(type) >= info.limit(pop) || w.stock.wood < CFG.COST[type].wood + 12 || w.stock.food < pop * 2) continue;
@@ -138,23 +138,29 @@ const HARDSHIP = [
 const hardOf = w => HARDSHIP[w.settings.hardship == null ? 1 : w.settings.hardship] || HARDSHIP[1];
 /* prosperity 0.3..1.8, refreshed daily: food in store, spare beds, mood and health. It nudges births, newcomers and how far ahead builders plan. */
 function prosperityDay(w) {
-  const pop = Math.max(1, w.vills.length), food = clamp(w.stock.food / pop / 6, 0, 1.5), room = clamp((w.beds() - pop) / (pop * 0.15 + 2), 0, 1);
+  const pop = Math.max(1, w.pop), food = clamp(w.stock.food / pop / 6, 0, 1.5), room = clamp((w.beds() - pop) / (pop * 0.15 + 2), 0, 1);
   let mood = 0, hp = 0; for (const v of w.vills) { mood += v.mood; hp += v.health } mood /= pop * 100; hp /= pop * 100;
   const fa = w.vills.filter(v => v.isAdult() && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)); w.pairNeed = fa.length >= 6 ? clamp(1 - (fa.filter(v => v.partner != null).length / fa.length) / 0.55, 0, 1) : 0;       // few couples among the fertile: people are readier to settle down
   w.lifeScale = 1 + 0.5 * Math.min(0.75, techFx(w, 'health'));       // medicine, nutrition and sanitation stretch a life by up to about 37%
   w.prosp = clamp(0.4 + 0.35 * food + 0.35 * room + 0.5 * (mood - 0.5) + 0.3 * (hp - 0.7), 0.3, 1.8);
 }
 const fertilityMult = w => clamp(w.prosp == null ? 1 : w.prosp, 0.5, 1.6);
+function crowdWant(w, pending, pop) {
+  const P = w.priv; if (!P || !P.list || w.day < 60 || pop < 24) return false;
+  const ad = Math.max(1, w.vills.filter(v => v.isAdult()).length), houses = w.houses(), empty = houses.filter(h => h.occ.length === 0).length;
+  return P.list.length >= Math.max(4, ad * 0.3) && empty + pending < 1 && houses.length < pop / 2.5 + 6 && w.stock.wood >= 24 && w.stock.food > pop * 3;
+}
 function planTown(w) {
-  const pop = w.vills.length, count = t => w.bps.filter(b => b.type === t).length;
+  const pop = w.pop, count = t => w.bps.filter(b => b.type === t).length;
   const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = w.beds() + count('house') * bedsOf({ style: styleNow(w) });
   const structBps = w.bps.filter(b => b.type !== 'road').length;
   const drive = ordersOf(w).build;
   if (structBps < 2 + Math.floor(pop / 8) + (drive ? 4 : 0)) {
     const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
     if (cap < pop + 1) placeHouse(w);
-    else if (farms < Math.min(30, Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
+    else if (farms < Math.min(30 + Math.max(0, Math.floor((pop - 130) / 5)), Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
     else if (full && stores < 10) placeBuilding(w, 'store');
+    else if (crowdWant(w, count('house'), pop)) placeHouse(w);                                       // crowded households need somewhere to move to
     else if (cap < pop * (1.1 + 0.2 * clamp((w.prosp || 1) - 0.8, 0, 1) + (drive ? 0.3 : 0)) + 3 && w.stock.food > pop * 3 && w.stock.wood >= 10) placeHouse(w);       // build ahead when life is good
   }
   if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(3, 1 + Math.floor(pop / 40)) && w.stock.wood > 30) placeDock(w);
@@ -169,7 +175,7 @@ function planTown(w) {
 
 /* ----- resource targets: what the village wants in stock, and what it has coming ----- */
 function resourceTargets(w) {
-  const pop = w.vills.length, pend = w.pending(), s = w.season, cap = w.cap();
+  const pop = w.pop, pend = w.pending(), s = w.season, cap = w.cap();
   const tgt = {
     wood: 16 + 3 * pop + pend.wood + ((s === 2 ? pop * 3 + w.houses().length * 6 : 0) + (s === 3 ? pop * 2 : 0)) * (1 + 0.4 * lesson(w, 'cold')), stone: 6 + 2 * pop + pend.stone,
     food: (10 + 4 * pop + (s === 2 ? pop * 8 : 0) + (s === 1 ? pop * 3 : 0)) * (1 + 0.5 * lesson(w, 'famine'))
@@ -245,7 +251,7 @@ function storm(w) {
 }
 function townNewDay(w) {
   prosperityDay(w);
-  const pop = w.vills.length, s = w.season, d = w.day, sv = w.settings.survival ? 2 : 1, dis = w.settings.disasters, hd = hardOf(w);
+  const pop = w.pop, s = w.season, d = w.day, sv = w.settings.survival ? 2 : 1, dis = w.settings.disasters, hd = hardOf(w);
   if (w.seasonDay === 1 && dis) {
     if (s === 3 && w.r() < 0.3 * sv * hd.cold) { w.harsh = true; w.emit('event', 'A bitter winter sets in. The cold will be harsh this year.', { kind: 'harsh' }) }
     if (s === 1 && w.r() < 0.25 * sv) { w.drought = true; w.emit('event', 'The summer is dry. The crops grow slowly.', { kind: 'drought' }) }
@@ -277,6 +283,6 @@ function chatTopic(w, a, b) {
   if (a.trait.cur > 0.6 && b.trait.cur > 0.6) pool.push(`${a.name} and ${b.name} argued late into the evening about why the stars move.`, `${a.name} and ${b.name} wondered what lies beyond the far hills.`, `${a.name} and ${b.name} debated how to build a stronger granary.`);
   if (a.trait.kind > 0.6 || b.trait.kind > 0.6) pool.push(`${a.name} and ${b.name} shared stories of old friends.`);
   if (w.animals.some(x => x.kind === 'wolf' && x.alive)) pool.push(`${a.name} and ${b.name} whispered about the wolves.`);
-  if (w.stock.food < w.vills.length * 3) pool.push(`${a.name} and ${b.name} worried about the food stores.`);
+  if (w.stock.food < w.pop * 3) pool.push(`${a.name} and ${b.name} worried about the food stores.`);
   return pool[(w.r() * pool.length) | 0];
 }

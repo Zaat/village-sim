@@ -27,7 +27,9 @@ const STAT_LABEL = Object.fromEntries(STAT_EVENTS.map(e => [e.key, e.label]));
 const MARKED = new Set(['concern_critical', 'tech_lost', 'coup', 'uprising', 'secession', 'civil_strife', 'famine', 'era', 'outpost_founded', 'outpost_free', 'bridge', 'sect', 'rival_council', 'project', 'voyage', 'fever', 'strike']);
 
 const STAT_SERIES = [
-  { id: 'pop', label: 'Population', group: 'People', get: w => w.vills.length },
+  { id: 'pop', label: 'Population', group: 'People', get: w => w.pop },
+  { id: 'crowd', label: 'Townsfolk beyond the villagers in play', group: 'People', get: w => w.crowd ? w.crowd.n : 0 },
+  { id: 'focus', label: 'Villagers in play', group: 'People', get: w => w.vills.length },
   { id: 'prosp', label: 'Prosperity index (fertility and newcomers)', group: 'People', get: w => w.prosp == null ? 1 : w.prosp },
   { id: 'beds', label: 'Beds', group: 'People', get: w => w.beds() },
   { id: 'outside', label: 'Sleeping outside', group: 'People', get: w => w.priv ? w.priv.out : 0 },

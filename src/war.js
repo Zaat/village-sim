@@ -165,7 +165,7 @@ function outpostThreats(w) {
 /* ----- the council's own campaign against a hostile neighbour ----- */
 function campaignTargets(w) { return hostileNeighbours(w).filter(n => n.rel < -20 && (n.raids >= 1 || n.grudge > 0.3) && (n.kind === 'raiders')) }
 function campaignDay(w) {
-  const W = WAR(w); if (W.campaign || w.visit || w.day < W.nextCampaign || w.season === 3 || w.vills.length < 30) return;
+  const W = WAR(w); if (W.campaign || w.visit || w.day < W.nextCampaign || w.season === 3 || w.pop < 30) return;
   const home = soldiersHome(w); if (home.length < 6) return;
   const tg = campaignTargets(w).filter(n => true)[0]; if (!tg) return;
   W.nextCampaign = w.day + 24;

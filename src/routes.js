@@ -85,7 +85,7 @@ function routesDay(w) {
   const t = T2(w); if (!w.neigh || !w.has('trade')) return;
   yardDay(w, t);
   if (t.active) { if (t.active.state === 'pending' && w.day > t.active.until) { w.say('Nobody is free to take the trading voyage, and it is put off.'); t.active = null; t.nextPlan = w.day + 4 } return }
-  if (w.day < t.nextPlan || w.vills.length < 18 || w.season === 3) return;
+  if (w.day < t.nextPlan || w.pop < 18 || w.season === 3) return;
   const app = tradeAppetite(w); t.nextPlan = w.day + Math.round((5 + ((w.r() * 4) | 0)) / clamp(app, 0.3, 2));
   const cand = w.neigh.filter(n => n.found && n.met && !isHostile(n)).map(n => bestPlan(w, n)).filter(Boolean).sort((a, b) => b.ratio - a.ratio);
   if (cand.length) t.lastPlan = { day: w.day, n: cand[0].n.name, ratio: Math.round(cand[0].ratio * 10) / 10, capped: cand[0].capped };
@@ -123,7 +123,7 @@ function harbourDay(w, t, plan) {
   if (docks.some(d => d.upg) || t.yard.length) return;
   const ok = k => { const c = HARBOUR_COST[k]; return c.tech.every(x => w.has(x)) && w.stock.wood >= c.wood && w.stock.stone >= c.stone && (!coin || E.treasury >= c.coins) };
   const cargo = w.boats.filter(b => b.kind === 'cargo' || b.kind === 'carrack').length, opts = [];
-  if (tier < 2 && ok('quay')) opts.push('quay'); else if (tier === 2 && ok('port') && w.vills.length >= 40) opts.push('port');
+  if (tier < 2 && ok('quay')) opts.push('quay'); else if (tier === 2 && ok('port') && w.pop >= 40) opts.push('port');
   const ydock = docks.find(d => dockTier(d) >= 2 && w.boats.filter(b => b.dock === d.id).length < berths(w, d));
   if (ydock && cargo < 1 + tier && plan && (plan.capped || plan.ratio > 1)) { if (ok('cargo')) opts.push('cargo') } if (ydock && tier >= 3 && ok('carrack') && cargo < 3 && plan && plan.capped) opts.push('carrack');
   if (!opts.length) return;

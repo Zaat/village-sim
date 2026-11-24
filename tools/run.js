@@ -2,6 +2,7 @@
 // tools/run.js - the test runner.
 //   node tools/run.js              quick: only the suites the changed files can affect (vs the last full green run)
 //   node tools/run.js full         every node suite, 2 at a time, writes the green stamp when all pass
+//   node tools/run.js resume       only the node suites not yet green for exactly these sources and their own test file (tests/.passed.json); stamps green when all are
 //   node tools/run.js pages        browser page tests (playwright), stamps pages green
 //   node tools/run.js a b c        just these suites
 //   options: --bail (stop at the first failure), --jobs=N
@@ -11,7 +12,7 @@ const ROOT = path.resolve(__dirname, '..'), T = path.join(ROOT, 'tests'), STAMP 
 const cfg = JSON.parse(fs.readFileSync(path.join(T, 'suites.json'), 'utf8'));
 const args = process.argv.slice(2), flags = args.filter(a => a.startsWith('--')), names = args.filter(a => !a.startsWith('--'));
 const bail = flags.includes('--bail'), jobsFlag = flags.find(a => a.startsWith('--jobs=')), JOBS = jobsFlag ? +jobsFlag.slice(7) : (args[0] === 'pages' ? 1 : 2); // page tests run in real time, so one at a time
-const mode = names[0] === 'full' || names[0] === 'pages' || names[0] === 'quick' ? names.shift() : (names.length ? 'list' : 'quick');
+const mode = names[0] === 'full' || names[0] === 'resume' || names[0] === 'pages' || names[0] === 'quick' ? names.shift() : (names.length ? 'list' : 'quick');
 const read = (f, d) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')) } catch (e) { return d } };
 const fileHashes = () => { // every file that can change what the game or a test does
   const out = {}, add = f => { out[path.relative(ROOT, f)] = crypto.createHash('sha1').update(fs.readFileSync(f)).digest('hex') };
@@ -43,8 +44,12 @@ function affected() {
   }
   return { list: cfg.node.filter(s => set.has(s)), why: why.length ? 'changed: ' + why.join(', ') : 'nothing changed since the last full green run' };
 }
+const PASSED = path.join(T, '.passed.json'), sha = x => crypto.createHash('sha1').update(x).digest('hex').slice(0, 12);
+const simInputs = h => sha(Object.keys(h).filter(k => !isUi(k) && (!/^tests\//.test(k) || /^tests\/(lib\.js|golden\.json)$/.test(k))).sort().map(k => k + h[k]).join(''));
+const keyOf = (h, s) => simInputs(h) + ':' + (h['tests/' + s + '.js'] || '');   // a suite is green for these sources plus its own test file
 let list, kind = 'node';
 if (mode === 'full') list = cfg.node;
+else if (mode === 'resume') { const pm = read(PASSED, {}); list = cfg.node.filter(n => pm[n] !== keyOf(H, n)); console.log('resume: ' + (cfg.node.length - list.length) + ' suites already green for these sources, ' + list.length + ' to run' + (list.length ? ': ' + list.join(', ') : '')); if (!list.length) { fs.writeFileSync(STAMP, JSON.stringify({ ...stamp, files: H, hash: total(H), simHash: simHash(H), time: new Date().toISOString(), suites: cfg.node.length, resumed: true }, null, 1)); console.log(' green stamp written: ' + total(H)); process.exit(0) } }
 else if (mode === 'pages') { list = cfg.pages; kind = 'pages' }
 else if (mode === 'list') list = names;
 else { const a = affected(); list = a.list; console.log(a.why + (list.length ? ' -> ' + list.length + ' suite(s)' : ' -> no node suites needed')) }
@@ -61,8 +66,9 @@ function done() {
   for (const s of Object.keys(results).sort((a, b) => results[b].sec - results[a].sec)) console.log(' ' + s.padEnd(24) + fmt(results[s].sec).padStart(6) + '   ' + (results[s].ok ? results[s].line : 'FAILED'));
   console.log(`\n ${list.length} suites, ${failed} failed, ${fmt(wall)} wall (${fmt(sum)} of work on ${JOBS} workers)`);
   fs.writeFileSync(TIMES, JSON.stringify(times, null, 1));
+  if (kind === 'node') { const pm = read(PASSED, {}); for (const n of Object.keys(results)) { if (results[n].ok) pm[n] = keyOf(H, n); else delete pm[n] } fs.writeFileSync(PASSED, JSON.stringify(pm, null, 1)) }
   if (!failed && Object.keys(results).length === list.length) {
-    if (mode === 'full' || (mode === 'quick' && list.length === cfg.node.length)) { fs.writeFileSync(STAMP, JSON.stringify({ ...stamp, files: H, hash: total(H), simHash: simHash(H), time: new Date().toISOString(), suites: list.length }, null, 1)); console.log(' green stamp written: ' + total(H)) }
+    if (mode === 'full' || (mode === 'quick' && list.length === cfg.node.length) || (mode === 'resume' && cfg.node.every(n => read(PASSED, {})[n] === keyOf(H, n)))) { fs.writeFileSync(STAMP, JSON.stringify({ ...stamp, files: H, hash: total(H), simHash: simHash(H), time: new Date().toISOString(), suites: list.length }, null, 1)); console.log(' green stamp written: ' + total(H)) }
     if (mode === 'pages') fs.writeFileSync(STAMP, JSON.stringify({ ...stamp, pagesHash: simHash(H), pagesTime: new Date().toISOString() }, null, 1)), console.log(' page tests stamped for source ' + simHash(H));
   }
   process.exit(failed ? 1 : 0);

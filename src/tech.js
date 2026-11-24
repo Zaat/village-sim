@@ -54,7 +54,7 @@ function addKnowledge(w, pts, v) {
 /* how much does the village need this discovery right now? (rules-based default for the council) */
 /* techs added in v0.24 have no hand-made need: judge them by their branch and the village's state */
 function branchNeed(w, id) {
-  const T = TECHS[id], pop = Math.max(1, w.vills.length), food = w.stock.food / pop, fever = w.causes['succumbed to the fever'] || 0, wolf = w.causes['was killed by a wolf'] || 0;
+  const T = TECHS[id], pop = Math.max(1, w.pop), food = w.stock.food / pop, fever = w.causes['succumbed to the fever'] || 0, wolf = w.causes['was killed by a wolf'] || 0;
   const b = { food: 0.55 + (food < 4 ? 0.4 : 0), build: 0.5 + (w.beds() - pop < 3 ? 0.2 : 0), craft: 0.5, sea: (w.of('dock').length ? 0.5 : 0.2) + (w.neigh ? 0.2 : 0), mind: 0.6, law: 0.45, war: 0.25 + Math.min(0.4, wolf * 0.04 + 0.3 * lesson(w, 'raids')), health: 0.4 + Math.min(0.5, fever * 0.1) }[T.branch];
   return b - 0.03 * T.age;
 }
@@ -72,12 +72,12 @@ const PHILOSOPHIES = {
 };
 function voiceNeed(w, id) {
   const T = TECHS[id], ph = PHILOSOPHIES[(w.settings && w.settings.philosophy) || 'balanced'] || PHILOSOPHIES.balanced; let r = ph.tilt[T.branch] || 0;
-  const pop = Math.max(1, w.vills.length), foc = TECH_FOCUS[id], rg = w.gov && w.gov.ruling ? w.gov.ruling.gid : null, auth = w.rx ? Math.min(1, w.rx.A || 0) : 0.3;
+  const pop = Math.max(1, w.pop), foc = TECH_FOCUS[id], rg = w.gov && w.gov.ruling ? w.gov.ruling.gid : null, auth = w.rx ? Math.min(1, w.rx.A || 0) : 0.3;
   for (const g of w.groups) { if (g.members.length < 4 || !g.platform) continue; const share = g.members.length / pop, weight = g.id === rg ? 2 : (1 - 0.6 * auth); if (g.platform.focus === foc) r += 0.5 * share * weight }
   return r;
 }
 function techNeed(w, id) {
-  const pop = w.vills.length, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
+  const pop = w.pop, wolfDeaths = w.causes['was killed by a wolf'] || 0, fever = w.causes['succumbed to the fever'] || 0, food = w.stock.food / Math.max(1, pop);
   const base = { nets: (w.fishOK ? 0.6 : 0.1) + (w.neigh ? 0.3 : 0), tools: 0.8, granary: food > 7 ? 0.9 : 0.6, carpentry: 0.8, boats: (w.fishOK ? 0.9 : 0.1) + (w.neigh ? 0.35 : 0), rotation: 0.5 + Math.min(0.4, w.of('farm').length / 40), masonry: 0.7, medicine: 0.4 + Math.min(0.6, fever * 0.15), watchtowers: 0.3 + Math.min(0.6, wolfDeaths * 0.1), ironwork: 0.6, plow: 0.6, navigation: 0.4 + (w.neigh ? 0.2 : 0), forestry: 0.6 + (w.stock.wood / Math.max(1, pop) < 3 ? 0.5 : 0) + (w.stock.wood / Math.max(1, pop) < 1.5 ? 1.2 : 0), mining: 0.5 + (w.stock.stone / Math.max(1, pop) < 2 ? 0.5 : 0), lodges: 0.4 + (food < 4 ? 0.3 : 0), trade: 0.55 + (food > 6 ? 0.3 : 0), coinage: 0.5, seatrade: 0.35 + (w.of('dock').length ? 0.3 : 0) };
   return (base[id] !== undefined ? base[id] : branchNeed(w, id)) + breadthNeed(w, id) + (food < 4 ? (id === 'rotation' || id === 'nets' ? 0.4 : 0) : 0) + lessonNeed(w, id) + regimeNeed(w, id) + voiceNeed(w, id);
 }
@@ -112,7 +112,7 @@ function discover(w) {
 }
 function techDay(w) {
   const t = w.tech, adults = w.vills.filter(v => v.isAdult()).length; t.today = 0; addKnowledge(w, adults * 0.06);
-  t.peak = Math.max(t.peak || 0, w.vills.length); if (w.day % 10 === 0) { try { techLossDay(w) } catch (e) { w.fault('techloss', e) } try { neighbourTechDay(w) } catch (e) { w.fault('neightech', e) } }
+  t.peak = Math.max(t.peak || 0, w.pop); if (w.day % 10 === 0) { try { techLossDay(w) } catch (e) { w.fault('techloss', e) } try { neighbourTechDay(w) } catch (e) { w.fault('neightech', e) } }
   const avail = techAvailable(w); if (!avail.length) return;
   if (!t.focus) {
     t.wait++;                                                           // the council normally chooses at a meeting; without one, the village drifts to the most useful idea
@@ -137,7 +137,7 @@ function researchAgenda(w, base, ms) {
 
 /* upgrading old buildings when the village learns better ways */
 function planUpgrades(w) {
-  const pop = w.vills.length, open = w.bps.filter(b => b.type === 'upgrade').length;
+  const pop = w.pop, open = w.bps.filter(b => b.type === 'upgrade').length;
   if (open >= 1 + Math.floor(pop / 60) || w.day < (w.nextUpgrade || 0)) return;
   const top = styleNow(w); if (!top) return;
   const { tgt, eff } = resourceTargets(w); if (eff.wood < tgt.wood * 0.8 || eff.stone < tgt.stone * 0.6 || w.stock.food < pop * 3) return;
@@ -153,7 +153,7 @@ function planUpgrades(w) {
 
 /* ----- knowledge can be lost: when a great part of the people are gone, the newest, least-shared skills go with them ----- */
 function techLossDay(w) {
-  const t = w.tech, peak = t.peak || 0, pop = w.vills.length; if (peak < 40 || pop > peak * 0.45 || w.r() > 0.3) return;
+  const t = w.tech, peak = t.peak || 0, pop = w.pop; if (peak < 40 || pop > peak * 0.45 || w.r() > 0.3) return;
   const known = Object.keys(t.known).filter(id => !Object.keys(t.known).some(o => TECHS[o] && TECHS[o].req.includes(id)));       // leaves: nothing known builds on them
   known.sort((a, b) => TECHS[b].age - TECHS[a].age || t.known[b] - t.known[a]); const id = known[0]; if (!id || TECHS[id].age === 0) return;
   delete t.known[id]; t.points = 0; t.lost = (t.lost || 0) + 1; (t.lostIds || (t.lostIds = [])).push(id); t.peak = Math.max(pop * 1.6, peak * 0.8);

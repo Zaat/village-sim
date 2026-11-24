@@ -16,14 +16,14 @@ ok(w.vills.every(v=>!v.thh||v.thh.length<=8),'thought history is capped');
 // content follows real state
 const adult=()=>w.vills.find(x=>x.age>=ctx.CFG.ADULT_DAYS&&!x.sleeping&&x.partner==null);
 const cats=(v,mut,n=40)=>{const save={...mut.keep};const o={};for(let s=0;s<n;s++){const t=ctx.thinkOf(w,v,s);if(t)o[t.cat]=(o[t.cat]||0)+1}return o};
-{const v=adult(),h=v.hunger;v.hunger=8;const c=cats(v,{keep:{}});v.hunger=h;ok((c.hunger||0)>=n(c,0.45),'a starving villager mostly thinks about hunger: '+JSON.stringify(c))}
+{const v=adult(),h=v.hunger,dr=w.drought,hr=w.harsh;w.drought=false;w.harsh=false;v.hunger=8;const c=cats(v,{keep:{}});v.hunger=h;w.drought=dr;w.harsh=hr;ok((c.hunger||0)>=n(c,0.45),'a starving villager mostly thinks about hunger: '+JSON.stringify(c))}
 function n(c,f){return Object.values(c).reduce((a,b)=>a+b,0)*f}
 {const v=adult(),m=v.mournUntil;v.mournUntil=w.tick+5000;const c=cats(v,{keep:{}});v.mournUntil=m;ok((c.grief||0)>=n(c,0.3),'a mourner thinks of grief: '+JSON.stringify(c))}
 {const v=adult(),p=v.preg;v.preg=3;const c=cats(v,{keep:{}});v.preg=p;ok((c.baby||0)>=n(c,0.2),'an expecting mother thinks of the baby: '+JSON.stringify(c))}
 {const v=w.vills.find(x=>x.age>=ctx.CFG.INFANT_DAYS&&x.age<ctx.CFG.CHILD_DAYS*1.5&&(x.stage()==='child'||x.stage()==='youth')&&!x.sleeping);if(v){const c=cats(v,{keep:{}});ok((c.play||0)>=n(c,0.4),'children think of play and lessons: '+JSON.stringify(c))}else ok(true,'(no child in this run)')}
 {const v=adult(),s=v.sleeping;v.sleeping=true;const t=ctx.thinkOf(w,v,3);v.sleeping=s;ok(t&&t.kind==='dream'&&t.emo==='z','the sleeping dream');}
 {const v=adult();const fs0=w.festival,hd=w.holiday;w.festival=true;w.holiday='Harvest Festival';const c=cats(v,{keep:{}});w.festival=fs0;w.holiday=hd;ok((c.feast||0)>=n(c,0.15),'a festival is on their mind: '+JSON.stringify(c))}
-{const v=adult();const sn=w.season;w.tick=1200*26;const f=w.stock.food;w.stock.food=2;const c=cats(v,{keep:{}});w.stock.food=f;ok((c.winter||0)>=n(c,0.15),'thin stores in winter are a worry: '+JSON.stringify(c))}
+{const v=adult();const sn=w.season,dr=w.drought,hr=w.harsh;w.drought=false;w.harsh=false;w.tick=1200*26;const f=w.stock.food;w.stock.food=2;const c=cats(v,{keep:{}});w.stock.food=f;w.drought=dr;w.harsh=hr;ok((c.winter||0)>=n(c,0.15),'thin stores in winter are a worry: '+JSON.stringify(c))}
 // thoughts at a news item: a discovery in the last days
 {const v=adult();w.tech.log.unshift({id:Object.keys(ctx.TECHS)[0],day:w.day,by:null});const c=cats(v,{keep:{}});w.tech.log.shift();ok((c.news||0)>0,'a fresh discovery is talked about: '+JSON.stringify(c))}
 {const v=adult(),D=w.disc;D.log.unshift({day:w.day,text:'Marek returns from an outcrop of dark stone with 18 loads of goods, a source of copper.'});const c=cats(v,{keep:{}});D.log.shift();ok((c.finds||0)>0,'a new source of a material is talked about: '+JSON.stringify(c));D.log.unshift({day:w.day,text:'Eryk returns with strange stone nobody can name yet.'});const c2=cats(v,{keep:{}});D.log.shift();ok((c2.finds||0)>0,'strange stone is talked about')}

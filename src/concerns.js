@@ -34,7 +34,7 @@ const CN = w => w.concerns || (initConcerns(w), w.concerns);
 
 /* the firewood a winter will take (shared with the winter upkeep in world.js) */
 function winterWood(w) {
-  return Math.ceil((w.vills.length * 0.3 + w.houses().length * 0.7 + 1) * (w.harsh ? 1.8 : 1) * (w.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(w)));
+  return Math.ceil((w.pop * 0.3 + w.houses().length * 0.7 + 1) * (w.harsh ? 1.8 : 1) * (w.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(w)));
 }
 
 /* which standing orders are in force right now */
@@ -67,7 +67,7 @@ function popWhy(w, C, days) {
 
 /* ----- the rules ----- */
 function popRules(w, C, found) {
-  const pop = w.vills.length; if (pop < 12 || C.pop.length < 8) return;
+  const pop = w.pop; if (pop < 12 || C.pop.length < 8) return;
   const win = C.pop.slice(-32), hi = Math.max(...win), drop = hi - pop, rel = hi ? drop / hi : 0;
   let sudden = false;
   if (hi >= 24 && drop >= 6 && rel >= 0.15) {
@@ -81,7 +81,7 @@ function popRules(w, C, found) {
   }
 }
 function foodRules(w, C, found) {
-  const pop = w.vills.length; if (pop < 8) return;
+  const pop = w.pop; if (pop < 8) return;
   const cover = w.stock.food / pop, starved = causesSince(w, C, 16).filter(([k]) => k === 'starved').reduce((s, [, n]) => s + n, 0);
   const limit = w.season === 3 ? 3 : 2.5, sev = cover < 1.5 || starved > 0 ? 2 : cover < limit ? 1 : 0; if (!sev) return;
   const farms = w.of('farm').length, farmers = w.vills.filter(v => v.role === 'farmer').length;
@@ -92,17 +92,17 @@ function fuelRules(w, C, found) {
   if (w.season < 1) return; const need = winterWood(w), have = Math.floor(w.stock.wood);
   if (w.season === 3) { if (w.cold) found.push({ key: 'fuel', sev: 2, text: 'The firewood has run out and the village is freezing.', why: `The winter needed about ${need} firewood; only ${have} was stored.`, m: { v: have, ok: need, bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] }); return }
   const sev = w.season === 2 && have < need ? 2 : have < need * (w.season === 2 ? 1.5 : 1.3) ? 1 : 0; if (!sev) return;
-  found.push({ key: 'fuel', sev, text: `${have} firewood is stored and winter will take about ${need}.`, why: `${w.vills.filter(v => v.role === 'woodcutter').length} woodcutters at work; ${w.houses().length} homes to heat for ${w.vills.length} people.`, m: { v: have, ok: need * (w.season === 2 ? 1.5 : 1.3), bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] });
+  found.push({ key: 'fuel', sev, text: `${have} firewood is stored and winter will take about ${need}.`, why: `${w.vills.filter(v => v.role === 'woodcutter').length} woodcutters at work; ${w.houses().length} homes to heat for ${w.pop} people.`, m: { v: have, ok: need * (w.season === 2 ? 1.5 : 1.3), bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] });
 }
 function housingRules(w, C, found) {
   const P = w.priv; if (!P || !w.houses().length) return;
   const ad = Math.max(1, w.vills.filter(v => v.isAdult()).length), out = P.out, crowd = P.crowd, winter = w.season === 3;
   const sev = out >= Math.max(4, ad * 0.12) && winter ? 2 : out >= Math.max(3, ad * 0.08) || crowd >= ad * 0.3 ? 1 : 0; if (!sev) return;
   found.push({ key: 'housing', sev, text: out >= 3 ? `${out} people have no bed of their own${winter ? ' and are sleeping in the cold' : ''}.` : `${crowd} people are sharing a roof against their nature.`,
-    why: `${w.beds()} beds for ${w.vills.length} people${crowd ? '; ' + crowd + ' are crowded in with people they would rather not live with' : ''}${w.bps.some(b => b.type === 'house') ? '; new homes are being built' : ''}${(() => { try { const h = housingDiag(w); return h.why.length ? '; ' + h.why.join('; ') : w.sprawl ? '; homes are now going up further out' : '' } catch (e) { return '' } })()}.`, m: { v: ad - out, ok: ad, bad: ad * 0.8 }, fix: ['hands_build', 'allhands'] });
+    why: `${w.beds()} beds for ${w.pop} people${crowd ? '; ' + crowd + ' are crowded in with people they would rather not live with' : ''}${w.bps.some(b => b.type === 'house') ? '; new homes are being built' : ''}${(() => { try { const h = housingDiag(w); return h.why.length ? '; ' + h.why.join('; ') : w.sprawl ? '; homes are now going up further out' : '' } catch (e) { return '' } })()}.`, m: { v: ad - out, ok: ad, bad: ad * 0.8 }, fix: ['hands_build', 'allhands'] });
 }
 function unityRules(w, C, found) {
-  const R = w.regime, S = w.strife; if (!R || w.vills.length < 14) return;
+  const R = w.regime, S = w.strife; if (!R || w.pop < 14) return;
   const u = R.ax.cohes; C.lowUnity = u < 0.25 ? C.lowUnity + 1 : 0;
   if (S && S.civil) found.push({ key: 'faction', sev: 2, text: 'Civil strife has broken out: neighbours are fighting each other.', why: 'The divisions were not healed in time; peace may only come through a truce, a split or a victory.', m: { v: 0, ok: 1, bad: 0 }, fix: ['nudge_reconcile', 'feast'] });
   else if (S && S.shadow) found.push({ key: 'faction', sev: S.shadow.days >= 8 && u < 0.45 ? 2 : 1, text: `${S.shadow.name} run a rival council under ${S.shadow.leaderName}; the village has two governments.`, why: `They have held out for ${S.shadow.days} days. Left alone they may fight, leave by boat, or fade. Unity is ${u.toFixed(2)}.`, m: { v: u, ok: 0.5, bad: 0.1 }, fix: ['nudge_reconcile', 'nudge_ease', 'feast'] });
@@ -130,7 +130,7 @@ function warRules(w, C, found) {
 /* ----- keeping the list: raise, update, resolve ----- */
 function concernTitle(k, c) { return c && c.title ? c.title : CONCERN_KINDS[k.split(':')[0]] || k }
 function concernsDay(w) {
-  const C = CN(w), pop = w.vills.length;
+  const C = CN(w), pop = w.pop;
   C.led.push({ d: w.day, born: w.births, died: w.deaths, left: (w.flow && w.flow.tot.left) || 0, arrived: (w.flow && w.flow.tot.arrived) || 0 }); if (C.led.length > 70) C.led.shift();
   C.pop.push(pop); if (C.pop.length > 192) C.pop.shift();
   if (w.day % 4 === 0) { C.snap.push({ d: w.day, c: { ...w.causes } }); if (C.snap.length > 12) C.snap.shift() }
@@ -181,8 +181,8 @@ const shiftPolicy = (w, k, d) => { w.gov.policy[k] = clamp(w.gov.policy[k] + d, 
 const RESPONSES = {
   feast: {
     dur: 20, label: 'Hold a feast', cd: 48, blurb: 'Everyone gathers at the fire tomorrow. Lifts mood and unity for a while.',
-    cost: w => ({ food: Math.max(20, Math.round(w.vills.length * 1.5)), wood: Math.max(6, Math.round(w.vills.length * 0.3)) }),
-    can: w => { const c = RESPONSES.feast.cost(w); return w.stock.food - c.food < w.vills.length * 1.5 ? 'Not enough food to spare' : w.stock.wood < c.wood ? 'Not enough firewood' : '' },
+    cost: w => ({ food: Math.max(20, Math.round(w.pop * 1.5)), wood: Math.max(6, Math.round(w.pop * 0.3)) }),
+    can: w => { const c = RESPONSES.feast.cost(w); return w.stock.food - c.food < w.pop * 1.5 ? 'Not enough food to spare' : w.stock.wood < c.wood ? 'Not enough firewood' : '' },
     run: w => {
       const c = RESPONSES.feast.cost(w); w.stock.food -= c.food; w.stock.wood -= c.wood; w.forceFeast = true;
       for (const v of w.vills) if (v.isAdult()) v.mood = Math.min(100, v.mood + 6);

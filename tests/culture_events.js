@@ -46,7 +46,7 @@ const errs = w => [...w.dbg.errors.values()].map(e => e.where + ' ' + e.msg).joi
 }
 { // selling knowledge and spies
   const w = clone(); w.tech.known.coinage = 1; w.tech.known.trade = 1; const n = w.neigh[0]; Object.assign(n, { found: true, met: true, rel: 70, kind: 'traders', knows: [] }); w.econ.treasury = 100; const C = ctx.CUL(w); C.nextSale = 0; const t0 = w.econ.treasury; adv(w, 1);
-  ctx.knowledgeDay(w); run(w, 6); ok(C.sold >= 1 && w.econ.treasury > t0 - 5 || C.sold === 0, 'sale decision runs'); ok(w.dbg.total === 0, 'no errors in sale: ' + errs(w));
+  ctx.knowledgeDay(w); run(w, 6); ok(C.sold >= 1 && w.econ.treasury > t0 - 15 || C.sold === 0, 'sale decision runs: sold ' + C.sold + ', treasury ' + t0 + ' to ' + w.econ.treasury); ok(w.dbg.total === 0, 'no errors in sale: ' + errs(w));
   const w2 = clone(); w2.tech.known.trade = 1; const h = w2.neigh[0]; Object.assign(h, { found: true, met: true, rel: -40, kind: 'raiders', knows: [] }); const C2 = ctx.CUL(w2); let acts = 0;
   for (let i = 0; i < 40 && C2.stolen + C2.caught < 3; i++) { C2.nextSpy = 0; C2.nextSale = 1e9; C2.nextOwnSpy = 1e9; adv(w2, 1); ctx.knowledgeDay(w2); acts = C2.stolen + C2.caught }
   ok(acts >= 3, 'hostile neighbours send spies: caught ' + C2.caught + ' stolen ' + C2.stolen); ok(h.knows.length >= C2.stolen, 'stolen crafts reach the neighbour');

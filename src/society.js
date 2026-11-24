@@ -257,7 +257,7 @@ function holdMeeting(w) {
   const g = w.gov, ms = councilMembers(w); if (ms.length < 2) return;
   if (w.strife && w.strife.shadow && w.r() < 0.2) { w.say('The council meets, but the rival council across the square has nothing to do with it, and nothing is decided.'); g.nextMeeting = w.day + 3; return }
   if (w.regime && w.regime.ax.cohes < 0.3 && w.r() < 0.5) { w.say('The council meeting dissolves into bickering and nothing is decided.'); g.nextMeeting = w.day + 3; return }
-  const pop = w.vills.length, ad = adultsOf(w);
+  const pop = w.pop, ad = adultsOf(w);
   const rate = crimeRate(w, 8), crisis = w.settings.crime && rate >= Math.max(2, Math.round(pop * 0.05)) && !g.trial;
   const members = ms.map(m => ({ name: m.v.name, title: m.title, traits: m.v.traitWords().join(', ') || 'even-tempered', op: m.v.op, group: (w.groups.find(x => x.id === m.v.group) || {}).name || null }));
   const history = g.decisions.slice(0, 5).map(d => `Day ${d.day}: ${d.text}`);
@@ -315,7 +315,7 @@ function reviewRemedy(w) {
 }
 function stateBrief(w) {
   const ad = adultsOf(w), g = w.gov;
-  return `Year ${w.year}, ${SEASONS[w.season]}. Population ${w.vills.length}. Food ${w.stock.food}, firewood ${w.stock.wood}. Policies (−1 to +1): growth ${g.policy.growth}, leisure ${g.policy.labor}, strict law ${g.policy.law}, watch ${g.policy.defense}. Crimes in last 8 days: ${crimeRate(w, 8)}. Average mood ${Math.round(ad.reduce((s, v) => s + v.mood, 0) / Math.max(1, ad.length))}/100. Wolves nearby: ${w.animals.some(a => a.kind === 'wolf' && a.alive) ? 'yes' : 'no'}.`;
+  return `Year ${w.year}, ${SEASONS[w.season]}. Population ${w.pop}. Food ${w.stock.food}, firewood ${w.stock.wood}. Policies (−1 to +1): growth ${g.policy.growth}, leisure ${g.policy.labor}, strict law ${g.policy.law}, watch ${g.policy.defense}. Crimes in last 8 days: ${crimeRate(w, 8)}. Average mood ${Math.round(ad.reduce((s, v) => s + v.mood, 0) / Math.max(1, ad.length))}/100. Wolves nearby: ${w.animals.some(a => a.kind === 'wolf' && a.alive) ? 'yes' : 'no'}.`;
 }
 
 /* ---------------------------------------------------------------- crime & justice */
@@ -323,7 +323,7 @@ function crimeDay(w) {
   const g = w.gov, law = g.policy.law, def = g.policy.defense, warden = wardenOf(w);
   for (const v of adultsOf(w)) {
     if (v.stocksUntil > w.tick || v.duty > w.tick) continue;
-    const poor = v.hunger < 35 && w.stock.food < w.vills.length * 2.5;
+    const poor = v.hunger < 35 && w.stock.food < w.pop * 2.5;
     let p = 0.0025 * (1.4 - v.trait.kind) * (v.mood < 35 ? 3 : v.mood < 50 ? 1.5 : 1) * (poor ? 5 : 1) * (1 - 0.4 * Math.max(0, law)) * (1 + 0.3 * Math.max(0, -law)) * (1 - 0.25 * Math.max(0, def)) * (warden ? 0.8 : 1) * (1 + Math.min(2, v.record * 0.4)) * (w.settings.survival ? 1.4 : 1) * (g.welfare ? 0.6 : 1) * (w.has('coinage') ? ((v.coins || 0) < 4 ? 1.35 : (v.coins || 0) > 60 ? 0.7 : 1) : 1);
     if (v.trait.kind > 0.75) p *= 0.4;
     if (w.r() < p * (projBuilt(w, 'bastion') ? 0.67 : 1) * (w.rx ? w.rx.crime : 1)) theft(w, v);
@@ -370,7 +370,7 @@ function trial(w, c) {
 function setupHoliday(w) {
   w.festival = false; w.holiday = null;
   const h = HOLIDAYS[w.season];
-  if (w.seasonDay === h.day && (!h.food || w.stock.food >= w.vills.length * h.food)) { w.festival = true; w.holiday = h.name }
+  if (w.seasonDay === h.day && (!h.food || w.stock.food >= w.pop * h.food)) { w.festival = true; w.holiday = h.name }
   else if (w.forceFeast) { w.festival = true; w.holiday = 'Community Feast'; w.forceFeast = false }
   else if (w.gov.policy.labor > 0.4 && w.day % 6 === 0) { w.festival = true; w.holiday = 'Day of Rest' }
   if (!w.festival && w.rx && w.rx.devotion && w.day % 8 === 4) { w.festival = true; w.holiday = 'Day of Devotion' }
@@ -401,7 +401,7 @@ function societyNewDay(w) {
   for (const v of w.vills) { v.friends = fr.get(v.id) || 0; v.enemies = en.get(v.id) || 0; v.updateMood(); v.checkDesire() }
   const ad = adultsOf(w); g.approval = ad.length ? ad.reduce((s, v) => s + v.mood, 0) / ad.length : 70;
   if (g.mediation) for (const [k, r] of w.rel) if (r < -30) w.rel.set(k, r + 3);
-  if (w.stock.food < w.vills.length) nudge(w, 'growth', -0.05);
+  if (w.stock.food < w.pop) nudge(w, 'growth', -0.05);
   if (w.has('coinage')) { const cs = ad.map(v => v.coins || 0).sort((a, b) => a - b), med = cs.length ? cs[cs.length >> 1] : 0; for (const v of ad) v.op.tax = clamp(v.op.tax + clamp((med - (v.coins || 0)) / 300, -0.02, 0.02), -1, 1) }       // the poor lean toward taxes, the comfortable away from them
   for (const v of ad) for (const k of ISSUES) v.op[k] *= 0.995;          // convictions fade without fresh cause, so opinions keep their variety
   factionDay(w);

@@ -33,7 +33,7 @@ function cultureDay(w) {
   // funerals: the village gathers for those who died since last time
   if (w.deaths > C.deaths) {
     const n = w.deaths - C.deaths; C.deaths = w.deaths;
-    if (w.vills.length >= 8 && n) { C.funerals += n; C.score = Math.min(100, C.score + 0.4 * n); for (const x of ad) if (x.mournUntil > w.tick) { x.mournUntil -= Math.min(x.mournUntil - w.tick, CFG.TPD * 2); x.mood = Math.min(100, x.mood + 3) } if (n >= 1) w.emit('culture', `The village gathers to bury ${n > 1 ? n + ' of its own' : 'one of its own'} and share memories.`, { kind: 'funeral' }) }
+    if (w.pop >= 8 && n) { C.funerals += n; C.score = Math.min(100, C.score + 0.4 * n); for (const x of ad) if (x.mournUntil > w.tick) { x.mournUntil -= Math.min(x.mournUntil - w.tick, CFG.TPD * 2); x.mood = Math.min(100, x.mood + 3) } if (n >= 1) w.emit('culture', `The village gathers to bury ${n > 1 ? n + ' of its own' : 'one of its own'} and share memories.`, { kind: 'funeral' }) }
   }
   // a storytelling night in winter and at feasts
   if (w.day >= C.nextTale && ad.length >= 10 && (w.season === 3 || R() < 0.3) && !w.cold) {
@@ -55,7 +55,7 @@ function scienceDay(w) {
 function disasterDay(w) {
   const C = CUL(w), R = culR(w, 2); if (!w.settings.disasters || w.day < 20) return;
   // spring flood
-  if (w.season === 0 && w.vills.length >= 12 && R() < 0.01 * (1 - 0.5 * lesson(w, 'storm'))) {
+  if (w.season === 0 && w.pop >= 12 && R() < 0.01 * (1 - 0.5 * lesson(w, 'storm'))) {
     const fs = w.of('farm'); let n = 0; for (const b of fs) if (R() < 0.5) { b.state = 0; b.g = 0; n++ }
     const lost = Math.round(w.stock.food * (0.1 + 0.1 * R())); w.stock.food -= lost; C.floods++; learn(w, 'storm', 0.15);
     w.emit('event', `The spring melt floods the low ground: ${n} field${n === 1 ? '' : 's'} washed out and ${lost} food spoiled.`, { kind: 'flood' })
@@ -63,7 +63,7 @@ function disasterDay(w) {
   // plague
   const P = C.plague;
   if (!P) {
-    if (w.vills.length >= 30 && w.day >= C.nextPlague && (w.season === 0 || w.season === 2) && R() < 0.007 * (1 + (w.neigh && w.neigh.some(n => n.met && n.tradeCount > 3) ? 0.6 : 0)) * (1 - 0.6 * lesson(w, 'fever') - (w.has('medicine') ? 0.3 : 0))) startPlague(w, C, R);
+    if (w.pop >= 30 && w.day >= C.nextPlague && (w.season === 0 || w.season === 2) && R() < 0.007 * (1 + (w.neigh && w.neigh.some(n => n.met && n.tradeCount > 3) ? 0.6 : 0)) * (1 - 0.6 * lesson(w, 'fever') - (w.has('medicine') ? 0.3 : 0))) startPlague(w, C, R);
     return
   }
   plagueDay(w, C, P, R)
@@ -146,7 +146,7 @@ function knowledgeDay(w) {
     }
   }
   // our own spy: the council may try to take a craft from a rival
-  if (w.day >= C.nextOwnSpy && w.econ && w.econ.treasury >= 40 && w.vills.length >= 30) {
+  if (w.day >= C.nextOwnSpy && w.econ && w.econ.treasury >= 40 && w.pop >= 30) {
     C.nextOwnSpy = w.day + 60 + ((R() * 40) | 0); const open = techAvailableRaw(w); if (!open.length) return;
     let pick = null; for (const n of w.neigh) { if (!n.found || !n.met || !n.knows || n.rel > 20) continue; const id = open.find(x => n.knows.includes(x)); if (id) { pick = { n, id }; break } }
     if (!pick) return; const { n, id } = pick, T = TECHS[id], cost = 25;

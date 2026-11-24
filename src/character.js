@@ -32,7 +32,7 @@ function ensureChar(w, v) {
 const livingParent = (w, v) => v.parentIds.some(id => id != null && w.vills.some(x => x.id === id));
 /* once a day, for the young: the household around them leaves its mark */
 function characterDay(w) {
-  const fed = w.stock.food > w.vills.length * 6;
+  const fed = w.stock.food > w.pop * 6;
   for (const v of w.vills) {
     ensureChar(w, v); if (v.isAdult()) continue; const L = v.life;
     const ps = v.parentIds.map(id => w.vills.find(x => x.id === id)).filter(Boolean), pr = ps.length ? ps.reduce((s, p) => s + p.char.ruth, 0) / ps.length : 0.55, pk = ps.length ? ps.reduce((s, p) => s + p.trait.kind, 0) / ps.length : 0.4;

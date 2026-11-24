@@ -22,7 +22,7 @@ const PROJECTS = {
     name: 'Bastion', tech: 'watchtowers', size: [3, 3], cost: { wood: 30, stone: 90 }, time: 1100, minPop: 30,
     pitch: 'a stone bastion to guard the village', gives: 'Wolves come half as often, thefts and brawls fall by a third.',
     fit: v => 0.45 * v.trait.brave + 0.4 * (v.op.defense + 1) / 2 + 0.15 * (v.op.law + 1) / 2,
-    focus: 'safety', need: w => clamp(0.3 * lesson(w, 'wolves') + 0.4 * lesson(w, 'raids') + crimeRate(w, 16) / Math.max(4, w.vills.length * 0.15) + (w.animals.some(a => a.kind === 'wolf' && a.alive) ? 0.3 : 0), 0, 1)
+    focus: 'safety', need: w => clamp(0.3 * lesson(w, 'wolves') + 0.4 * lesson(w, 'raids') + crimeRate(w, 16) / Math.max(4, w.pop * 0.15) + (w.animals.some(a => a.kind === 'wolf' && a.alive) ? 0.3 : 0), 0, 1)
   },
   monument: {
     name: 'Monument', tech: 'masonry', size: [3, 3], cost: { wood: 20, stone: 80 }, time: 1000, minPop: 35,
@@ -40,7 +40,7 @@ const PROJECTS = {
     name: 'Great Granary', tech: 'granary', size: [3, 3], cost: { wood: 60, stone: 40 }, time: 900, minPop: 25,
     pitch: 'a great granary so no winter finds the village hungry', gives: 'Stores hold 120 more, and food spoils far more slowly.',
     fit: v => 0.4 * (1 - v.trait.brave) + 0.3 * (1 - v.trait.ind) + 0.3 * v.trait.kind,
-    focus: 'safety', need: w => clamp(0.8 * lesson(w, 'famine') + (w.stock.food < w.vills.length * 5 ? 0.3 : 0), 0, 1)
+    focus: 'safety', need: w => clamp(0.8 * lesson(w, 'famine') + (w.stock.food < w.pop * 5 ? 0.3 : 0), 0, 1)
   },
   temple: {
     name: 'Temple', tech: 'masonry', size: [4, 3], cost: { wood: 40, stone: 70 }, time: 1000, minPop: 28, req: w => !!(w.rx && (w.rx.P > 0.1 || (w.regime && w.regime.prophet) || (w.strife && w.strife.sect))),
@@ -76,7 +76,7 @@ const PROJECTS = {
     name: 'Lighthouse', tech: 'navigation', size: [2, 3], cost: { wood: 40, stone: 60 }, time: 900, minPop: 30, req: w => w.of('dock').length > 0, place: placeLighthouse,
     pitch: 'a lighthouse above the docks to guide the boats home', gives: 'The deep fisheries recover faster, and trading ships come more often.',
     fit: v => 0.4 * v.trait.cur + 0.3 * v.trait.brave + 0.3 * (1 - v.trait.soc),
-    focus: 'enterprise', need: w => clamp(w.stock.food < w.vills.length * 4 ? 0.5 : 0.15 + (w.has('seatrade') ? 0.2 : 0), 0, 1)
+    focus: 'enterprise', need: w => clamp(w.stock.food < w.pop * 4 ? 0.5 : 0.15 + (w.has('seatrade') ? 0.2 : 0), 0, 1)
   }
 };
 /* the lighthouse stands on free ground near a dock */
@@ -100,7 +100,7 @@ const avgMood = w => { const a = adultsOf(w); return a.length ? a.reduce((s, v) 
 function initProjects(w) { w.proj = { active: null, done: {}, cooldown: 10 } }
 function projAvailable(w) {
   const pop = adultsOf(w).length + 0;
-  return Object.keys(PROJECTS).filter(id => { const p = PROJECTS[id]; return (!p.req || p.req(w)) && w.has(p.tech) && !projBuilt(w, id) && w.vills.length >= p.minPop && pop >= 8 });
+  return Object.keys(PROJECTS).filter(id => { const p = PROJECTS[id]; return (!p.req || p.req(w)) && w.has(p.tech) && !projBuilt(w, id) && w.pop >= p.minPop && pop >= 8 });
 }
 /* which circles back it: those whose members like it, best first */
 function projBackers(w, id) {

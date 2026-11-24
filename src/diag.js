@@ -23,7 +23,7 @@ function logAction(w, kind, text) {
   const L = w.alog || (w.alog = []); L.push({ t: w.tick, k: kind, a: text }); if (L.length > 300) L.splice(0, L.length - 300);
 }
 function diagText(w) {
-  const pop = w.vills.length, bps = w.bps.filter(b => b.type !== 'road'), out = [worldLine(w)];
+  const pop = w.pop, bps = w.bps.filter(b => b.type !== 'road'), out = [worldLine(w)];
   out.push(`people ${pop} · homes ${w.houses().length} · beds ${w.beds()} · projects open ${bps.length} (${bps.filter(b => !b.ready()).length} waiting for materials)`);
   out.push(`stock: wood ${Math.floor(w.stock.wood)}, stone ${Math.floor(w.stock.stone)}, food ${Math.floor(w.stock.food)}`);
   if (w.beds() < pop + 2 && typeof housingDiag === 'function') { try { const h = housingDiag(w); out.push('housing held up: ' + (h.why.join('; ') || 'no cause found') + `\nfree sites near ${JSON.stringify(h.close)}\nfree sites wide ${JSON.stringify(h.wide)}`) } catch (e) { } }

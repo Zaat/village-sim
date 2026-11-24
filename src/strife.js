@@ -31,7 +31,7 @@ const SECEDE_GAP = 128, SECEDE_SHARE = 0.3, SECEDE_RELIEF = 140;      // a facti
 function strifeDiv(w) {
   const S = w.strife; if (!S) return 0; let d = 0;
   if (S.shadow) d += 0.2; if (S.strike) d += 0.08; if (S.civil) d += 0.18;
-  if (S.sect) { const share = S.sect.members.length / Math.max(8, w.vills.length), k = S.sect.doctrine === 'zealots' ? 0.5 : 0.3; d += k * share * (S.sect.stance === 'embraced' ? 0.4 : S.sect.stance === 'suppressed' ? 1.2 : 1) }
+  if (S.sect) { const share = S.sect.members.length / Math.max(8, w.pop), k = S.sect.doctrine === 'zealots' ? 0.5 : 0.3; d += k * share * (S.sect.stance === 'embraced' ? 0.4 : S.sect.stance === 'suppressed' ? 1.2 : 1) }
   if (w.day < S.truceUntil) d -= 0.1;
   if (S.reliefUntil && w.day < S.reliefUntil) d -= 0.16 * (S.reliefUntil - w.day) / SECEDE_RELIEF;           // the air clears after a faction leaves
   return d;

@@ -95,7 +95,7 @@ const LIV = w => w.liv || (initLiv(w), w.liv);
 
 /* ----- the list of trades open to the village now ----- */
 function allTrades(w) {
-  const L = LIV(w), out = [], pop = w.vills.length;
+  const L = LIV(w), out = [], pop = w.pop;
   for (const id in TRADES) { const t = TRADES[id]; if (pop >= t.pop && t.req.every(x => w.has(x))) out.push({ id, t }) }
   for (const iv of L.inv) out.push({ id: iv.id, t: invTrade(iv) });
   return out;
@@ -111,7 +111,7 @@ function census(w) {
   return { kids, elders, sick, preg, adults };
 }
 function demandOf(w, id, t, cen) {
-  const pop = w.vills.length;
+  const pop = w.pop;
   if (t.inv) return pop * t.inv.k * t.inv.appeal * (1 + 0.4 * Math.min(1.5, (w.stock.food / Math.max(1, pop)) / 6));
   const base = t.dem ? t.dem(w, pop, cen) : pop * t.k, S = SATURATION[t.good];
   return S ? base * clamp(1.6 - (LIV(w).goods[t.good] || 0) / (pop * S), 0.1, 1) : base;      // a market full of a good wants no more of it
@@ -123,7 +123,7 @@ function take(w, v, x) { if (w.has('coinage')) v.coins = Math.max(0, (v.coins ||
 
 /* ----- the daily round: pay, assign, invent, overtime, dreams ----- */
 function livelihoodsDay(w) {
-  const L = LIV(w); if (w.day < 3 || w.vills.length < 6) return;
+  const L = LIV(w); if (w.day < 3 || w.pop < 6) return;
   for (const v of w.vills) if (v.role && v.trade) { v.side = v.side || v.trade; v.trade = null }
   const cen = census(w), trades = allTrades(w), byTrade = {};
   for (const v of w.vills) { if (v.trade) (byTrade[v.trade] = byTrade[v.trade] || []).push(v); if (v.side) (byTrade[v.side] = byTrade[v.side] || []).push(v) }
@@ -147,7 +147,7 @@ function livelihoodsDay(w) {
   L.jobs = {};
   /* 2. goods wear out, and what is left works for the village */
   for (const g in L.goods) L.goods[g] *= 0.985;
-  const n = Math.max(1, w.vills.length), G = L.goods;
+  const n = Math.max(1, w.pop), G = L.goods;
   L.fx.work = Math.min(0.07, ((G.tools || 0) / n) * 0.12); L.fx.warm = Math.min(0.35, ((G.cloth || 0) / n) * 0.3);
   L.fx.comfort = Math.min(2.5, (((G.pots || 0) + 2 * (G.fine || 0)) / n) * 1.2); L.fx.guard = Math.min(0.4, 0.07 * w.vills.filter(v => (v.trade === 'guard' || v.side === 'guard') && (v.inc || 0) >= 0).length);
   if (L.fx.comfort > 0.1 && w.day % 4 === 0) for (const v of ad) v.mood = Math.min(100, v.mood + L.fx.comfort * 0.4);
@@ -185,7 +185,7 @@ function assignTrades(w, plan, cen) {
   }
   /* still gaps and nobody free: let a few people leave the lighter heavy roles for a trade (a richer village specialises) */
   const total = need.reduce((s, p) => s + Math.max(0, p.gap), 0), adults = w.vills.filter(v => v.isAdult() && !v.isElder()), tradesmen = adults.filter(v => v.trade).length;
-  if (total > 0 && w.stock.food >= w.vills.length * 3 && tradesmen < adults.length * 0.35) {
+  if (total > 0 && w.stock.food >= w.pop * 3 && tradesmen < adults.length * 0.35) {
     const cnt = {}; for (const v of adults) if (v.role) cnt[v.role] = (cnt[v.role] || 0) + 1;
     const donors = adults.filter(v => v.role && ['woodcutter', 'miner', 'builder'].includes(v.role) && cnt[v.role] > 1 && !v.trade).sort(() => w.r() - 0.5);
     let moved = 0;
@@ -206,7 +206,7 @@ function assignTrades(w, plan, cen) {
   }
 }
 function inventTrades(w, plan) {
-  const L = LIV(w), pop = w.vills.length; if (pop < 14 || L.inv.length >= 12) return;
+  const L = LIV(w), pop = w.pop; if (pop < 14 || L.inv.length >= 12) return;
   const idle = w.vills.filter(v => v.isAdult() && !v.role && !v.trade && !v.isElder() && (v.tradeSince || 0) < w.day - 8 && v.mood > 40);
   if (!idle.length) return;
   for (let k = 0; k < 1 + Math.floor(idle.length / 5) && idle.length; k++) {
@@ -266,7 +266,7 @@ function tradeSlack(w) {
   const c = w._lsl; if (c && c.t === w.tick) return c.v;
   const { tgt, eff } = resourceTargets(w); let m = 9; for (const k in tgt) m = Math.min(m, eff[k] / Math.max(1, tgt[k]));
   let p = m < 0.6 ? 0.12 : m < 0.9 ? 0.4 : 1; const bld = w.vills.filter(v => v.jobKind === 'build' || v.jobKind === 'haul').length;
-  if (w.bps.length && bld < Math.ceil(w.vills.length / 6)) p *= 0.35;
+  if (w.bps.length && bld < Math.ceil(w.pop / 6)) p *= 0.35;
   w._lsl = { t: w.tick, v: p }; return p;
 }
 /* what the villager's decide() calls: trades first for people without a role, after role work for people with one */
@@ -294,7 +294,7 @@ const overtimeMode = w => (w.liv && w.liv.ot.until > w.day ? w.liv.ot.mode : 0);
 
 /* ----- aspirations ----- */
 function dreamsDay(w) {
-  const pop = w.vills.length, cover = w.stock.food / Math.max(1, pop);
+  const pop = w.pop, cover = w.stock.food / Math.max(1, pop);
   for (const v of w.vills) {
     if (!v.isAdult() || v.isElder()) continue;
     const a = v.asp;

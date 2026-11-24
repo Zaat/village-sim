@@ -53,7 +53,7 @@ function bridgeDay(w) {
     if (!b.bp || !b.bp.alive) { if (b.done >= b.tiles.length) { b.state = 'done'; continue } nextTile(w, b) }
   }
   if (w.day < B.nextPlan) return; B.nextPlan = w.day + 14;
-  if (!w.has('carpentry') || w.day < 40 || w.vills.length < 18 || B.list.some(b => b.state === 'building') || B.list.length >= 6) return;
+  if (!w.has('carpentry') || w.day < 40 || w.pop < 18 || B.list.some(b => b.state === 'building') || B.list.length >= 6) return;
   if (w.stock.wood < 30) return;
   const cands = findCrossings(w).filter(c => c.near < 48); if (!cands.length) return;
   cands.sort((a, b) => (b.newLand - a.newLand) || a.L - b.L || a.near - b.near);

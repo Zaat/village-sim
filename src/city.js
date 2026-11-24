@@ -42,7 +42,7 @@ const waterAt = (w, x, y) => x < 0 || y < 0 || x >= CFG.W || y >= CFG.H ? false 
 function landValueDay(w) {
   const C = cityState(w); if (w._lv && w.day - C.lvDay < 6) return; C.lvDay = w.day;
   const { W, H } = CFG, { gw, gh } = lvGrid(w), lv = w._lv && w._lv.length === gw * gh ? w._lv : (w._lv = new Float32Array(gw * gh));
-  const pts = [[w.cx, w.cy, 22]], bad = [], pop = w.vills.length;
+  const pts = [[w.cx, w.cy, 22]], bad = [], pop = w.pop;
   for (const b of w.buildings.values()) { const s = SERVICE_W[b.type]; if (s) pts.push([b.x + b.w / 2, b.y + b.h / 2, s]); const n = NUISANCE[b.type]; if (n) bad.push([b.x + b.w / 2, b.y + b.h / 2, n]) }
   const R = 12 + Math.min(14, pop / 35), bias = layoutBias(w); let vmax = 0;
   for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
@@ -81,11 +81,11 @@ function placeHouse(w) {
 /* workshops: a trade quarter on cheaper ground a little way from the centre (smoke and noise), where the crafts work together */
 function workshopScore(w, x, y, d) { const v = lvAt(w, x, y), rel = v > 0 && w.city ? v / w.city.vmax : 0.5; return Math.abs(d - 11) + Math.abs(rel - 0.45) * 12 + w.r() * 2 }
 function planWorkshops(w) {
-  const pop = w.vills.length; if (pop < 30 || !w.has('tools') || w.stock.wood < 40 || w.bps.some(b => b.type === 'workshop')) return;
+  const pop = w.pop; if (pop < 30 || !w.has('tools') || w.stock.wood < 40 || w.bps.some(b => b.type === 'workshop')) return;
   if (w.of('workshop').length >= Math.min(5, 1 + Math.floor(pop / 55))) return; placeBuilding(w, 'workshop');
 }
 function foundHamlet(w) {
-  const C = cityState(w), pop = w.vills.length, { W, H } = CFG, L = CFG.LATTICE, b = layoutBias(w);
+  const C = cityState(w), pop = w.pop, { W, H } = CFG, L = CFG.LATTICE, b = layoutBias(w);
   if (pop < 50 || C.hamlets.length >= Math.min(6, 1 + Math.floor(pop / 110)) || w.day < C.nextHam || !w._lv) return null;
   const closeFree = placeFunnel(w, 'house', false); const squeezed = closeFree.reach < 25 || (w.noRoom != null && w.day - w.noRoom < 24);
   if (!squeezed && !(b.spread > 0.5 && pop >= 80)) return null;
@@ -120,7 +120,7 @@ function hamletStores(w) {
 
 /* ---------- redevelopment ---------- */
 function renewalDay(w) {
-  const C = cityState(w), pop = w.vills.length; if (pop < 40 || w.day < C.nextRenew || !w._lv) return; C.nextRenew = w.day + 3;
+  const C = cityState(w), pop = w.pop; if (pop < 40 || w.day < C.nextRenew || !w._lv) return; C.nextRenew = w.day + 3;
   for (const b of w.buildings.values()) if (b.type === 'house' && b.maxHp && b.hp < b.maxHp * 0.18 && !b.occ.length && !w.bpAt.has(b.y * CFG.W + b.x)) { w.removeBuilding(b); C.cleared.ruin++; return }
   const pressure = (w.noRoom != null && w.day - w.noRoom < 20) || w.beds() < pop + 4, thr = pressure ? 0.5 : 0.8;
   if (w.stock.wood < 20 || w.season === 1) return;
@@ -136,7 +136,7 @@ function cityTick(w) {
 }
 function pathDay(w) {
   const { W, H } = CFG, h = w._heat; if (!h) return; for (let i = 0; i < h.length; i++) if (h[i]) h[i] -= (h[i] >> 3) + 1;
-  const C = cityState(w), pop = w.vills.length; if (pop < 25 || w.stock.stone < 3) return;
+  const C = cityState(w), pop = w.pop; if (pop < 25 || w.stock.stone < 3) return;
   const thr = 18, level = w.has('concrete') ? 4 : w.has('roads') ? 3 : w.has('masonry') ? 2 : 1, open = w.bps.filter(b => b.type === 'road').length;
   const hot = []; for (let i = 0; i < h.length; i++) if (h[i] >= thr) hot.push(i);
   hot.sort((a, b) => h[b] - h[a] || a - b);

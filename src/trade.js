@@ -39,7 +39,7 @@ function dealPreview(w, mode, cc) {
   out.revenue = Math.round(rev); out.cost = Math.round(cost); out.net = out.revenue - out.cost;
   if (mode === 'full') {
     const after = E.treasury + (out.net > 0 ? out.net * taxRate(w) : out.net);
-    out.luxury = after >= FINE_PRICE + 30 ? Math.min(2, Math.ceil(w.vills.length / 40), Math.floor((after - 30) / FINE_PRICE)) : 0;
+    out.luxury = after >= FINE_PRICE + 30 ? Math.min(2, Math.ceil(w.pop / 40), Math.floor((after - 30) / FINE_PRICE)) : 0;
   }
   return out;
 }

@@ -8,7 +8,7 @@
    in the Ages panel, the dependency tree and the discovery message. Projects and
    terraforming works that a technology opens are added automatically.
    ========================================================================== */
-const popOf = w => w.vills.length;
+const popOf = w => w.pop;
 const GATES = {
   coast: { name: 'a coast to fish and sail from', ok: w => !!(w.fishOK || w.of('dock').length) },
   harbour: { name: 'two landings or more', ok: w => w.of('dock').length >= 2 },

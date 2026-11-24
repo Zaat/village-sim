@@ -27,7 +27,7 @@ function initOutposts(w) { w.out = { list: [], next: 1, nextPlan: 40, founded: 0
 const OP = w => w.out || (initOutposts(w), w.out);
 const outLog = (w, text) => { const S = OP(w); S.log.unshift(`D${w.day}: ${text}`); if (S.log.length > 8) S.log.pop() };
 const outpostsAlive = w => OP(w).list.filter(o => o.state !== 'gone');
-const outCap = w => Math.min(5, 1 + Math.floor(w.vills.length / 22));
+const outCap = w => Math.min(5, 1 + Math.floor(w.pop / 22));
 
 /* ----- where could we settle? ----- */
 function homeTile(w) { return { x: w.cx, y: w.cy + 2 } }
@@ -46,14 +46,14 @@ function richness(s) {
   return { timber: Math.min(1.5, s.trees / 22), quarry: Math.min(1.5, (s.stone + 0.3 * s.rock) / 11), farming: Math.min(1.5, s.grass / 45 * (1 - Math.min(0.8, s.trees / 60))), fishing: Math.min(1.5, s.shore / 9 * Math.min(1.3, 0.5 + s.fish)) };
 }
 function outWants(w) {          // how much the village needs each product right now
-  const pop = w.vills.length, forest = w.trees0 ? w.trees / w.trees0 : 1;
+  const pop = w.pop, forest = w.trees0 ? w.trees / w.trees0 : 1;
   return {
     timber: w.stock.wood < 30 + pop || forest < 0.6 ? 1 : 0.35, quarry: w.stock.stone < 20 + pop * 0.5 ? 0.95 : 0.3,
     farming: w.stock.food < pop * 3 ? 0.9 : 0.4, fishing: w.stock.food < pop * 3 ? 0.85 : 0.35
   };
 }
 function expandPressure(w) {
-  const pop = w.vills.length, free = w.beds() - pop, g = w.gov.policy.growth;
+  const pop = w.pop, free = w.beds() - pop, g = w.gov.policy.growth;
   const forest = w.trees0 ? w.trees / w.trees0 : 1;
   return clamp((pop >= 30 ? 0.15 : 0) + (pop >= 50 ? 0.15 : 0) + (pop >= 70 ? 0.25 : 0) + (pop >= 110 ? 0.2 : 0) + (free <= 1 && pop >= 20 ? 0.35 : 0) + (w.stock.wood < 25 || forest < 0.55 ? 0.35 : 0) + (w.stock.stone < 12 ? 0.2 : 0) + (w.stock.food < pop * 2.5 ? 0.25 : 0) + 0.3 * g, 0, 1.4);
 }
@@ -94,7 +94,7 @@ function findOutpostSites(w, want) {
 
 /* ----- the plan: gain, cost, risk, then the council ----- */
 function planOutpost(w) {
-  const sites = findOutpostSites(w), n = clamp(Math.round(w.vills.length * 0.14), 4, 9); let best = null;
+  const sites = findOutpostSites(w), n = clamp(Math.round(w.pop * 0.14), 4, 9); let best = null;
   for (const s of sites) {
     let mode = 'land', route = null, days = 0;
     if (s.same) { route = outLandRoute(w, s.x, s.y); if (route) days = routeDays(route.length, 'land') }
@@ -114,11 +114,11 @@ function outShare(w, o) {         // the share of an outpost's surplus that come
 }
 function outDecide(w) {
   const S = OP(w); if (w.day < S.nextPlan) return; S.nextPlan = w.day + 10;
-  if (w.vills.length < 22 || w.day < 50 || outpostsAlive(w).length >= outCap(w)) return;
+  if (w.pop < 22 || w.day < 50 || outpostsAlive(w).length >= outCap(w)) return;
   if (outpostsAlive(w).some(o => o.state === 'travelling' || w.day - o.day < 40)) return;       // let the last one find its feet first
   if (w.tradeLock || (w.gov.council.length && w.gov.trial)) return;
   const press = expandPressure(w), app = expandAppetite(w); if (press * app < 0.5) return;
-  const kids = w.vills.filter(v => v.isAdult()).length; if (kids < 14 || w.stock.food < w.vills.length * 2 + 12 || w.stock.wood < 16) return;
+  const kids = w.vills.filter(v => v.isAdult()).length; if (kids < 14 || w.stock.food < w.pop * 2 + 12 || w.stock.wood < 16) return;
   const p = planOutpost(w); S.lastPlan = p ? { day: w.day, role: p.role, mode: p.mode, ratio: Math.round(p.cb.ratio * 10) / 10, go: p.cb.go } : { day: w.day, none: true };
   if (!p || !p.cb.go) { S.nextPlan = w.day + 14; return }
   proposeOutpost(w, p, press, app);
@@ -155,7 +155,7 @@ function pickSettlers(w, n) {
 function sendSettlers(w, p) {
   const S = OP(w), folk = pickSettlers(w, p.n); if (folk.length < 3) return false;
   const adults = folk.filter(v => v.isAdult()), leader = adults.slice().sort((a, b) => b.char.amb + b.trait.soc - a.char.amb - a.trait.soc)[0] || folk[0];
-  const food = Math.min(p.food, Math.max(0, w.stock.food - w.vills.length)), wood = Math.min(p.wood, Math.max(0, w.stock.wood - 8)); w.stock.food -= food; w.stock.wood -= wood; S.sent.food += food; S.sent.wood += wood;
+  const food = Math.min(p.food, Math.max(0, w.stock.food - w.pop)), wood = Math.min(p.wood, Math.max(0, w.stock.wood - 8)); w.stock.food -= food; w.stock.wood -= wood; S.sent.food += food; S.sent.wood += wood;
   const names = folk.map(v => v.name); for (const v of folk) { v.story(`${firstName(v.name)} set out with the settlers to found a new outpost.`); departVillager(w, v) }
   let nm = '', g = 0; do nm = OUT_NAMES[(w.r() * OUT_NAMES.length) | 0] + OUT_TAILS[(w.r() * OUT_TAILS.length) | 0]; while (S.list.some(o => o.name === nm) && g++ < 20);
   const lt = leader && leader.trait ? leader.trait : null, temper = clamp((lt ? 0.35 * (lt.soc - 0.5) - 0.3 * (lt.ind - 0.5) : 0) + (w.r() - 0.5) * 0.24, -0.2, 0.2);       // each settlement has its own temper: its leader's character and the luck of the founding
@@ -192,7 +192,7 @@ function outTend(w, o) {
   const st = OUT_STAGE_POP.filter(x => o.pop >= x).length - 1; if (st > o.stage) { o.stage = st; w.emit('outpost', `${o.name} has grown into a ${OUT_STAGES[st]}: ${o.pop} souls.`, { o }); outLog(w, `${o.name} became a ${OUT_STAGES[st]}.`) } else if (st < o.stage - 0) o.stage = Math.max(0, st);
   if (o.pop <= 2) { o.state = 'gone'; o.fate = 'failed'; S.failed++; outLog(w, `${o.name} died out.`); return w.emit('outpost', `${o.name} has died out; its fields and huts are empty.`, { o }) }
   // loyalty drifts toward what the outpost experiences
-  const share = outShare(w, o), target = clamp(0.64 - 1.1 * (share - 0.42) - outFar(w, o.x, o.y) / 520 - (o.hungry > 2 ? 0.25 : 0) - 0.18 * Math.min(1.2, o.pop / Math.max(12, w.vills.length)) - Math.min(0.15, (w.day - o.day) / 1200) + o.aid + (w.rx ? -0.12 * w.rx.A + 0.08 * w.rx.C : 0) + (o.stage >= 2 ? -0.05 : 0) + (o.temper || 0) + 0.04 * Math.sin((w.day + o.id * 37) / 23), 0, 1);
+  const share = outShare(w, o), target = clamp(0.64 - 1.1 * (share - 0.42) - outFar(w, o.x, o.y) / 520 - (o.hungry > 2 ? 0.25 : 0) - 0.18 * Math.min(1.2, o.pop / Math.max(12, w.pop)) - Math.min(0.15, (w.day - o.day) / 1200) + o.aid + (w.rx ? -0.12 * w.rx.A + 0.08 * w.rx.C : 0) + (o.stage >= 2 ? -0.05 : 0) + (o.temper || 0) + 0.04 * Math.sin((w.day + o.id * 37) / 23), 0, 1);
   o.loyalty += (target - o.loyalty) * 0.05; o.aid *= 0.985;
   if (w.day >= o.nextHaul) haul(w, o, share);
   const rest = []; for (const c of o.cargo) { if (w.day < c.at) { rest.push(c); continue } if (c.lost) { outLog(w, `A load from ${o.name} was lost on the way.`); continue } for (const k of ['wood', 'stone', 'food']) if (c[k]) { w.stock[k] = Math.min(w.stock[k] + c[k], w.cap() + 40); S.back[k] += c[k] } o.sentHome += (c.wood || 0) + (c.stone || 0) + (c.food || 0) } o.cargo = rest;
