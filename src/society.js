@@ -263,7 +263,7 @@ function holdMeeting(w) {
   const history = g.decisions.slice(0, 5).map(d => `Day ${d.day}: ${d.text}`);
   const base = { members, history, state: stateBrief(w) };
   if (!crisis && !w.tech.focus && techAvailable(w).length) { researchAgenda(w, base, ms); return }
-  if (!crisis && projectAgenda(w, base, ms)) return;
+  if (!crisis && autoOn(w, 'build') && projectAgenda(w, base, ms)) return;        // Play: the player decides the great works too (v0.35.1)
   if (crisis) {
     const options = Object.keys(REMEDIES).map(id => ({ id, text: `${REMEDIES[id].text} (past results score ${g.efficacy[id].toFixed(2)} of 1)` }));
     const score = id => ms.reduce((s, m) => s + remedyPref(m.v, id) + 0.8 * g.efficacy[id] + w.r() * 0.2, 0);

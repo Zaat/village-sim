@@ -665,9 +665,14 @@ function drawChart() {
 /* ---------- input ---------- */
 const cv = $('cv'); initRender(cv, $('mini')); puInit(); overInit(); menuInit();
 let drag = null;
-cv.addEventListener('pointerdown', e => { if (puDown(e)) return; try { cv.setPointerCapture(e.pointerId) } catch (_) { } drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
-cv.addEventListener('pointermove', e => { if (puMove(e)) return; if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY; if (drag.moved > 5) { R.cam.x -= dx / R.cam.z; R.cam.y -= dy / R.cam.z; follow = false; clampCam() } });
-cv.addEventListener('pointerup', e => { cv.classList.remove('drag'); cv._moved = drag ? drag.moved : 0; if (puUp(e)) { drag = null; return } if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top); puPicked(e, selected) } drag = null });
+/* two fingers: pinch to zoom, and drag with both to pan (v0.35.1) */
+const ptrs = new Map(); let pinch = null;
+const pinchNow = () => { const [a, b] = [...ptrs.values()]; return { d: Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
+function pinchEnd(e) { if (e.pointerType !== 'touch') return false; ptrs.delete(e.pointerId); if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; cv.classList.remove('drag'); return true } return false }
+cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size >= 2) { PU.paint = null; PU.box = null; clearTimeout(PU.hold); PU.hold = null; drag = null; try { cv.setPointerCapture(e.pointerId) } catch (_) { } if (ptrs.size === 2) pinch = pinchNow(); return } } if (puDown(e)) return; try { cv.setPointerCapture(e.pointerId) } catch (_) { } drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
+cv.addEventListener('pointermove', e => { if (e.pointerType === 'touch' && ptrs.has(e.pointerId)) { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch && ptrs.size === 2) { const n = pinchNow(), r = cv.getBoundingClientRect(); zoomAt(n.d / pinch.d, pinch.x - r.left, pinch.y - r.top); R.cam.x -= (n.x - pinch.x) / R.cam.z; R.cam.y -= (n.y - pinch.y) / R.cam.z; follow = false; clampCam(); pinch = n; return } } if (pinch) return; if (puMove(e)) return; if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY; if (drag.moved > 5) { R.cam.x -= dx / R.cam.z; R.cam.y -= dy / R.cam.z; follow = false; clampCam() } });
+cv.addEventListener('pointercancel', e => { pinchEnd(e); drag = null; cv.classList.remove('drag') });
+cv.addEventListener('pointerup', e => { if (pinchEnd(e)) return; cv.classList.remove('drag'); cv._moved = drag ? drag.moved : 0; if (puUp(e)) { drag = null; return } if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top); puPicked(e, selected) } drag = null });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0016), e.clientX - r.left, e.clientY - r.top) }, { passive: false });
 function pick(sx, sy) {
   { const bv = bubbleAt(sx, sy); if (bv) { selected = bv; showTab('village'); updateUI(); return } }

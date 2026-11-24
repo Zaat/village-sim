@@ -21,6 +21,8 @@ function puNote(t) { PU.note = t; PU.noteT = performance.now(); const el = $('pn
 function puMode(on) {
   if (!world) return; playSet(world, 'on', on); if (!on) { PU.tool = 'select'; PU.panel = null; PU.sel = []; PU.menu = null }
   document.body.classList.toggle('playing', !!on); $('ptool').scrollLeft = 0; puRefresh(); if (typeof updateUI === 'function') updateUI();
+  if (on) { const A = world.play.auto; puNote(A.build ? 'Play: you give orders; the village still plans its buildings.' : 'Play: the council has stopped building. You place the buildings now (B).'); let seen = true; try { seen = !!localStorage.getItem(PLAYTIP_KEY) } catch (e) { } if (!seen && !navigator.webdriver && typeof playTipOpen === 'function') playTipOpen() }
+  else puNote('Watch: the council plans and builds again.');
 }
 function puWorld() { PU.sel = []; PU.tool = 'select'; PU.panel = null; PU.menu = null; document.body.classList.toggle('playing', puOn()); puRefresh() }
 function puTool(t) { PU.tool = t; PU.menu = null; PU.paint = null; PU.box = null; PU.panel = t === 'select' ? null : t; if (t === 'zone') PU.panel = 'zone'; puRefresh() }

@@ -14,6 +14,10 @@ const { chromium } = require('playwright');
   await p.click('[data-mode=play]'); await p.waitForTimeout(150);
   ok(await vis('ptools') && await ev(() => world.play.on), 'Play shows the toolbar and marks the world');
   ok(await ev(() => document.querySelector('[data-tool=select]').classList.contains('on')), 'Select is the tool you start in');
+  ok(await ev(() => world.play.auto.build === false), 'first time in Play the council stops building'); ok(await ev(() => document.getElementById('pnote').textContent.includes('stopped building')), 'and a note says so');
+  { const z0 = await ev(() => { R.cam.z = 1.5; return R.cam.z });   // two fingers apart zoom in, together zoom out
+    const pinch = (a0, a1) => ev(([a0, a1]) => { const mk = (t, id, x, y) => cv.dispatchEvent(new PointerEvent(t, { pointerId: id, pointerType: 'touch', clientX: x, clientY: y, bubbles: true, isPrimary: id === 1 })), r = cv.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2; mk('pointerdown', 1, cx - a0, cy); mk('pointerdown', 2, cx + a0, cy); mk('pointermove', 1, cx - a1, cy); mk('pointermove', 2, cx + a1, cy); mk('pointerup', 1, cx - a1, cy); mk('pointerup', 2, cx + a1, cy); return R.cam.z }, [a0, a1]);
+    const z1 = await pinch(40, 80), z2 = await pinch(80, 40); ok(z1 > z0 * 1.5, 'pinching out zooms in: ' + z0 + ' to ' + z1); ok(z2 < z1 * 0.7, 'pinching in zooms out: ' + z1 + ' to ' + z2); ok(await ev(() => !world.play.paint && !PU.paint), 'a pinch starts no brush stroke or order'); }
 
   // selecting: a click on a villager selects it and puts it in the group; a click on a building inspects it and keeps the group
   let vid = await ev(() => { const v = world.vills.find(v => v.isAdult() && !v.isElder()); R.cam.x = v.x * CFG.T; R.cam.y = v.y * CFG.T; return v.id });
@@ -84,8 +88,8 @@ const { chromium } = require('playwright');
   await p.click('#presearch'); await p.waitForTimeout(150); const tn = await ev(() => document.querySelectorAll('[data-ptech]').length); ok(tn > 0, 'the research panel lists what can be studied: ' + tn);
   const tid = await ev(() => document.querySelectorAll('[data-ptech]')[0].dataset.ptech); await p.click('[data-ptech]'); await p.waitForTimeout(100); ok(await ev(t => world.tech.focus === t, tid), 'picking a technology sets the research');
   await p.click('#pcrowd'); await p.waitForTimeout(100); ok(await vis('ppanel'), 'the crowd panel opens');
-  await p.click('[data-auto=jobs]'); await p.click('[data-auto=build]'); await p.click('[data-auto=research]'); ok(await ev(() => !world.play.auto.jobs && !world.play.auto.build && !world.play.auto.research), 'the three switches turn off the village\'s own planning');
-  await p.click('[data-auto=jobs]'); await p.click('[data-auto=build]'); await p.click('[data-auto=research]'); ok(await ev(() => world.play.auto.jobs && world.play.auto.build && world.play.auto.research), 'and back on');
+  await p.click('[data-auto=jobs]'); await p.click('[data-auto=build]'); await p.click('[data-auto=research]'); ok(await ev(() => !world.play.auto.jobs && world.play.auto.build && !world.play.auto.research), 'the switches flip: jobs and research off, buildings (off since entering Play) back on');
+  await p.click('[data-auto=jobs]'); await p.click('[data-auto=build]'); await p.click('[data-auto=research]'); ok(await ev(() => world.play.auto.jobs && !world.play.auto.build && world.play.auto.research), 'and flip back');
 
   // saving keeps Play; Watch hides the tools again and drawing carries on with no errors
   await ev(() => { __sim.setSpeed(10) }); await p.waitForTimeout(1200);

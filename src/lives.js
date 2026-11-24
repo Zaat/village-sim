@@ -229,9 +229,15 @@ function privacyDay(w) {
 function rehomeDay(w) {
   const P = w.priv; if (!P.list.length || w.day < 12) return;
   const empty = w.houses().filter(h => h.occ.length === 0 && !(h.cabin && h.owner != null));
+  const sharable = w.houses().filter(h => h.occ.length > 0 && h.occ.length < bedsOf(h) && !(h.cabin && h.owner != null));
+  const fits = (h, unit) => {                      // would everyone in h, with the unit added, still have the privacy they need?
+    const bd = bedsOf(h), ids = h.occ.concat(unit.map(m => m.id)); if (ids.length > bd) return false;
+    for (const id of ids) { const m = vById(w, id); if (!m || !m.isAdult()) continue; if (ids.filter(o => o !== id && !isKin(m, o)).length > Math.round((1 - privOf(m)) * (bd - 1))) return false }
+    return true;
+  };
   let moved = 0;
   for (const id of P.list) {
-    if (moved >= 3 || !empty.length) break;
+    if (moved >= 3 || (!empty.length && !sharable.length)) break;
     if ((w.day + id) % 4) continue;
     const v = vById(w, id); if (!v || v.home == null || !v.isAdult()) continue;
     const old = w.buildings.get(v.home); if (!old) continue;
@@ -239,7 +245,11 @@ function rehomeDay(w) {
     for (const k of v.kids || []) { const c = vById(w, k); if (c && c.home === v.home && !c.isAdult()) unit.push(c) }
     let best = null, bs = 1e9;
     for (const h of empty) { const bd = bedsOf(h); if (bd < unit.length) continue; const sc = (bd - unit.length) * 6 + Math.abs(h.x - w.cx) + Math.abs(h.y - w.cy); if (sc < bs) { bs = sc; best = h } }
-    if (!best) continue;
+    if (!best) {                                  // no empty house: a house with spare beds where nobody ends up crowded (v0.35.1: houses held 10 people while 30 held one)
+      for (const h of sharable) { if (h === old || !fits(h, unit)) continue; const sc = (bedsOf(h) - h.occ.length - unit.length) * 3 + Math.abs(h.x - w.cx) + Math.abs(h.y - w.cy); if (sc < bs) { bs = sc; best = h } }
+      if (best) { for (const m of unit) { const i = old.occ.indexOf(m.id); if (i >= 0) old.occ.splice(i, 1); if (old.owner === m.id) old.owner = null; best.occ.push(m.id); m.home = best.id } v.mood = Math.min(100, v.mood + 3); v.story('Moved in with housemates who suit better.'); moved++ }
+      continue;
+    }
     empty.splice(empty.indexOf(best), 1);
     for (const m of unit) { const i = old.occ.indexOf(m.id); if (i >= 0) old.occ.splice(i, 1); if (old.owner === m.id) old.owner = null; best.occ.push(m.id); m.home = best.id }
     claimHome(w, best, v); v.mood = Math.min(100, v.mood + 4); v.story('Moved into a house with more room.'); moved++

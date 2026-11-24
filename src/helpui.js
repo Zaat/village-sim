@@ -3,8 +3,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.35', name: 'Play',
-  news: ['Play mode: a Watch / Play switch. In Play you can select villagers and give orders, place buildings, lay roads, paint zones for the village to build in, choose the research, and decide what the village still plans for itself.', 'Longer lives: villagers live about 8 to 12 years and childhood lasts a little over a year; growth keeps its familiar rhythm.', 'Game over: a village that empties, or stays below five people for a month, ends with a story of what it was. You can carry on, start the same world again, or begin a new one.', 'A manual, this menu and the About card.'],
+  version: '0.35.1', name: 'Play',
+  news: ['Switching between Watch and Play is seamless: Watch is always fully automatic and your Play choices are kept. The first time you enter Play the council stops building, with a note saying so.', 'Crowded households can now move in with housemates who suit them, so the Not enough homes concern no longer stays on all the time.', 'Pinch to zoom and two-finger pan on touchscreens.', 'The council no longer starts great works such as halls while you are in charge in Play.'],
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>
@@ -19,7 +19,7 @@ const HELP = `
 <h4>Saving</h4><p>The game saves by itself and resumes where you left off. Settings has Save now, Export and Import for keeping a village as a file.</p>
 <h4>Tips</h4><ul><li>Food first: a granary and a few farms before more houses.</li><li>Roads between homes, stores and fields make everyone faster.</li><li>Pausing is free. Plan while paused, then watch what happens.</li><li>If something looks wrong, About has a button that copies a report.</li></ul>`;
 function modal(title, html, extra) { const m = $('modal'); $('modal_t').textContent = title; $('modal_b').innerHTML = html; m.style.display = 'flex'; m._extra = extra || null }
-function modalClose() { $('modal').style.display = 'none' }
+function modalClose() { const m = $('modal'), f = m._extra; m._extra = null; m.style.display = 'none'; if (f) f() }
 function helpOpen() { modal('How to play', HELP) }
 function aboutOpen() {
   const a = ABOUT, ver = typeof APP_VERSION !== 'undefined' ? APP_VERSION : a.version;
@@ -28,6 +28,13 @@ function aboutOpen() {
     <div class="hint" style="margin-top:10px">Something wrong? This copies a report (the world line and diagnostics, no personal details) and opens the issue page.</div><div class="btnrow"><button id="ab_report" class="on">Report a problem</button></div><div class="hint" id="ab_note"></div>`);
   $('ab_help').onclick = helpOpen;
   $('ab_report').onclick = async () => { let ok = false; try { await navigator.clipboard.writeText(JSON.stringify(dbgReport(world, speed), null, 2)); ok = true } catch (e) { } $('ab_note').textContent = ok ? 'Report copied. Paste it into the issue.' : 'Your browser blocked copying: use Settings, Diagnostics, Download report.'; window.open(a.issues, '_blank', 'noopener') };
+}
+const PLAYTIP_KEY = 'villagesim.playtip';
+/* first time in Play: the village waits while the tip is open */
+function playTipOpen() {
+  const was = speed; setSpeed(0);
+  modal('You are in charge', `<p>The council has stopped building. From now on <b>you</b> place the buildings, roads and fields: pick <b>Build</b> (B), <b>Road</b> (R) or <b>Zone</b> (Z) in the bar below, or right-click a villager's target to give an order.</p><p>Research and jobs are still automatic until you switch them in <b>Village plan</b>.</p><p class="hint">Switch back to Watch at any time and the council takes over again. Your choices are kept for next time.</p><div class="btnrow"><button id="pt_ok" class="on">Got it</button></div>`, () => { if (speed === 0) setSpeed(was || 10) });
+  $('pt_ok').onclick = modalClose; try { localStorage.setItem(PLAYTIP_KEY, '1') } catch (e) { }
 }
 const WELCOME_KEY = 'villagesim.welcomed';
 function welcomeOpen() {

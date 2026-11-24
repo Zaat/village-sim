@@ -21,13 +21,14 @@ const DESIRE_ROLE_NAMES = { builder: 1, farmer: 1, woodcutter: 1, miner: 1, hunt
 const PLAY_GATHER = { wood: 'wood', stone: 'stone', food: 'berries' };
 
 const playOf = w => w.play || (w.play = { on: false, auto: { build: true, research: true, jobs: true }, orders: {}, zones: {}, nz: 0, share: null, did: 0 });
-const autoOn = (w, k) => !w.play || w.play.auto[k] !== false;
+/* Watch mode is always fully automatic; the switches only apply while playing, and keep their state across mode changes (v0.35.1) */
+const autoOn = (w, k) => !w.play || !w.play.on || w.play.auto[k] !== false;
 const playVill = (w, id) => w.vills.find(v => v.id === id && v.alive);
 
 /* ---------- switches and shares ---------- */
 function playSet(w, key, val) {
   const P = playOf(w);
-  if (key === 'on') P.on = !!val;
+  if (key === 'on') { P.on = !!val; if (P.on && !P.entered) { P.entered = 1; P.auto.build = false } }      // first time in Play: the council stops building, the player takes over
   else if (key in P.auto) P.auto[key] = !!val;
   else if (key === 'share') { P.share = val ? { food: +val.food || 0, wood: +val.wood || 0, stone: +val.stone || 0 } : null; if (P.share) { const t = P.share.food + P.share.wood + P.share.stone; if (t > 0.95) for (const k in P.share) P.share[k] *= 0.95 / t } }
   else return false;

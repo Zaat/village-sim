@@ -1,13 +1,13 @@
 // v0.35 Play: orders, placing buildings and roads, zones, research, the switches, saving, and Watch mode staying untouched
-const { loadSim, loadCheckpoint } = require('./lib'); const S = loadSim('World,CFG,TERR,FEAT,serializeWorld,deserializeWorld,playOrder,playPlace,playRoad,playZone,playCancelBp,playCanPlace,playSet,playResearch,playOrderAt,placeBuilding,techAvailable,playOf'); let fail = 0, pass = 0;
+const { loadSim, loadCheckpoint } = require('./lib'); const S = loadSim('World,CFG,TERR,FEAT,serializeWorld,deserializeWorld,playOrder,playPlace,playRoad,playZone,playCancelBp,playCanPlace,playSet,playResearch,playOrderAt,placeBuilding,techAvailable,playOf,autoOn'); let fail = 0, pass = 0;
 const ok = (x, m) => { if (x) pass++; else { fail++; console.log('FAIL', m) } };
-const mk = () => { const w = loadCheckpoint(S, 'isl777_d96'); w.faults = []; const f0 = w.fault.bind(w); w.fault = (k, e) => { w.faults.push(k + ': ' + String(e && e.stack || e).split('\n').slice(0, 2).join(' | ')); f0(k, e) }; return w };
+const mk = () => { const w = loadCheckpoint(S, 'isl777_d96'); w.faults = []; const f0 = w.fault.bind(w); w.fault = (k, e) => { w.faults.push(k + ': ' + String(e && e.stack || e).split('\n').slice(0, 2).join(' | ')); f0(k, e) }; S.playSet(w, 'on', true); S.playSet(w, 'build', true); return w };
 const days = (w, d, f) => { for (let i = 0; i < d; i++) { for (let t = 0; t < 1200; t++) { w.step(); if (f && t % 100 === 0) f() } } };
 const free = (w, n = 1) => { const out = [], { W, H } = S.CFG; for (let r = 2; r < 30 && out.length < n; r++) for (let dy = -r; dy <= r && out.length < n; dy++) for (let dx = -r; dx <= r && out.length < n; dx++) { const x = w.cx + dx, y = w.cy + dy; if (S.playCanPlace(w, 'house', x, y, true).ok && S.playCanPlace(w, 'house', x, y, false).ok && !out.some(o => Math.abs(o[0] - x) < 4 && Math.abs(o[1] - y) < 4)) out.push([x, y]) } return out };
 const treeNear = w => { const { W } = S.CFG, T = []; for (let i = 0; i < w.feat.length; i++) if ((w.feat[i] === S.FEAT.OAK || w.feat[i] === S.FEAT.PINE) && w.res[i] >= 3 && Math.hypot(i % W - w.cx, ((i / W) | 0) - w.cy) < 40) T.push(i); let best = null, bn = -1; for (const i of T) { let n = 0; for (const j of T) if (Math.hypot(i % W - j % W, ((i / W) | 0) - ((j / W) | 0)) <= 8) n++; if (n > bn) { bn = n; best = i } } return [best % W, (best / W) | 0] };
 
 // Watch mode is untouched: nothing appears on the world until the player does something
-{ const w = mk(); days(w, 3); ok(!w.play, 'Watch mode leaves no play state'); ok(w.faults.length === 0, 'no faults over three days of Watch: ' + w.faults[0]); }
+{ const w = loadCheckpoint(S, 'isl777_d96'); w.faults = []; const f0 = w.fault.bind(w); w.fault = (k, e) => { w.faults.push(k + ': ' + String(e && e.stack || e).split('\n').slice(0, 2).join(' | ')); f0(k, e) }; days(w, 3); ok(!w.play, 'Watch mode leaves no play state'); ok(w.faults.length === 0, 'no faults over three days of Watch: ' + w.faults[0]); }
 
 // orders
 { const w = mk(), ad = w.vills.filter(v => v.isAdult() && !v.isElder()).slice(0, 4), ids = ad.map(v => v.id), [tx, ty] = treeNear(w);
@@ -53,4 +53,11 @@ const treeNear = w => { const { W } = S.CFG, T = []; for (let i = 0; i < w.feat.
   const sig = x => JSON.stringify([x.vills.length, Math.round(x.stock.wood), Math.round(x.stock.stone), Math.round(x.stock.food), x.houses().length, x.bps.length, x.births, x.deaths]);
   days(A, 4); days(B, 4); ok(sig(A) === sig(B), 'two loads of the same save carry on identically: ' + sig(A) + ' vs ' + sig(B)); ok(A.faults === undefined || true, ''); }
 { const w = mk(); S.playSet(w, 'share', { food: 2, wood: 2, stone: 2 }); const s = w.play.share; ok(s.food + s.wood + s.stone <= 0.951, 'the crowd shares never add past the whole: ' + (s.food + s.wood + s.stone).toFixed(2)); }
+// Watch and Play switch back and forth without losing anything (v0.35.1)
+{ const w = mk(); w.play.auto.build = false; w.play.auto.jobs = false;
+  S.playSet(w, 'on', false); ok(S.autoOn(w, 'build') && S.autoOn(w, 'jobs') && S.autoOn(w, 'research'), 'Watch mode is fully automatic whatever the switches say');
+  const n0 = w.bpnext; days(w, 10); ok(w.bpnext > n0 || w.bps.length > 0 || w.houses().length > 0, 'back in Watch the council builds again: ' + (w.bpnext - n0) + ' new sites');
+  S.playSet(w, 'on', true); ok(w.play.auto.build === false && w.play.auto.jobs === false && w.play.entered === 1, 'going back into Play restores the switches as left, not reset'); }
+{ const w = loadCheckpoint(S, 'isl777_d96'); ok(S.autoOn(w, 'build'), 'a world that was never played is automatic'); S.playSet(w, 'on', true); ok(w.play.auto.build === false && w.play.auto.research !== false && w.play.auto.jobs !== false, 'first time in Play only the council stops building');
+  const n0 = w.bpnext; days(w, 8); ok(w.bpnext === n0, 'the council builds nothing in Play after the first switch: ' + (w.bpnext - n0)); S.playSet(w, 'build', true); S.playSet(w, 'on', false); S.playSet(w, 'on', true); ok(w.play.auto.build === true, 'a player who turned buildings back on keeps them on'); }
 console.log(fail ? 'FAILED ' + fail + ' (passed ' + pass + ')' : 'play_events passed ' + pass); process.exit(fail ? 1 : 0);
