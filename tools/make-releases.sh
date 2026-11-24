@@ -74,3 +74,5 @@ sha=$(grep "^v0.29.1 " tools/release-commits.txt | cut -d" " -f2)
 mk v0.29.1 --repo $R --target "$(git rev-parse "$sha")" --title "v0.29.1 — Test suite overhaul" --notes-file docs/releases/v0.29.1.md
 sha=$(grep "^v0.29.2 " tools/release-commits.txt | cut -d" " -f2)
 mk v0.29.2 --repo $R --target "$(git rev-parse "$sha")" --title "v0.29.2 — Varied bubbles and quicker tests" --notes-file docs/releases/v0.29.2.md
+sha=$(grep "^v0.30 " tools/release-commits.txt | cut -d" " -f2)
+mk v0.30 --repo $R --target "$(git rev-parse "$sha")" --title "v0.30 — Conflict" --notes-file docs/releases/v0.30.md

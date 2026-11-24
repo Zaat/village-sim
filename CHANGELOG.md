@@ -2,6 +2,16 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.30 — Conflict
+Conflict arrives, abstractly. With the **Raids and war** switch on (off by default; peace is still the default and the simulation is unchanged without it), a hostile neighbour the village has met makes the council muster a watch of real villagers, up to a target that grows with the danger, the defence policy and the regime. Arms follow technology (militia, spearmen, archers, swordsmen, legionaries, musketeers); soldiers wear a helmet and carry a spear on the map. A **Barracks** drills the ranks and a **Watchtower** gives early warning; both are new great projects with their own art. Upkeep comes out of the food store (cheaper under authority) and morale rises and falls with food, victories and defeats.
+
+Battles are abstract (two sides, three rounds, casualties on both) and settle raids on the village (friends with a treaty may stand with it), attacks on outposts (which may be driven off, hurt or overrun) and the council's own campaigns: after enough raids or a grudge, the council is asked whether to march on the neighbour, send envoys with gifts, or hold. A campaign takes days, the soldiers are away and do not defend meanwhile; victory brings plunder and a spell of tribute, defeat costs lives and respect. New concerns ("poorly defended", "army going hungry"), statistics, chronicle entries and a **Defence & war** card in the World tab.
+
+Also fixes an old bug: victims of raids and strife were given 0 health but regained a little before the death check, so many of those deaths never happened. Tests: `tests/war_events.js` (51 checks) and the page test `tests/ui_war.js`. Control of the army (orders, stance) is planned for v0.33.
+
+<img src="docs/screenshots/v0.30-feature.png" width="640" alt="Village Sim v0.30">
+
+
 ### v0.29.2 — Varied bubbles and quicker tests
 Villagers' thoughts no longer repeat across a crowd: every thought carries other wordings for the same subject (about 35 new lines for hunger, tiredness, loneliness, cold, contentment, low spirits, housing, privacy, drought, winter and the seasons), a bubble picks a wording that has not been on screen in the last 90 seconds, and no more than two bubbles on the same subject show at once. The small white emote box over a villager now shows only for the selected villager (alarms still show for all). The simulation is identical to v0.29. Tests: the full run is about 17 minutes (was 22), the wolf check and the performance gate are shorter.
 
