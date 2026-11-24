@@ -30,4 +30,10 @@ if [ -d "$REPO/.git" ]; then
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
 Claude-Session: https://claude.ai/code/session_01EvsuWaMaRoMJQAB9iM4xPe" && git push -q origin main && git log --oneline | head -1
+  # record the release commit (the file lives in the sim folder too, so the next release cannot overwrite the line), then push that as a follow-up
+  SHA=$(git rev-parse --short HEAD); cd "$ROOT"; grep -q "^$V " tools/release-commits.txt || echo "$V $SHA" >> tools/release-commits.txt; cp tools/release-commits.txt "$REPO/tools/release-commits.txt"
+  cd "$REPO" && git add -A && git commit -q -m "$V: record release commit
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01EvsuWaMaRoMJQAB9iM4xPe" && git push -q origin main
 fi
