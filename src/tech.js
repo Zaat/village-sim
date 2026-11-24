@@ -137,12 +137,18 @@ function researchAgenda(w, base, ms) {
 
 /* upgrading old buildings when the village learns better ways */
 function planUpgrades(w) {
-  if (w.bps.some(b => b.type === 'upgrade') || w.day < (w.nextUpgrade || 0)) return;
-  const target = styleNow(w); if (!target) return;
-  const { tgt, eff } = resourceTargets(w); if (eff.wood < tgt.wood * 0.8 || eff.stone < tgt.stone * 0.6 || w.stock.food < w.vills.length * 3) return;
-  const old = w.houses().filter(h => (h.style || 0) < target && !w.bpAt.has(h.y * CFG.W + h.x)).sort((a, b) => (a.style || 0) - (b.style || 0) || (Math.abs(a.x - w.cx) + Math.abs(a.y - w.cy)) - (Math.abs(b.x - w.cx) + Math.abs(b.y - w.cy)));
-  if (!old.length) return;
-  makeBp(w, 'upgrade', old[0].x, old[0].y, { target: old[0].id, toStyle: (old[0].style || 0) + 1 }); w.nextUpgrade = w.day + 3;
+  const pop = w.vills.length, open = w.bps.filter(b => b.type === 'upgrade').length;
+  if (open >= 1 + Math.floor(pop / 60) || w.day < (w.nextUpgrade || 0)) return;
+  const top = styleNow(w); if (!top) return;
+  const { tgt, eff } = resourceTargets(w); if (eff.wood < tgt.wood * 0.8 || eff.stone < tgt.stone * 0.6 || w.stock.food < pop * 3) return;
+  // the dearest ground is rebuilt first and furthest: each home aims for the style its site deserves (see siteStyle in city.js)
+  let best = null, bs = 0;
+  for (const h of w.houses()) {
+    if (w.bpAt.has(h.y * CFG.W + h.x)) continue; const want = siteStyle(w, h.x, h.y), gap = want - (h.style || 0); if (gap <= 0) continue;
+    const lv = lvAt(w, h.x, h.y), sc = gap * 10 + (lv > 0 ? lv * 0.2 : 0) - Math.hypot(h.x - w.cx, h.y - w.cy) * 0.05; if (!best || sc > bs) { best = h; bs = sc }
+  }
+  if (!best) return;
+  makeBp(w, 'upgrade', best.x, best.y, { target: best.id, toStyle: (best.style || 0) + 1 }); w.nextUpgrade = w.day + (pop >= 120 ? 1 : 3);
 }
 
 /* ----- knowledge can be lost: when a great part of the people are gone, the newest, least-shared skills go with them ----- */

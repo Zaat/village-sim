@@ -296,7 +296,7 @@ function bpArt(g, w, bp, now) {
   if (bp.prog > 0 && bp.type !== 'upgrade') { const hgt = Math.round(Ht * 0.6 * bp.prog / bp.time); rc(g, 'rgba(150,110,70,.75)', X + 3, Y + Ht - 6 - hgt, Wd - 6, hgt) }
 }
 function drawBuilding(g, w, b, now, dark) {
-  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark); else if (b.type === 'tavern') tavernArt(g, w, b, now, dark);
+  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark); else if (b.type === 'tavern') tavernArt(g, w, b, now, dark); else if (b.type === 'workshop') workshopArt(g, w, b, now, dark);
 }
 
 /* ---------- animals & villagers ---------- */
@@ -391,6 +391,7 @@ function render(w, sel, now) {
     const i = y * W + x; if (w.terr[i] <= TERR.SHALLOW) { if ((hash2(x, y) + tick) % 13 === 0) rc(g, w.season === 3 ? '#fff' : 'rgba(255,255,255,.35)', x * T + (hash2(y, x) & 7), y * T + ((hash2(y, x) >> 3) & 7) + 3, 4, 1) }
     else if (w.road[i]) roadTile(g, w, x, y);
   }
+  if (R.lvShow && w._lv) lvOverlay(g, w, x0, x1, y0, y1);
   R.gcol = new Map(w.groups.map(gr => [gr.id, gr.color])); R.crown = new Set(w.gov.council.map(c => c.id));
   for (const sc of w.scars) if (w.tick < sc.until && inViewR(sc, x0, x1, y0, y1)) scarArt(g, sc, w);
   const rows = []; for (let y = y0; y <= y1 + 3; y++) rows[y] = [];
@@ -715,4 +716,27 @@ function drawBubbles(g, w, selV, now, tlx, tly, z) {
     lines.forEach((l, i) => g.fillText(l, bx + 5, by + 3 + (i + 1) * lh - 3.5));
   }
   g.restore(); g.globalAlpha = 1; V.prev = ids;
+}
+
+/* land value heat map (City card button): one tinted square per 4x4 tiles, green cheap to red dear */
+function lvOverlay(g, w, x0, x1, y0, y1) {
+  const { T } = CFG, C = CITY_CELL, { gw, gh } = lvGrid(w), vm = w.city ? w.city.vmax : 40;
+  for (let gy = Math.max(0, Math.floor(y0 / C)); gy <= Math.min(gh - 1, Math.floor(y1 / C)); gy++) for (let gx = Math.max(0, Math.floor(x0 / C)); gx <= Math.min(gw - 1, Math.floor(x1 / C)); gx++) {
+    const v = w._lv[gy * gw + gx]; if (v < 3) continue; const k = clamp(v / vm, 0, 1);
+    g.fillStyle = `rgba(${Math.round(60 + 190 * k)},${Math.round(190 - 130 * k)},70,${(0.12 + 0.3 * k).toFixed(2)})`; g.fillRect(gx * C * T, gy * C * T, C * T, C * T);
+  }
+}
+
+/* a workshop: low timber hall with a wide open front, a forge hearth with a glowing chimney, a bench and stacked work */
+function workshopArt(g, w, b, now, dark) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T, Wd = b.w * CFG.T, snow = w.season === 3, stone = w.has('masonry'), lit = dark > 0.25 || w.tod > 0.55;
+  rc(g, 'rgba(0,0,0,.22)', X + 1, Y + 29, Wd, 3);
+  rc(g, stone ? '#8f8a80' : '#7a5a34', X + 2, Y + 14, Wd - 4, 16); for (let k = 0; k < Wd - 4; k += 6) rc(g, stone ? '#7b766d' : '#6a4c2e', X + 2 + k, Y + 14, 1, 16);
+  for (let r = 0; r < 9; r++) { const l = Math.round(r * 0.9); rc(g, r % 2 ? '#6a4c38' : '#5a4030', X + l, Y + 4 + r, Wd - 2 * l, 1) } rc(g, '#3e2a1c', X, Y + 13, Wd, 1); if (snow) rc(g, '#f4f6fa', X + 6, Y + 4, Wd - 12, 2);
+  rc(g, '#2a2018', X + 6, Y + 17, Wd - 20, 13); rc(g, lit ? '#d9822a' : '#4a3626', X + 8, Y + 25, 8, 5);     // open front with the hearth glowing inside
+  if (lit) { g.fillStyle = 'rgba(255,150,60,.16)'; g.beginPath(); g.arc(X + 12, Y + 26, 14, 0, 6.3); g.fill() }
+  rc(g, '#5a5a56', X + Wd - 12, Y + 1, 6, 12); rc(g, '#46463f', X + Wd - 12, Y + 1, 6, 1);
+  rc(g, '#6a4a2a', X + Wd - 12, Y + 20, 9, 3); rc(g, '#4a3220', X + Wd - 11, Y + 23, 1, 6); rc(g, '#4a3220', X + Wd - 5, Y + 23, 1, 6);       // bench
+  rc(g, '#8a6a3a', X + 1, Y + 24, 5, 3); rc(g, '#7a5a2e', X + 2, Y + 21, 4, 3);       // stacked stock
+  for (let k = 0; k < 2; k++) { const t = ((now / 700) + k / 2) % 1; g.fillStyle = `rgba(190,190,195,${0.55 * (1 - t)})`; g.fillRect(X + Wd - 11 + Math.sin(t * 4 + k) * 2, Y - 2 - t * 9, 3, 3) }
 }

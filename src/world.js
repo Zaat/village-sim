@@ -175,12 +175,13 @@ class World {
     if (bp.type === 'road') { this.road[bp.idx] = this.has('concrete') ? 4 : this.has('roads') ? 3 : this.has('masonry') ? 2 : 1; return }
     if (bp.type === 'bridge') { bridgeTileDone(this, bp); return }
     if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
-    const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' || bp.type === 'store' ? styleNow(this) : 0;
+    const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' ? siteStyle(this, bp.x, bp.y) : bp.type === 'store' ? styleNow(this) : 0;
     ensureStats(this, b);
     if (PROJECTS[bp.type]) { projectDone(this, b, bp); return }
     if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.say('A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
     if (bp.type === 'market') this.say('A market square is opened. Merchants will know where to find us.');
     if (bp.type === 'plaza') this.say(this.has('masonry') ? 'A cobbled village square is finished, with a well at its heart.' : 'A village square is laid out around a new well. The village has a place to meet.');
+    if (bp.type === 'workshop') this.say('A workshop is finished. The crafts will work side by side now.');
     if (bp.type === 'tavern') this.say('A tavern opens its doors. Evenings will be livelier.');
     if (bp.type === 'logcamp') this.say('A logging camp is raised beside the forest.');
     if (bp.type === 'minecamp') this.say('A mining camp opens at the rockface.');
@@ -321,6 +322,7 @@ class World {
     try { voicesDay(this) } catch (e) { this.fault('voices', e) }
     neighbourDay(this);
     buildingDay(this);
+    try { cityDay(this) } catch (e) { this.fault('city', e) }
     characterDay(this);
     regimeDay(this);
     strifeDay(this);
@@ -403,6 +405,7 @@ class World {
     this.section('animals', () => { for (const a of this.animals) if (a.alive) { try { a.update() } catch (e) { this.entityFault('animal', a, e) } } if (this.tick % 20 === 0) this.animals = this.animals.filter(a => a.alive) });
     this.section('villagers', () => { for (const v of this.vills.slice()) if (v.alive) { try { v.update() } catch (e) { this.entityFault('villager', v, e) } } });
     if (this.tick % 60 === 0) this.section('planner', () => planTown(this));
+    if (this.tick % 40 === 7) this.section('city', () => cityTick(this));
     if (this.tick % 400 === 0) this.section('groups', () => updateGroups(this));
     if (this.tick % 20 === 0) this.section('voices', () => voicesTick(this));
     if (!this.holidayDone && this.tod > 0.68) this.section('holiday', () => resolveHoliday(this));

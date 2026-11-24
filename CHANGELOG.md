@@ -2,6 +2,11 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.33 — City structure
+City structure. The village now grows into a town in a shaped way. Every 4x4 tiles gets a **land value** from the pull of the camp, market, plaza, tavern and other services, roads and the shore, minus the nuisance of fields, camps and forges; the new City card in the World tab shows the layout, the mix of home styles and a **land value map** button. The dearest ground gets the best style the village knows, the edge keeps log cabins, old homes are rebuilt in place, ruins are cleared and fields the town has grown around are given up. **Hamlets** (named by direction) are founded when the close ground fills up; they get their own store. Villagers' footsteps pave **desire paths**, and busy roads get better surfaces first. A new **workshop** building gathers the crafts. When beds run short the Housing concern now says what is in the way. Settings shows a one-line **world line** (click to copy, or paste a whole line into the Seed box) with a collapsed Diagnostics snapshot and a saved log of your own choices. The Concerns list keeps its scroll position at fast speeds.
+
+<img src="docs/screenshots/v0.33-feature.png" width="640" alt="Village Sim v0.33">
+
 ### v0.32 — Settlements, causes of death and housing
 Settlements, causes of death and housing. Click another settlement on the map (or its name in the World tab) for a full panel: people, temper, strength, treaty and dealings, what each side knows that the other does not, origin and history. A new **Causes of death** card in the Society tab shows totals by cause, this year against last year, age groups, the main preventable cause with advice and recent deaths. When the ground near the village is full, new homes are now sited further out (suburbs and hamlets) and the Housing concern says so. Fixes: the tree of knowledge window fits the stage on small screens, 'Recently eased' stays open, culture no longer saturates, plague is a little likelier. Tests: `tests/ui_settle.js` and `tests/housing_events.js`.
 

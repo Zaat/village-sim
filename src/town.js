@@ -10,9 +10,10 @@ function makeBp(w, type, x, y, extra) {
   w.bps.push(bp); for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) w.bpAt.set((y + dy) * CFG.W + x + dx, bp);
   return bp;
 }
-function placeBuilding(w, type, wide) {
-  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, k = wide ? 1.9 : 1, dmax = wide ? 74 : 40, pop = w.vills.length;
-  for (let y = w.cy - Math.round(36 * k); y <= w.cy + Math.round(36 * k); y += L) for (let x = w.cx - Math.round(45 * k); x <= w.cx + Math.round(45 * k); x += L) {
+function placeBuilding(w, type, wide, at) {       // `at` (a hamlet) restricts the search to the ground around it
+  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, k = wide ? 1.9 : 1, dmax = at ? 200 : wide ? 74 : 40, pop = w.vills.length;
+  const ax0 = at ? at.x - 10 : w.cx - Math.round(45 * k), ax1 = at ? at.x + 10 : w.cx + Math.round(45 * k), ay0 = at ? at.y - 8 : w.cy - Math.round(36 * k), ay1 = at ? at.y + 8 : w.cy + Math.round(36 * k);
+  for (let y = ay0; y <= ay1; y += L) for (let x = ax0; x <= ax1; x += L) {
     if (x < 2 || y < 2 || x + bw >= W - 2 || y + bh >= H - 2) continue;
     let ok = true;
     for (let dy = 0; dy < bh && ok; dy++) for (let dx = 0; dx < bw; dx++) {
@@ -21,16 +22,53 @@ function placeBuilding(w, type, wide) {
     }
     if (!ok) continue;
     const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5 || d > dmax) continue;
-    const score = type === 'house' ? d + w.r() * 2 + (pop > 40 ? w.r() * Math.min(10, pop / 12) : 0) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
+    const score = at ? Math.hypot(x - at.x, y - at.y) + w.r() * 2 : type === 'house' ? houseScore(w, x, y, d, pop) : type === 'farm' ? farmScore(w, x, y, d, pop) : type === 'workshop' ? workshopScore(w, x, y, d) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
     cands.push({ x, y, score });
   }
   cands.sort((a, b) => a.score - b.score);
-  for (const c of cands.slice(0, wide ? 14 : 8)) {
-    const p = w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: bw, h: bh }), wide ? 320 : 120);   // must be reachable from camp
-    if (p) { if (wide) w.sprawl = (w.sprawl || 0) + 1; return makeBp(w, type, c.x, c.y) }
+  if (cands.length) {
+    const s0 = w._st; w.search(w.cx - 1, w.cy, () => false, wide ? 320 : 120); if (w._st === s0) return null;       // one flood from camp tells which sites can be walked to (many floods for the best few used to fail together when they were all cut off)
+    const seen = w._seen, st = w._st;
+    for (const c of cands.slice(0, 80)) {
+      let ok = false; for (let dy = -1; dy <= bh && !ok; dy++) for (let dx = -1; dx <= bw; dx++) { if ((dx < 0 || dx >= bw) && (dy < 0 || dy >= bh)) continue; const xx = c.x + dx, yy = c.y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && seen[yy * W + xx] === st) { ok = true; break } }
+      if (ok) { if (wide) w.sprawl = (w.sprawl || 0) + 1; return makeBp(w, type, c.x, c.y) }
+    }
   }
-  if (!wide && (type === 'house' || type === 'farm' || type === 'store')) { const r = placeBuilding(w, type, true); if (!r && type === 'house') w.noRoom = w.day; return r }   // the close ground is full: look further out, in suburbs and hamlets
+  if (!wide && !at && (type === 'house' || type === 'farm' || type === 'store')) { const r = placeBuilding(w, type, true); if (!r && type === 'house' && !w.deferredSearch) w.noRoom = w.day; return r }   // the close ground is full: look further out, in suburbs and hamlets
   return null;
+}
+/* why can no home be placed? Counts every lattice site by the first thing that rules it out, then how many of the free ones can be walked to from camp. Read only; used by concerns, the diagnostics and the probes. */
+function placeFunnel(w, type, wide) {
+  type = type || 'house'; const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, { W, H } = CFG, k = wide ? 1.9 : 1, dmax = wide ? 74 : 40, f = { cells: 0, edge: 0, water: 0, tree: 0, built: 0, road: 0, plan: 0, claimed: 0, near: 0, far: 0, free: 0, reach: 0, unreach: 0 }, free = [];
+  for (let y = w.cy - Math.round(36 * k); y <= w.cy + Math.round(36 * k); y += L) for (let x = w.cx - Math.round(45 * k); x <= w.cx + Math.round(45 * k); x += L) {
+    f.cells++; if (x < 2 || y < 2 || x + bw >= W - 2 || y + bh >= H - 2) { f.edge++; continue }
+    let why = null;
+    for (let dy = 0; dy < bh && !why; dy++) for (let dx = 0; dx < bw; dx++) {
+      const i = (y + dy) * W + x + dx;
+      if (w.terr[i] !== TERR.GRASS) why = 'water'; else if (w.feat[i]) why = 'tree'; else if (w.bmap[i]) why = 'built'; else if (w.road[i]) why = 'road'; else if (w.bpAt.has(i)) why = 'plan'; else if (w.claim[i] >= 0) why = 'claimed';
+      if (why) break;
+    }
+    if (why) { f[why]++; continue }
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5) { f.near++; continue } if (d > dmax) { f.far++; continue }
+    f.free++; free.push([x, y]);
+  }
+  if (free.length) {
+    w.search(w.cx - 1, w.cy, () => false, wide ? 320 : 120); const seen = w._seen, st = w._st;       // one flood from camp: every tile it touched can be walked to
+    for (const [x, y] of free) { let ok = false; for (let dy = -1; dy <= bh && !ok; dy++) for (let dx = -1; dx <= bw; dx++) { if ((dx < 0 || dx >= bw) && (dy < 0 || dy >= bh)) continue; const xx = x + dx, yy = y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && seen[yy * W + xx] === st) { ok = true; break } } if (ok) f.reach++; else f.unreach++ }
+  }
+  return f;
+}
+/* the housing diagnosis: when beds run short, what is actually in the way? Cached for six days; also kept in w.hdiag for the diagnostics report. */
+function housingDiag(w) {
+  if (w.hdiag && w.day - w.hdiag.day < 6) return w.hdiag;
+  const pop = w.vills.length, bps = w.bps.filter(b => b.type !== 'road'), cap = 2 + Math.floor(pop / 8) + (ordersOf(w).build ? 4 : 0), hb = bps.filter(b => b.type === 'house'), cost = CFG.COST.house, why = [];
+  const wait = bps.filter(b => !b.ready()).length, f = placeFunnel(w, 'house', true), fc = placeFunnel(w, 'house', false);
+  if (bps.length >= cap) why.push(`${bps.length} building projects are already open, which is as many as the village can run at once (${cap})${wait ? `; ${wait} of them still wait for materials` : ''}`);
+  if (w.stock.wood < cost.wood || w.stock.stone < cost.stone) why.push(`there is not enough ${w.stock.wood < cost.wood ? 'wood' : 'stone'} in store for another home`);
+  if (!f.reach) why.push(`there is no free ground that people can walk to (${f.free} sites are free, but cut off by water, trees or buildings)`);
+  else if (!fc.reach) why.push('the ground close to the village is full; homes now go up further out');
+  if (hb.length && hb.every(b => !b.workers) && w.day > 3) why.push('homes are planned, but nobody is working on them');
+  const d = { day: w.day, pop, beds: w.beds(), homes: w.houses().length, open: hb.length, cap, wait, stock: { wood: Math.floor(w.stock.wood), stone: Math.floor(w.stock.stone), food: Math.floor(w.stock.food) }, close: fc, wide: f, why }; w.hdiag = d; return d;
 }
 /* camps: built beside dense resources once the village has the know-how */
 const CAMP_INFO = {
@@ -83,7 +121,7 @@ function placeDock(w) {
 }
 function planRoads(w) {
   if (w.bps.filter(b => b.type === 'road').length >= 8) return;
-  const targets = [...w.houses(), ...w.of('farm'), ...w.of('store'), ...w.of('logcamp'), ...w.of('minecamp'), ...w.of('lodge'), ...w.of('market'), ...w.of('plaza'), ...w.of('tavern')];
+  const targets = [...w.houses(), ...w.of('farm'), ...w.of('store'), ...w.of('logcamp'), ...w.of('minecamp'), ...w.of('lodge'), ...w.of('market'), ...w.of('plaza'), ...w.of('tavern'), ...w.of('workshop')];
   for (const b of targets) {
     if (w.connected.has(b.id)) continue; w.connected.add(b.id);
     const path = w.search(b.x, b.y, (x, y, i) => w.storeAdj[i] === 1 && !(w.bmap[i] && w.blk[i])); if (!path) continue;
@@ -114,15 +152,16 @@ function planTown(w) {
   const drive = ordersOf(w).build;
   if (structBps < 2 + Math.floor(pop / 8) + (drive ? 4 : 0)) {
     const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
-    if (cap < pop + 1) placeBuilding(w, 'house');
+    if (cap < pop + 1) placeHouse(w);
     else if (farms < Math.min(30, Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
     else if (full && stores < 10) placeBuilding(w, 'store');
-    else if (cap < pop * (1.1 + 0.2 * clamp((w.prosp || 1) - 0.8, 0, 1) + (drive ? 0.3 : 0)) + 3 && w.stock.food > pop * 3 && w.stock.wood >= 10) placeBuilding(w, 'house');       // build ahead when life is good
+    else if (cap < pop * (1.1 + 0.2 * clamp((w.prosp || 1) - 0.8, 0, 1) + (drive ? 0.3 : 0)) + 3 && w.stock.food > pop * 3 && w.stock.wood >= 10) placeHouse(w);       // build ahead when life is good
   }
   if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(3, 1 + Math.floor(pop / 40)) && w.stock.wood > 30) placeDock(w);
   if (w.has('trade') && pop >= 20 && w.of('market').length + count('market') < Math.min(3, 1 + Math.floor(pop / 70)) && w.stock.wood > 30) placeBuilding(w, 'market');
   if (w.has('carpentry') && pop >= 14 && !w.of('plaza').length && !count('plaza') && w.stock.wood >= 14) placeBuilding(w, 'plaza');
   if (w.has('trade') && w.of('plaza').length && pop >= 30 && w.of('tavern').length + count('tavern') < Math.min(3, 1 + Math.floor(pop / 90)) && w.stock.wood > 40) placeBuilding(w, 'tavern');
+  planWorkshops(w);
   planCamps(w);
   planUpgrades(w);
   planRoads(w);

@@ -90,11 +90,15 @@ function renderConcerns(force) {
   }
   for (const id of [...cnUI.toasts.keys()]) if (!list.some(c => c.id === id && c.sev >= 2)) removeToast(id);
   if (!cnUI.open) return;
-  const sig = w.day + '|' + list.map(c => c.id + ':' + c.sev + ':' + c.text.length + ':' + (c.acts || []).map(a => a.status).join('')).join(',') + '|' + C.hist.length + '|' + cnUI.note;
+  const pnl = $('concernPanel'), held = !!(pnl && pnl.matches && pnl.matches(':hover'));       // while the pointer is over the list, only a real change redraws it (the day count would otherwise rebuild it every moment at fast speeds and swallow clicks)
+  if (!held || cnUI.dk == null) cnUI.dk = Math.floor(w.day / 4);
+  const sig = cnUI.dk + '|' + list.map(c => c.id + ':' + c.sev + ':' + c.text.length + ':' + (c.acts || []).map(a => a.status).join('')).join(',') + '|' + C.hist.length + '|' + cnUI.note;
   if (!force && sig === cnUI.sig) return; cnUI.sig = sig;
   const fresh = C.hist.filter(h => w.day - h.end <= 16).map(h => `<div class="cn done"><b>✓ ${escapeHtml(h.title)}</b> <span class="hint">resolved day ${h.end}${h.did && h.did.length ? ' · tried: ' + escapeHtml(h.did.join(', ').toLowerCase()) : ''}</span></div>`).join(''), hist = C.hist.slice(0, 8).map(h => `<div class="hint">${cnYear(h.end)}: ${escapeHtml(h.title.toLowerCase())} eased (since day ${h.since})</div>`).join('');
+  const keep = pnl ? pnl.scrollTop : 0;
   $('cnBody').innerHTML = (cnUI.note ? `<div class="cnnote">${escapeHtml(cnUI.note)}</div>` : '') + ordersLine(w)
     + (list.length ? list.sort((a, b) => b.sev - a.sev || a.since - b.since).map(c => concernHtml(w, c)).join('') : '<div class="hint" style="padding:6px 0">Nothing worries the village right now. It watches its population, food and firewood, and the unity of its people and outposts.</div>')
     + fresh + (hist ? `<details id="cnHist" style="margin-top:8px"${cnUI.histOpen ? ' open' : ''}><summary class="hint">Recently eased</summary>${hist}</details>` : '');
   const hd = $('cnHist'); if (hd) hd.ontoggle = () => { cnUI.histOpen = hd.open };
+  if (pnl) pnl.scrollTop = keep;       // a refresh keeps the reader's place
 }

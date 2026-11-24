@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cultCard', 'deathCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cityCard', 'cultCard', 'deathCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -91,20 +91,20 @@ $('mindRetry').addEventListener('click', () => mindEnable());
 const SETTING_DEFAULTS = { survival: false, disasters: true, crime: true, raids: false };
 function loadSettings() { let s = {}; try { s = JSON.parse(localStorage.getItem('villagesim.settings') || '{}') } catch (e) { } return { ...SETTING_DEFAULTS, ...s } }
 function saveSettings() { try { localStorage.setItem('villagesim.settings', JSON.stringify(world.settings)) } catch (e) { } }
-for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('change', e => { world.settings[k] = e.target.checked; saveSettings() });
+for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).addEventListener('change', e => { world.settings[k] = e.target.checked; saveSettings(); logAction(world, 'setting', k + ' ' + (e.target.checked ? 'on' : 'off')) });
 $('set_hardship').addEventListener('change', e => {            // live change: noted in the chronicle so it never passes silently
-  const v = +e.target.value; if (v === world.settings.hardship) return; world.settings.hardship = v; saveSettings(); lsSet('villagesim.hardship', String(v));
+  const v = +e.target.value; if (v === world.settings.hardship) return; world.settings.hardship = v; saveSettings(); lsSet('villagesim.hardship', String(v)); logAction(world, 'setting', 'hardship ' + HARD_NAMES[v]);
   world.emit('event', `The council notes that life feels ${['gentler', 'as it was', 'harsher'][v]} now (hardship set to ${HARDSHIP[v].name}).`, { kind: 'hardship' });
 });
 
 const OPEN_LEVELS = [{ name: 'Off', note: 'Research has limits: scholars, rising costs, and the inputs a technology needs.' }, { name: 'Relaxed', note: 'No input gates, twice the scholar capacity, slower cost growth.' }, { name: 'Unlimited', note: 'Every technology is open at once, cheap and fast; grant any at will.' }];
 $('set_philosophy').innerHTML = Object.keys(PHILOSOPHIES).map(k => `<option value="${k}">${PHILOSOPHIES[k].name}</option>`).join('');
 $('set_philosophy').addEventListener('change', e => {
-  const v = e.target.value; if (v === world.settings.philosophy) return; world.settings.philosophy = v; saveSettings(); lsSet('villagesim.phil', v);
+  const v = e.target.value; if (v === world.settings.philosophy) return; world.settings.philosophy = v; saveSettings(); lsSet('villagesim.phil', v); logAction(world, 'setting', 'philosophy ' + v);
   world.emit('event', `The council turns its mind to a ${PHILOSOPHIES[v].name.toLowerCase()} way of learning. ${PHILOSOPHIES[v].hint}`, { kind: 'philosophy' });
 });
 $('set_open').addEventListener('change', e => {            // a sandbox switch: always noted in the chronicle and in the records
-  const v = +e.target.value; if (v === (world.settings.openKnowledge || 0)) return; world.settings.openKnowledge = v; if (v) world.sandbox = true; saveSettings(); lsSet('villagesim.open', String(v));
+  const v = +e.target.value; if (v === (world.settings.openKnowledge || 0)) return; world.settings.openKnowledge = v; if (v) world.sandbox = true; saveSettings(); logAction(world, 'setting', 'open knowledge ' + v); lsSet('villagesim.open', String(v));
   world.emit('event', v ? `Sandbox: knowledge is now ${OPEN_LEVELS[v].name.toLowerCase()}. ${OPEN_LEVELS[v].note}` : 'Knowledge is bound by its limits again.', { kind: 'open' }); renderTech();
 });
 
@@ -112,7 +112,7 @@ $('set_open').addEventListener('change', e => {            // a sandbox switch: 
 function adoptWorld(w) {
   try { $('mapnow').textContent = MAP_TYPES[w.arch].label + ' · ' + CFG.W + '×' + CFG.H + ' · seed ' + w.seed + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
   if (tt) { tt = null; $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false }
-  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = '';
+  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = ''; renderWorldLine();
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
   world.dbg.onFault = () => dbgPersist(world); world.profReset();
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k]; $('set_hardship').value = String(world.settings.hardship == null ? 1 : world.settings.hardship); $('set_philosophy').value = world.settings.philosophy || 'balanced'; $('set_open').value = String(world.settings.openKnowledge || 0);
@@ -152,8 +152,14 @@ $('nw_check').onclick = () => {
     try { const v = $('nw_seed').value.trim(), seed = (v === '' || isNaN(+v) ? 1 : +v) >>> 0, type = nwType === 'auto' ? pickMapType(seed) : nwType, size = sizeFor(type, nwSize), w = new World(seed, { map: type }, MAP_SIZES[size].dims);
       el.innerHTML = `<b>${MAP_TYPES[type].label}, ${MAP_SIZES[size].label}, seed ${seed}</b>` + worldTraits(w).map(([k, t]) => `<div><span style="color:#9fb4c8">${k}:</span> ${escapeHtml(t)}</div>`).join('') } catch (e) { el.textContent = 'Could not check this world: ' + e.message }
   }, 30) };
-$('nw_seed').addEventListener('input', () => { $('nw_traits').textContent = '' });
-$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); lsSet('villagesim.hardship', String(nwHard)); lsSet('villagesim.phil', nwPhil); lsSet('villagesim.open', String(nwOpen_)); nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize, hardship: nwHard, phil: nwPhil, open: nwOpen_ }) };
+let nwSw = null;      // switches taken from a pasted world line, applied at Go
+$('nw_seed').addEventListener('input', () => {
+  $('nw_traits').textContent = ''; const raw = $('nw_seed').value; if (!/seed/i.test(raw)) return;       // a whole world line pasted into the seed box sets everything it names
+  const p = parseWorldLine(raw); if (!p) return; $('nw_seed').value = String(p.seed); nwSw = p.switches || null;
+  if (p.map && MAP_TYPES[p.map]) nwType = p.map; if (p.size && MAP_SIZES[p.size]) nwSize = p.size; if (p.hardship != null && p.hardship >= 0) nwHard = p.hardship; if (p.phil && PHILOSOPHIES[p.phil]) nwPhil = p.phil; if (p.open != null && p.open >= 0) nwOpen_ = p.open;
+  nwRender(); $('nw_traits').textContent = 'Taken from the pasted world line: seed, map, size and settings.';
+});
+$('nw_go').onclick = () => { const v = $('nw_seed').value.trim(); lsSet('villagesim.maptype', nwType); lsSet('villagesim.mapsize', nwSize); lsSet('villagesim.hardship', String(nwHard)); lsSet('villagesim.phil', nwPhil); lsSet('villagesim.open', String(nwOpen_)); if (nwSw) { try { localStorage.setItem('villagesim.settings', JSON.stringify({ ...loadSettings(), ...nwSw })) } catch (e) { } nwSw = null } nwClose(); newWorld(v === '' || isNaN(+v) ? (Math.random() * 1e9) | 0 : +v, { type: nwType, size: nwSize, hardship: nwHard, phil: nwPhil, open: nwOpen_ }) };
 $('nw_seed').addEventListener('keydown', e => { if (e.key === 'Enter') $('nw_go').click(); e.stopPropagation() });
 
 /* ---------- save & load ----------
@@ -237,7 +243,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups(); renderCulture(); renderDeaths() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar(); renderCity() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups(); renderCulture(); renderDeaths() }       // only the visible tab is redrawn
   if (curTab === 'stats') renderStats(); if (curTab === 'events') renderTalk(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -358,6 +364,24 @@ function renderNeigh() {
   el.innerHTML = html; el.onclick = e => { const b = e.target.closest('[data-nb]'); if (!b) return; const nb = w.neigh.find(x => String(x.id) === b.dataset.nb); if (nb) { selected = nb; showTab('village'); updateUI() } };
 }
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
+/* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
+const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a'];
+function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLine(w); a.title = 'Click to copy'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } const d = $('diagText'); if (d && d.parentElement.open) d.textContent = diagText(w) } catch (e) { } }
+function renderCity() {
+  const w = world, el = $('cityCard'); if (!el) return; if (!w._lv) { el.innerHTML = '<div class="hint">The town is still too small to map.</div>'; return }
+  const s = cityStats(w), b = s.bias, tot = s.beds.reduce((a, c) => a + c, 0) || 1, lay = b.compact > 0.75 ? 'tight and orderly' : b.compact > 0.5 ? 'fairly compact' : b.compact > 0.3 ? 'loose' : 'spread out';
+  const why = []; if (w.rx && w.rx.A > 0.6) why.push('strong authority'); if (w.rx && w.rx.A < 0.25) why.push('little central authority'); if (w.settings.philosophy === 'martial') why.push('a martial outlook'); if (w.settings.philosophy === 'mercantile') why.push('a love of the shore and market'); if (typeof threatLevel === 'function' && threatLevel(w) > 0.35) why.push('danger from outside');
+  let html = `<div class="hint" style="margin-bottom:4px">The town is laid out <b>${lay}</b>${why.length ? ' (' + why.join(', ') + ')' : ''}.</div>`;
+  html += `<div class="hint">Homes by style (beds)</div><div style="display:flex;height:9px;border-radius:3px;overflow:hidden;margin:2px 0 3px">${s.beds.map((n, i) => n ? `<i title="${HOUSE_STYLES[i]}: ${s.byStyle[i]} homes, ${n} beds" style="width:${(100 * n / tot).toFixed(1)}%;background:${STYLE_COL[i]}"></i>` : '').join('')}</div>`;
+  html += `<div class="hint">${s.byStyle.map((n, i) => n ? `<span style="color:${STYLE_COL[i]}">■</span> ${n} ${HOUSE_STYLES[i].toLowerCase()}${n === 1 ? '' : 's'}` : '').filter(Boolean).join(' · ') || 'No homes yet.'}</div>`;
+  html += `<div class="hint" style="margin-top:4px">Homes in the old core <b>${s.core}</b> · inner ring <b>${s.inner}</b> · outer ring <b>${s.outer}</b>${s.hamlets.length ? ' · hamlets <b>' + s.hamlet + '</b>' : ''}. Land value at homes <b>${s.avgLv}</b> of ${s.vmax} at the dearest ground.</div>`;
+  if (s.hamlets.length) html += `<div class="grp">${s.hamlets.map(h => `<div class="hint"><b>${escapeHtml(h.name)}</b> · ${h.n} homes, ${h.p} people · founded ${cnYear(h.day)}</div>`).join('')}</div>`;
+  const bits = []; if (s.cleared.farm) bits.push(`${s.cleared.farm} field${s.cleared.farm === 1 ? '' : 's'} given up to building`); if (s.cleared.ruin) bits.push(`${s.cleared.ruin} ruin${s.cleared.ruin === 1 ? '' : 's'} cleared`); if (s.paved) bits.push(`${s.paved} path tiles paved where people walk`); if (s.surfaced) bits.push(`${s.surfaced} busy road tiles improved`);
+  if (bits.length) html += `<div class="hint" style="margin-top:4px">So far: ${bits.join(', ')}.</div>`;
+  const hd = w.hdiag; if (hd && hd.why.length && w.beds() < w.vills.length + 2) html += `<div class="hint" style="margin-top:4px;color:#e0b86a">Housing is held up: ${escapeHtml(hd.why.join('; '))}.</div>`;
+  html += `<div style="margin-top:6px"><button id="lvBtn" class="btn">${R.lvShow ? 'Hide' : 'Show'} land value on the map</button></div>`;
+  el.innerHTML = html; const bt = $('lvBtn'); if (bt) bt.onclick = () => { R.lvShow = !R.lvShow; renderCity() };
+}
 function renderWar() {
   const w = world, el = $('warCard'), box = el.parentElement; if (!w.neigh) { box.style.display = 'none'; return } box.style.display = '';
   const W = w.war, on = w.settings.raids, rolls = W ? W.rolls : {}, ids = Object.keys(rolls), t = threatLevel(w), tgt = targetSize(w);
@@ -517,14 +541,14 @@ const dateText = d => `Day ${d} (year ${Math.floor(d / (CFG.DPS * 4)) + 1})`;
 const humanAge = days => `${ageYears(days)} (about ${humanYears(days)} in human years)`;
 const ageYears = days => { const y = days / (CFG.DPS * 4); return y < 1 ? `${Math.round(days)} days` : `${y.toFixed(1)} years` };
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
-const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', workshop: 'Workshop', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
 const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][Math.min(2, s.style || 0)] : BUILDING_NAMES[s.type] || s.type;
 const OUTPUT = { logcamp: 'firewood', minecamp: 'stone', lodge: 'food', farm: 'food', dock: 'food' };
 const VENUES = { monument: 'sightseers', temple: 'visitors', library: 'readers', lighthouse: 'sightseers', bastion: 'sightseers', citadel: 'sightseers', barracks: 'visits', watchtower: 'sightseers', foundry: 'sightseers', granaryhall: 'sightseers', plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
 function buildingPanel(w, s, extra) {
   const pct = Math.max(0, Math.round(100 * s.hp / s.maxHp)), cx = s.x + s.w / 2, cy = s.y + s.h / 2;
   const near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - cx, v.y - cy) < Math.max(s.w, s.h) + 2.5);
-  const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.', campfire: 'The first gathering place. Evenings and talk start here.' }[s.type] || '';
+  const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.', workshop: 'Smiths, carpenters, potters, weavers and other crafts work here side by side, away from the heart of the town.', campfire: 'The first gathering place. Evenings and talk start here.' }[s.type] || '';
   const mat = (BLD_MATERIAL[s.type] || (() => '-'))(s.type === 'plaza' || s.type === 'tavern' ? w : s.style), wr = (BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0];
   const facts = kvs([['Age', ageText(w, s)], ['Built', dateText(s.built ?? w.day)], ['Built in', AGES[s.builtEra !== undefined ? s.builtEra : (s.era || 0)]], s.upgraded !== undefined ? ['Rebuilt', dateText(s.upgraded) + ` (${ERAS[s.era || 0]})`] : null, ['Material', escapeHtml(mat)], ['Size', `${s.w} x ${s.h} tiles`], ['Repairs', s.repairs || 0], ['Wear', wr * 100 > 0 ? (wr * 3200).toFixed(1) + '% a year' : '-']]);
   let people = '', use = '';
@@ -775,7 +799,7 @@ let wd = { tick: 0, changedAt: performance.now(), stage: 0 };
 setInterval(() => {
   const nowT = performance.now(), dt = (nowT - lastDiag.t) / 1000; if (dt <= 0) return;
   DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick };
-  if (++diagTimer % 10 === 0) world.profReset();
+  if (++diagTimer % 10 === 0) { world.profReset(); renderWorldLine() }
   try { updateDiag() } catch (e) { }
   const drawn = frames - (wd.fr || 0); wd.fr = frames;
   { const eff = DBG.tps / CFG.TPS; $('rate').textContent = speed > 0 && speed < 100 && eff < speed * 0.8 ? 'running at ' + (eff < 1 ? eff.toFixed(1) : Math.round(eff)) + '×' : pendingTicks > 0 ? 'stepping…' : '' }

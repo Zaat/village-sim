@@ -40,22 +40,22 @@ const TRADES = {
   washer: { name: 'Launderer', kind: 'odd', req: [], pop: 16, k: 0.04, price: 0.5, at: 'home', fx: 'comfort', a: 'kind', go: 'To the washing place', lab: 'Washing and mending' },
   // ---- crafts ----
   basketmaker: { name: 'Basketmaker', kind: 'craft', req: [], pop: 14, k: 0.03, price: 0.8, at: 'home', good: 'pots', a: 'ind', go: 'To the workbench', lab: 'Weaving baskets' },
-  potter: { name: 'Potter', kind: 'craft', req: ['pottery'], pop: 14, k: 0.04, price: 1.0, at: 'home', good: 'pots', a: 'ind', go: 'To the kiln', lab: 'Throwing pots' },
-  weaver: { name: 'Weaver', kind: 'craft', req: ['weaving'], pop: 12, k: 0.05, price: 1.0, at: 'home', good: 'cloth', a: 'ind', go: 'To the loom', lab: 'Weaving cloth' },
+  potter: { name: 'Potter', kind: 'craft', req: ['pottery'], pop: 14, k: 0.04, price: 1.0, at: 'workshop', good: 'pots', a: 'ind', go: 'To the kiln', lab: 'Throwing pots' },
+  weaver: { name: 'Weaver', kind: 'craft', req: ['weaving'], pop: 12, k: 0.05, price: 1.0, at: 'workshop', good: 'cloth', a: 'ind', go: 'To the loom', lab: 'Weaving cloth' },
   tailor: { name: 'Tailor', kind: 'craft', req: ['weaving', 'trade'], pop: 22, k: 0.04, price: 1.4, at: 'market', good: 'cloth', a: 'soc', go: 'To the stall', lab: 'Cutting and sewing' },
-  cobbler: { name: 'Cobbler', kind: 'craft', req: ['tools', 'trade'], pop: 24, k: 0.03, price: 1.2, at: 'home', good: 'cloth', a: 'ind', go: 'To the last', lab: 'Mending shoes' },
-  tanner: { name: 'Tanner', kind: 'craft', req: ['tools', 'trade'], pop: 26, k: 0.025, price: 1.2, at: 'home', good: 'cloth', a: 'brave', go: 'To the tanning pits', lab: 'Tanning hides' },
-  carpenter: { name: 'Carpenter', kind: 'craft', req: ['carpentry'], pop: 14, k: 0.04, price: 1.2, at: 'home', good: 'tools', a: 'ind', go: 'To the bench', lab: 'Making tools and furniture' },
-  cooper: { name: 'Cooper', kind: 'craft', req: ['carpentry', 'trade'], pop: 30, k: 0.02, price: 1.3, at: 'home', good: 'pots', a: 'ind', go: 'To the barrels', lab: 'Binding barrels' },
-  smith: { name: 'Smith', kind: 'craft', req: ['bronze'], pop: 20, k: 0.05, price: 1.6, at: 'home', good: 'tools', a: 'brave', go: 'To the forge', lab: 'Forging tools' },
-  mason: { name: 'Stonecutter', kind: 'craft', req: ['masonry'], pop: 22, k: 0.03, price: 1.4, at: 'home', good: 'tools', a: 'ind', go: 'To the stoneyard', lab: 'Dressing stone' },
+  cobbler: { name: 'Cobbler', kind: 'craft', req: ['tools', 'trade'], pop: 24, k: 0.03, price: 1.2, at: 'workshop', good: 'cloth', a: 'ind', go: 'To the last', lab: 'Mending shoes' },
+  tanner: { name: 'Tanner', kind: 'craft', req: ['tools', 'trade'], pop: 26, k: 0.025, price: 1.2, at: 'workshop', good: 'cloth', a: 'brave', go: 'To the tanning pits', lab: 'Tanning hides' },
+  carpenter: { name: 'Carpenter', kind: 'craft', req: ['carpentry'], pop: 14, k: 0.04, price: 1.2, at: 'workshop', good: 'tools', a: 'ind', go: 'To the bench', lab: 'Making tools and furniture' },
+  cooper: { name: 'Cooper', kind: 'craft', req: ['carpentry', 'trade'], pop: 30, k: 0.02, price: 1.3, at: 'workshop', good: 'pots', a: 'ind', go: 'To the barrels', lab: 'Binding barrels' },
+  smith: { name: 'Smith', kind: 'craft', req: ['bronze'], pop: 20, k: 0.05, price: 1.6, at: 'workshop', good: 'tools', a: 'brave', go: 'To the forge', lab: 'Forging tools' },
+  mason: { name: 'Stonecutter', kind: 'craft', req: ['masonry'], pop: 22, k: 0.03, price: 1.4, at: 'workshop', good: 'tools', a: 'ind', go: 'To the stoneyard', lab: 'Dressing stone' },
   baker: { name: 'Baker', kind: 'craft', req: ['granary', 'pottery'], pop: 16, k: 0.05, price: 1.0, at: 'market', good: 'bread', a: 'kind', go: 'To the oven', lab: 'Baking bread' },
   miller: { name: 'Miller', kind: 'craft', req: ['watermills'], pop: 40, k: 0.02, price: 1.2, at: 'home', good: 'bread', a: 'ind', go: 'To the mill', lab: 'Grinding grain' },
   brewer: { name: 'Brewer', kind: 'craft', req: ['pottery', 'orchards'], pop: 30, k: 0.03, price: 1.2, at: 'tavern', fx: 'cheer', a: 'soc', go: 'To the brewhouse', lab: 'Brewing ale' },
-  chandler: { name: 'Chandler', kind: 'craft', req: ['shelter', 'trade'], pop: 28, k: 0.02, price: 1.0, at: 'home', good: 'pots', a: 'kind', go: 'To the wax pot', lab: 'Dipping candles' },
+  chandler: { name: 'Chandler', kind: 'craft', req: ['shelter', 'trade'], pop: 28, k: 0.02, price: 1.0, at: 'workshop', good: 'pots', a: 'kind', go: 'To the wax pot', lab: 'Dipping candles' },
   jeweller: { name: 'Jeweller', kind: 'craft', req: ['coinage', 'bronze'], pop: 36, k: 0.02, price: 3.0, at: 'market', good: 'fine', a: 'cur', go: 'To the bench', lab: 'Setting stones' },
   perfumer: { name: 'Perfumer', kind: 'craft', req: ['trade', 'orchards'], pop: 40, k: 0.015, price: 3.0, at: 'market', good: 'fine', a: 'cur', go: 'To the still', lab: 'Blending scents' },
-  glassblower: { name: 'Glassblower', kind: 'craft', req: ['glass'], pop: 50, k: 0.02, price: 2.5, at: 'home', good: 'fine', a: 'ind', go: 'To the furnace', lab: 'Blowing glass' },
+  glassblower: { name: 'Glassblower', kind: 'craft', req: ['glass'], pop: 50, k: 0.02, price: 2.5, at: 'workshop', good: 'fine', a: 'ind', go: 'To the furnace', lab: 'Blowing glass' },
   // ---- services and learned trades ----
   healer: { name: 'Healer', kind: 'service', req: ['medicine'], pop: 14, k: 0.04, price: 1.2, at: 'any', fx: 'heal', a: 'kind', go: 'To the sick', lab: 'Tending the sick' },
   midwife: { name: 'Midwife', kind: 'service', req: ['medicine'], pop: 20, dem: (w, n, c) => c.preg * 0.5, price: 1.2, at: 'any', fx: 'birth', a: 'kind', go: 'To an expectant mother', lab: 'Attending a birth' },
@@ -253,7 +253,7 @@ function jobEffect(w, v, t, id) {
 /* the villager's job: go to the workplace, do one job. side = true for a side job. Returns true if a job was planned. */
 function planLivelihood(w, v, side) {
   const id = side ? v.side : v.trade, t = tradeOf(w, id); if (!t) return false;
-  const hb = v.home != null ? w.buildings.get(v.home) : null, pl = t.at === 'market' ? w.of('market')[0] : t.at === 'tavern' ? w.of('tavern')[0] : t.at === 'plaza' ? w.of('plaza')[0] : null;
+  const hb = v.home != null ? w.buildings.get(v.home) : null, pl = t.at === 'market' ? w.of('market')[0] : t.at === 'tavern' ? w.of('tavern')[0] : t.at === 'plaza' ? w.of('plaza')[0] : t.at === 'workshop' ? (w.of('workshop').length ? w.of('workshop')[(v.id | 0) % w.of('workshop').length] : null) : null;
   let goal;
   if (pl) goal = (x, y) => w.nearRect(x, y, pl); else if (t.at === 'any') { const P = gatherPlan(w, v, false, false); goal = P ? (x, y) => x === P.x && y === P.y : null } else if (hb) goal = (x, y) => w.nearRect(x, y, hb);
   if (!goal && hb) goal = (x, y) => w.nearRect(x, y, hb); if (!goal) return false;

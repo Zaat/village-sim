@@ -73,6 +73,8 @@
       <div class="bar" style="margin-top:8px"><i id="ttBar" style="background:var(--acc);width:0"></i></div><div class="hint" id="ttInfo">Ready.</div><div id="ttResult" class="hint"></div></div>
     <div class="card"><h3>World</h3>
       <div class="hint" id="mapnow"></div>
+      <div class="hint wline" id="worldLine"></div>
+      <details class="hint" style="margin-top:4px"><summary>Diagnostics</summary><pre class="wline" id="diagText"></pre></details>
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
     <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
@@ -119,6 +121,7 @@
     <section class="tab" id="tab_world">
     <div class="card" id="outBox"><h3>Settlements &amp; outposts</h3><div id="outCard"></div></div>
     <div class="card"><h3>Neighbours</h3><div id="neighCard"></div></div>
+    <div class="card" id="cityBox"><h3>City</h3><div id="cityCard"></div></div>
     <div class="card" id="warBox"><h3>Defence &amp; war</h3><div id="warCard"></div></div>
     <div class="card"><h3>Chronicle &amp; lessons</h3><div id="chronCard"></div></div>
     </section>
@@ -173,6 +176,8 @@
 <script src="src/diplomacy.js"></script>
 <script src="src/war.js"></script>
 <script src="src/culture.js"></script>
+<script src="src/city.js"></script>
+<script src="src/diag.js"></script>
 <script src="src/routes.js"></script>
 <script src="src/save.js"></script>
 <script src="src/world.js"></script>

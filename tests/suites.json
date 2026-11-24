@@ -26,7 +26,8 @@
   "war_events",
   "culture_events",
   "perf",
-  "housing_events"
+  "housing_events",
+  "city_events"
  ],
  "first": [
   "save",
@@ -46,7 +47,8 @@
   "concerns_ui",
   "ui_war",
   "ui_culture",
-  "ui_settle"
+  "ui_settle",
+  "ui_city"
  ],
  "ui_only": [
   "render",
@@ -119,6 +121,8 @@
   "perf": 60,
   "war_events": 150,
   "culture_events": 90,
-  "housing_events": 15
+  "housing_events": 15,
+  "city_events": 90,
+  "ui_city": 40
  }
 }

@@ -3,7 +3,7 @@
    debug.js — diagnostics shared by the UI: error history (kept across page
    loads), a full report you can copy or download, and live performance numbers.
    ========================================================================== */
-const APP_VERSION = '0.32';
+const APP_VERSION = '0.33';
 const ERR_KEY = 'villagesim.errors';
 const DBG = { fps: 0, tps: 0, frameMs: 0, renderMs: 0, restarts: 0, lastRestart: null, session: new Map(), previous: [], watchdog: [], persistAt: 0 };
 

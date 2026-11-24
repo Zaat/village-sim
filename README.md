@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.32 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.33 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,18 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## City structure (new in 0.33)
+- **Land value** (`src/city.js`): every 4x4 tiles gets a value from the pull of the camp, market, plaza, tavern, hall and other services, roads and neighbours, the shore, minus the nuisance of fields, camps, mines and forges. Press **Show land value on the map** in the City card (World tab).
+- **Density follows value:** the dearest ground gets the best style the village knows, the edge keeps log cabins; old homes are rebuilt in place as ground gets dearer, several at a time in a big town.
+- **Redevelopment:** ruins are cleared; bare fields the town has grown around are given up and the farmers plough further out.
+- **Hamlets:** satellite clusters of homes (named by direction) are founded when the close ground fills up or the people like to spread out; each gets a store once it has six homes. Compact, tidy layouts come with strong authority, a martial outlook or danger; looser ones with the opposite.
+- **Desire paths:** villagers' footsteps are counted; the most walked ground is paved and the busiest roads get the best surface first.
+- **Workshops:** a new trade building (own art) in a trade quarter; potters, weavers, smiths, carpenters and other crafts now work there.
+- **Housing diagnosis:** when beds run short the concern now says what is in the way (project cap, no wood or stone, no walkable ground, nobody building). House placement checks reachability with one flood instead of up to 14 searches that could all fail together.
+- **World line and diagnostics:** Settings shows one line (version, seed, map, size, hardship, philosophy, open knowledge, switches, date). Click it to copy; paste a whole line into the Seed box in New world to set all of that. A collapsed Diagnostics section holds a snapshot, and your own choices are kept in a small saved action log.
+- **Fix:** the Concerns list keeps its scroll position when it refreshes and no longer rebuilds every game day while the pointer is over it.
+- Tests: `tests/city_events.js` (24 checks) and `tests/ui_city.js`; probes `tools/probe_city.js` and `tools/probe_house.js`.
 
 ## Settlements, causes of death and housing (new in 0.32)
 - **Click another settlement** on the map (or its name in the World tab) for a full panel: people, temper, strength, treaty and dealings, what they know that we do not (and the reverse), origin and recent history.
