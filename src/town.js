@@ -10,9 +10,9 @@ function makeBp(w, type, x, y, extra) {
   w.bps.push(bp); for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) w.bpAt.set((y + dy) * CFG.W + x + dx, bp);
   return bp;
 }
-function placeBuilding(w, type) {
-  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG;
-  for (let y = w.cy - 36; y <= w.cy + 36; y += L) for (let x = w.cx - 45; x <= w.cx + 45; x += L) {
+function placeBuilding(w, type, wide) {
+  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, k = wide ? 1.9 : 1, dmax = wide ? 74 : 40, pop = w.vills.length;
+  for (let y = w.cy - Math.round(36 * k); y <= w.cy + Math.round(36 * k); y += L) for (let x = w.cx - Math.round(45 * k); x <= w.cx + Math.round(45 * k); x += L) {
     if (x < 2 || y < 2 || x + bw >= W - 2 || y + bh >= H - 2) continue;
     let ok = true;
     for (let dy = 0; dy < bh && ok; dy++) for (let dx = 0; dx < bw; dx++) {
@@ -20,15 +20,16 @@ function placeBuilding(w, type) {
       if (w.terr[i] !== TERR.GRASS || w.feat[i] || w.bmap[i] || w.road[i] || w.bpAt.has(i) || w.claim[i] >= 0) { ok = false; break }
     }
     if (!ok) continue;
-    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5 || d > 40) continue;
-    const score = type === 'house' ? d + w.r() * 2 : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5 || d > dmax) continue;
+    const score = type === 'house' ? d + w.r() * 2 + (pop > 40 ? w.r() * Math.min(10, pop / 12) : 0) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
     cands.push({ x, y, score });
   }
   cands.sort((a, b) => a.score - b.score);
-  for (const c of cands.slice(0, 8)) {
-    const p = w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: bw, h: bh }), 120);   // must be reachable from camp
-    if (p) return makeBp(w, type, c.x, c.y);
+  for (const c of cands.slice(0, wide ? 14 : 8)) {
+    const p = w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: bw, h: bh }), wide ? 320 : 120);   // must be reachable from camp
+    if (p) { if (wide) w.sprawl = (w.sprawl || 0) + 1; return makeBp(w, type, c.x, c.y) }
   }
+  if (!wide && (type === 'house' || type === 'farm' || type === 'store')) { const r = placeBuilding(w, type, true); if (!r && type === 'house') w.noRoom = w.day; return r }   // the close ground is full: look further out, in suburbs and hamlets
   return null;
 }
 /* camps: built beside dense resources once the village has the know-how */

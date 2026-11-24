@@ -41,7 +41,7 @@ function cultureDay(w) {
     for (const x of ad) x.mood = Math.min(100, x.mood + 2);
     w.say('An evening of stories and songs by the fire lifts everyone’s spirits.')
   }
-  C.score = Math.max(0, C.score - 0.05);                                      // traditions need keeping up
+  C.score = Math.max(0, C.score - 0.05 - 0.0011 * C.score);                                      // traditions need keeping up
 }
 
 /* ----- science: culture and curiosity feed research ----- */
@@ -63,7 +63,7 @@ function disasterDay(w) {
   // plague
   const P = C.plague;
   if (!P) {
-    if (w.vills.length >= 30 && w.day >= C.nextPlague && (w.season === 0 || w.season === 2) && R() < 0.004 * (1 + (w.neigh && w.neigh.some(n => n.met && n.tradeCount > 3) ? 0.6 : 0)) * (1 - 0.6 * lesson(w, 'fever') - (w.has('medicine') ? 0.3 : 0))) startPlague(w, C, R);
+    if (w.vills.length >= 30 && w.day >= C.nextPlague && (w.season === 0 || w.season === 2) && R() < 0.007 * (1 + (w.neigh && w.neigh.some(n => n.met && n.tradeCount > 3) ? 0.6 : 0)) * (1 - 0.6 * lesson(w, 'fever') - (w.has('medicine') ? 0.3 : 0))) startPlague(w, C, R);
     return
   }
   plagueDay(w, C, P, R)

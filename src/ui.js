@@ -9,7 +9,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cultCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cultCard', 'deathCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -237,7 +237,7 @@ function updateUI() {
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
-  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups(); renderCulture() }       // only the visible tab is redrawn
+  if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups(); renderCulture(); renderDeaths() }       // only the visible tab is redrawn
   if (curTab === 'stats') renderStats(); if (curTab === 'events') renderTalk(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
   updateInspector(); drawChart();
 }
@@ -315,6 +315,21 @@ function renderOutposts() {
   if (S.log.length) h += `<div class="story" style="margin-top:6px"><div class="hint">Recent</div>${S.log.slice(0, 4).map(x => `<div>${escapeHtml(x)}</div>`).join('')}</div>`;
   el.innerHTML = h;
 }
+function neighPanel(w, n) {
+  const r = Math.round(n.rel || 0), col = r >= 40 ? '#7ad07a' : r >= 12 ? '#b8d070' : r > -12 ? '#d9c26a' : '#e07a5a', kn = Array.isArray(n.knows) ? n.knows.filter(id => TECHS[id]) : null;
+  const ours = Object.keys(w.tech.known), theyOnly = kn ? kn.filter(id => !w.tech.known[id]) : [], weOnly = kn ? ours.filter(id => !kn.includes(id)) : [];
+  const names = a => a.slice(0, 6).map(id => escapeHtml(TECHS[id].name)).join(', ') + (a.length > 6 ? ' and ' + (a.length - 6) + ' more' : '');
+  const ageOf = kn && kn.length ? Math.max(...kn.map(id => TECHS[id].age)) : null;
+  const land = n.reach === 'land', trav = land ? Math.max(1, Math.round(n.dist / 108 * 10) / 10) + ' days on foot' : Math.max(1, Math.round(n.dist / 84 * 10) / 10) + ' days by boat';
+  const temper = n.temper == null ? '—' : n.temper > 0.6 ? 'fierce' : n.temper > 0.35 ? 'proud' : 'peaceable';
+  const rows = [['People', 'about ' + n.pop + (n.pop > w.vills.length ? ' (more than us)' : n.pop < w.vills.length * 0.6 ? ' (fewer than us)' : ' (about as many as us)')], ['Kind', NEIGH_KINDS[n.kind].label], ['Temper', temper], ['Strength', n.strength != null ? Math.round(n.strength) + (w.war && w.settings.raids ? ' fighters, roughly' : '') : '—'], ['Found', 'day ' + (n.foundDay != null ? n.foundDay : '?')], ['Distance', compass(w, n.x, n.y) + ', ' + trav]];
+  const dips = [['Treaty', PACT_NAMES[n.pact || 0]], ['Trades done', n.tradeCount || 0], ['Gifts and aid', n.gifts || 0], ['Favours owed to us', n.owes || 0], ['Raids on us', n.raids || 0]];
+  if (n.grudge > 0.05) dips.push(['Grudge', n.grudge > 0.5 ? 'deep' : 'some']); if (n.tribute > w.day) dips.push(['Paid for peace until', 'day ' + n.tribute]);
+  const knowHtml = kn ? `<div class="hint">Knows ${kn.length} crafts${ageOf != null ? ', as far as the ' + AGES[ageOf] : ''}.</div>${theyOnly.length ? `<div class="hint"><b>They know, we do not:</b> ${names(theyOnly)}</div>` : ''}${weOnly.length ? `<div class="hint"><b>We know, they do not:</b> ${names(weOnly)}</div>` : ''}` : '<div class="hint">What they know is a mystery to us so far.</div>';
+  return `<h3>Settlement</h3><div class="big">${escapeHtml(n.name)}</div><div class="hint">${escapeHtml(NEIGH_KINDS[n.kind].blurb)} Offers ${escapeHtml(NEIGH_PROFILE[n.kind].goods)}.</div>
+    <div class="polh" style="margin-top:6px"><span class="hint">${relLabel(r)} toward us (${r > 0 ? '+' : ''}${r})</span><span class="hint">${PACT_NAMES[n.pact || 0]}</span></div><div class="bar"><i style="background:${col};width:${Math.round((r + 100) / 2)}%"></i></div>
+    ${sec('About', kvs(rows))}${sec('Dealings', kvs(dips))}${sec('Knowledge', knowHtml)}${n.colony ? sec('Origin', `<div class="hint">Founded on day ${n.colony.day} by ${escapeHtml(n.colony.circle)}, who left ${n.colony.mode === 'peace' ? 'in peace' : 'in bitterness'}.</div>`) : ''}${n.hist && n.hist.length ? sec('Recent history', n.hist.slice(0, 8).map(h => `<div class="hint">${escapeHtml(h)}</div>`).join('')) : ''}`;
+}
 function outpostPanel(w, o) {
   const role = OUT_ROLES[o.role], travelling = o.state === 'travelling', share = Math.round(outShare(w, o) * 100);
   const rows = [['Kind', role.label], ['People', travelling ? o.pop + ' on the road' : o.pop + ' (room for ' + o.cap + ')'], ['Stage', travelling ? 'not yet built' : OUT_STAGES[o.stage]], ['Distance', Math.round(outFar(w, o.x, o.y)) + ' tiles ' + (o.mode === 'sea' ? 'by sea' : 'on foot') + ', about ' + o.days + ' days'], ['Led by', escapeHtml(o.leader)], ['Founded', dateText(o.day)]];
@@ -334,13 +349,13 @@ function renderNeigh() {
   if (w.fortifyUntil > w.day) html += `<div class="hint" style="margin-bottom:6px">🛡 The village is on guard for ${w.fortifyUntil - w.day} more days.</div>`;
   html += found.map(n => {
     const r = Math.round(n.rel || 0), col = r >= 40 ? '#7ad07a' : r >= 12 ? '#b8d070' : r > -12 ? '#d9c26a' : '#e07a5a', pct = Math.round((r + 100) / 2);
-    return `<div class="grp"><b>${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span>
+    return `<div class="grp"><b class="nblink" data-nb="${n.id}" style="cursor:pointer;text-decoration:underline dotted" title="Show details">${escapeHtml(n.name)}</b> <span class="hint">${NEIGH_KINDS[n.kind].label} · about ${n.pop} people</span>
       <div class="polh" style="margin-top:3px"><span class="hint">${relLabel(r)} (${r > 0 ? '+' : ''}${r})</span><span class="hint">${PACT_NAMES[n.pact || 0]}</span></div><div class="bar"><i style="background:${col};width:${pct}%"></i></div>
       <div class="hint">${compass(w, n.x, n.y)} · ${n.reach === 'land' ? Math.max(1, Math.round(n.dist / 108 * 10) / 10) + ' day' + (n.dist > 140 ? 's' : '') + ' on foot' : Math.max(1, Math.round(n.dist / 84 * 10) / 10) + ' day' + (n.dist > 100 ? 's' : '') + ' by boat'} · offers ${escapeHtml(NEIGH_PROFILE[n.kind].goods)}</div>
       ${n.colony ? `<div class="hint">Founded on day ${n.colony.day} by ${escapeHtml(n.colony.circle)}, who left ${n.colony.mode === 'peace' ? 'in peace' : 'in bitterness'}.</div>` : ''}${n.tribute > w.day ? `<div class="hint">Paid for peace until day ${n.tribute}</div>` : ''}${n.hist && n.hist[0] ? `<div class="hint">${escapeHtml(n.hist[0])}</div>` : ''}</div>`;
   }).join('');
   html += left ? `<div class="hint" style="margin-top:6px">${left} more land${left > 1 ? 's' : ''} may lie in the mist.${w.neigh.some(n => !n.found && n.reach === 'navigation') && !w.has('navigation') ? ' The farthest need better navigation.' : ''}</div>` : '';
-  el.innerHTML = html;
+  el.innerHTML = html; el.onclick = e => { const b = e.target.closest('[data-nb]'); if (!b) return; const nb = w.neigh.find(x => String(x.id) === b.dataset.nb); if (nb) { selected = nb; showTab('village'); updateUI() } };
 }
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
 function renderWar() {
@@ -360,6 +375,25 @@ function renderWar() {
     if (W.battles.length) html += `<div style="margin-top:6px">${W.battles.slice(0, 5).map(b => `<div class="hint">Day ${b.d}: ${b.kind === 'campaign' ? 'campaign against' : b.kind === 'outpost' ? (b.at ? escapeHtml(b.at) + ' against' : 'outpost against') : 'raid by'} ${escapeHtml(b.foe)} · <b>${b.outcome}</b> · lost ${b.lostOurs || 0}, enemy ${b.lostTheirs || 0}</div>`).join('')}</div>`;
   }
   el.innerHTML = html;
+}
+function renderDeaths() {
+  const w = world, el = $('deathCard'); if (!el) return;
+  const all = {}; for (const why in w.causes) { const k = deathKey(why); all[k] = (all[k] || 0) + w.causes[why] }
+  const total = Object.values(all).reduce((a, b) => a + b, 0);
+  if (!total) { el.innerHTML = '<div class="hint">Nobody has died yet. When they do, the causes are tallied here so you can see what to prepare for.</div>'; return }
+  const yr = w.year, cur = w.dyr[yr] || {}, prev = w.dyr[yr - 1] || {}, keys = Object.keys(DEATH_KINDS).sort((a, b) => (all[b] || 0) - (all[a] || 0)), sum = o => keys.reduce((a, k) => a + (o[k] || 0), 0);
+  const mx = Math.max(1, ...keys.map(k => all[k] || 0));
+  let h = `<div class="polh"><span class="hint"><b>${total}</b> deaths in all</span><span class="hint">this year ${sum(cur)} · last year ${sum(prev)}</span></div>
+    <div class="dgrid"><span class="hint"></span><span class="hint"></span><span class="hint dn">all</span><span class="hint dn">this yr</span><span class="hint dn">last yr</span>`;
+  for (const k of keys) { const D = DEATH_KINDS[k], n = all[k] || 0; if (!n && !(cur[k] || prev[k])) continue;
+    h += `<span style="color:${D.col}">${D.label}</span><div class="bar" style="margin:6px 0"><i style="background:${D.col};width:${Math.round(n / mx * 100)}%"></i></div><b class="dn">${n} <span class="hint">${Math.round(n / total * 100)}%</span></b><b class="dn">${cur[k] || 0}</b><b class="dn">${prev[k] || 0}</b>` }
+  h += '</div>';
+  const grp = { child: 0, adult: 0, elder: 0 }; for (const y in w.dyr) for (const g in grp) grp[g] += w.dyr[y][g] || 0;
+  if (grp.child + grp.adult + grp.elder) h += `<div class="hint" style="margin-top:2px">Recorded by age: ${grp.child} children · ${grp.adult} adults · ${grp.elder} elders</div>`;
+  const worry = keys.find(k => k !== 'age' && ((cur[k] || 0) + (prev[k] || 0)) >= 2) || keys.find(k => k !== 'age' && (all[k] || 0) >= 3);
+  if (worry) h += `<div class="cn" style="margin-top:6px"><b>${DEATH_KINDS[worry].label} is the main preventable cause.</b> <span class="hint">${DEATH_KINDS[worry].tip}</span></div>`;
+  if (w.dlog.length) h += `<details style="margin-top:6px"${w.deathOpen ? ' open' : ''} ontoggle="world.deathOpen=this.open"><summary class="hint">Recent deaths</summary>${w.dlog.slice(0, 10).map(d => `<div class="hint"><span style="color:${DEATH_KINDS[d.k].col}">●</span> ${escapeHtml(d.name)}, ${d.age} · ${DEATH_KINDS[d.k].label.toLowerCase()} · ${cnYear(d.day)}</div>`).join('')}</details>`;
+  el.innerHTML = h;
 }
 function renderCulture() {
   const w = world, el = $('cultCard'), C = w.cul; if (!C) { el.innerHTML = '<div class="hint">Weddings, funerals and shared stories will build a culture here.</div>'; return }
@@ -567,6 +601,8 @@ function updateInspector() {
       ${sec('Details', kvs([['Sex', s.sex === 'm' ? 'Male' : 'Female'], s.born !== undefined ? ['Age', ageYears(w.day - s.born)] : null, ['Doing', s.moving ? (s.target ? 'Hunting or fleeing' : 'Roaming') : 'Resting'], ['Position', `${Math.round(s.x)}, ${Math.round(s.y)}`], s.kind === 'wolf' ? ['Pack nearby', pack] : null, ['Villagers near', near.length]]))}`;
   } else if (s && s.role && s.loyalty !== undefined && s.state) {
     el.innerHTML = outpostPanel(w, s);
+  } else if (s && s.kind && typeof NEIGH_KINDS !== 'undefined' && NEIGH_KINDS[s.kind] && s.rel !== undefined && s.found) {
+    el.innerHTML = neighPanel(w, s);
   } else if (s && s.type && s.w) {
     let extra = ''; if (s.type === 'house') extra = `Sleeps ${s.occ.length} of ${bedsOf(s)}: ${s.occ.map(nameOf).filter(Boolean).join(', ') || 'empty'}`;
     if (s.type === 'market') extra = 'Where visiting merchants trade. Surplus goods are sold and shortages bought; the council decides how to deal with each visit.';
@@ -613,6 +649,7 @@ function pick(sx, sy) {
   for (const v of world.vills) { const d = Math.hypot(v.x * T - p.x, v.y * T - 6 - p.y); if (d < bd) { bd = d; best = v } }
   for (const a of world.animals) if (a.alive) { const d = Math.hypot(a.x * T - p.x, a.y * T - 5 - p.y); if (d < bd) { bd = d; best = a } }
   if (!best && world.out) for (const o of world.out.list) if (o.state === 'active') { const d = Math.hypot(o.x * T + 8 - p.x, o.y * T + 4 - p.y); if (d < Math.max(34, 30 / R.cam.z)) { best = o; break } }
+  if (!best && world.neigh) for (const n of world.neigh) if (n.found) { const d = Math.hypot(n.x * T + 8 - p.x, n.y * T + 8 - p.y); if (d < Math.max(5 * T, 30 / R.cam.z)) { best = n; break } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
   if (best !== selected) voiceUnpin(); selected = best; if (!best) follow = false; else showTab('village'); updateUI();
 }

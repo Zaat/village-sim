@@ -22,7 +22,7 @@ class World {
     this.regrow = []; this.young = []; this.wet = 0; this.log = []; this.hist = []; this.listeners = []; this.connected = new Set();
     this.vills = []; this.animals = []; this.nextId = 1; this.tick = 0; this.rel = new Map();
     this.stock = { ...CFG.START_STOCK }; if (this.settings.survival) for (const k in this.stock) this.stock[k] = Math.floor(this.stock[k] * 0.6); this.inbound = { wood: 0, stone: 0, food: 0 };
-    this.nameUse = 0; this.births = 0; this.deaths = 0; this.causes = {};
+    this.nameUse = 0; this.births = 0; this.deaths = 0; this.causes = {}; this.dlog = []; this.dyr = {};
     this.harsh = false; this.drought = false; this.cold = false; this.festival = false; this.fishOK = false;
     this.gen(); for (let i = 0; i < N; i++) if (this.terr[i] === TERR.DEEP) this.fish[i] = CFG.FISH_DEEP;
     this.spawn();
@@ -270,7 +270,7 @@ class World {
   }
   kill(v, why) {
     try { onChiefDeath(this, v) } catch (e) { this.fault('succession', e) }
-    v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; noteFlow(this, 'died'); this.causes[why] = (this.causes[why] || 0) + 1;
+    v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; noteFlow(this, 'died'); this.causes[why] = (this.causes[why] || 0) + 1; try { noteDeath(this, v, why) } catch (e) { this.fault('deathlog', e) }
     for (const h of this.houses()) { const k = h.occ.indexOf(v.id); if (k >= 0) h.occ.splice(k, 1) }
     const grieve = (id, d, days, txt) => { const o = this.vills.find(x => x.id === id); if (o) { o.mournUntil = this.tick + CFG.TPD * days; o.mood = Math.max(0, o.mood - d); o.story(txt); experience(o, 'loss', d / 20) } };
     if (v.partner != null) { const p = this.vills.find(x => x.id === v.partner); if (p) p.partner = null; grieve(v.partner, 25, 6, `Lost ${v.name}, their partner.`) }

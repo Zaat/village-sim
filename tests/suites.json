@@ -25,7 +25,8 @@
   "voices_events",
   "war_events",
   "culture_events",
-  "perf"
+  "perf",
+  "housing_events"
  ],
  "first": [
   "save",
@@ -44,7 +45,8 @@
   "ui_voices",
   "concerns_ui",
   "ui_war",
-  "ui_culture"
+  "ui_culture",
+  "ui_settle"
  ],
  "ui_only": [
   "render",
@@ -116,6 +118,7 @@
   "concerns_events": 47,
   "perf": 60,
   "war_events": 150,
-  "culture_events": 90
+  "culture_events": 90,
+  "housing_events": 15
  }
 }

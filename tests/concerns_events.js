@@ -22,7 +22,7 @@ ok(ctx.respond(w,'hands_food')&&ctx.ordersOf(w).food,'extra hands order takes ef
  const lb=w3.vills.filter(v=>v.role==='woodcutter').length;ctx.respond(w3,'hands_fuel');ctx.assignRoles(w3);ok(w3.vills.filter(v=>v.role==='woodcutter').length>=lb,'firewood order does not reduce woodcutters');}
 w.stock.food=w.vills.length*8;w.stock.wood=200;const f0=w.stock.food;ok(ctx.respond(w,'feast'),'feast can be held');ok(w.stock.food<f0&&w.forceFeast,'feast costs food and calls a feast');
 // 3. resolves once the problem is gone
-w.stock.food=w.vills.length*8;nextDay(w);nextDay(w);nextDay(w);nextDay(w);ok(!C.list.some(c=>c.key==='food'),'food concern resolves');ok(C.hist.some(h=>h.key==='food'),'resolved concern goes into history');
+C.snap=[{d:w.day-20,c:{...w.causes}}];w.stock.food=w.vills.length*8;nextDay(w);nextDay(w);nextDay(w);nextDay(w);ok(!C.list.some(c=>c.key==='food'),'food concern resolves');ok(C.hist.some(h=>h.key==='food'),'resolved concern goes into history');
 // 4. population fall
 const before=w.vills.length;const gone=w.vills.slice(0,Math.ceil(before*0.45));for(const v of gone)w.kill(v,'was killed by a wolf');nextDay(w);
 const pf=C.list.find(c=>c.key==='pop_fall');ok(pf&&pf.sev===2,'critical population fall raised ('+(pf&&pf.text)+')');ok(pf&&/death/.test(pf.why),'population fall names deaths: '+(pf&&pf.why));

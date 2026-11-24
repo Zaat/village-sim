@@ -95,5 +95,6 @@ function renderConcerns(force) {
   const fresh = C.hist.filter(h => w.day - h.end <= 16).map(h => `<div class="cn done"><b>✓ ${escapeHtml(h.title)}</b> <span class="hint">resolved day ${h.end}${h.did && h.did.length ? ' · tried: ' + escapeHtml(h.did.join(', ').toLowerCase()) : ''}</span></div>`).join(''), hist = C.hist.slice(0, 8).map(h => `<div class="hint">${cnYear(h.end)}: ${escapeHtml(h.title.toLowerCase())} eased (since day ${h.since})</div>`).join('');
   $('cnBody').innerHTML = (cnUI.note ? `<div class="cnnote">${escapeHtml(cnUI.note)}</div>` : '') + ordersLine(w)
     + (list.length ? list.sort((a, b) => b.sev - a.sev || a.since - b.since).map(c => concernHtml(w, c)).join('') : '<div class="hint" style="padding:6px 0">Nothing worries the village right now. It watches its population, food and firewood, and the unity of its people and outposts.</div>')
-    + fresh + (hist ? `<details style="margin-top:8px"><summary class="hint">Recently eased</summary>${hist}</details>` : '');
+    + fresh + (hist ? `<details id="cnHist" style="margin-top:8px"${cnUI.histOpen ? ' open' : ''}><summary class="hint">Recently eased</summary>${hist}</details>` : '');
+  const hd = $('cnHist'); if (hd) hd.ontoggle = () => { cnUI.histOpen = hd.open };
 }

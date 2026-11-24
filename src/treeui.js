@@ -45,7 +45,7 @@ function renderTree() {
     <div class="hint"><b>Gives:</b> ${U.gives.map(escapeHtml).join(' · ')}</div>${U.needs.length ? `<div class="hint"><b>Needs:</b> ${U.needs.map(g => (GATES[g].ok(w) ? '✓ ' : '✗ ') + GATES[g].name).join(', ')}</div>` : ''}
     <div class="hint"><b>Builds on:</b> ${T.req.length ? T.req.map(r => (t.known[r] ? '✓ ' : '✗ ') + TECHS[r].name).join(', ') : 'nothing'}${st === 'l' && T.age > villageAge(w) ? ' · waits for the ' + AGES[T.age] : ''}</div>`;
 }
-function treeOpen() { treeSel = null; $('tree').style.display = 'flex'; renderTree() }
+function treeOpen() { treeSel = null; $('tree').style.display = 'flex'; renderTree(); const sc = $('treeSvg'); if (sc) { sc.scrollLeft = 0; sc.scrollTop = 0 } $('tree').scrollTop = 0 }
 function treeClose() { $('tree').style.display = 'none' }
 $('treeSvg').addEventListener('click', e => { const g = e.target.closest('[data-tid]'); treeSel = g ? (treeSel === g.dataset.tid ? null : g.dataset.tid) : null; renderTree() });
 $('treeInfo').addEventListener('click', e => { const b = e.target.closest('[data-grant]'); if (b) { grantTech(world, b.dataset.grant); renderTree(); renderTech() } });

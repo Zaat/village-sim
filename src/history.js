@@ -61,3 +61,22 @@ function lessonNeed(w, id) {
   const L = k => lesson(w, k);
   return ({ granary: 0.4 * L('famine'), rotation: 0.4 * L('famine'), nets: 0.25 * L('famine'), masonry: 0.3 * L('fire'), carpentry: 0.15 * L('storm'), medicine: 0.45 * L('fever'), watchtowers: 0.4 * L('wolves') + 0.35 * L('raids'), ironwork: 0.15 * L('wolves') + 0.2 * L('raids'), forestry: 0.3 * L('cold'), tools: 0.1 * L('cold') })[id] || 0;
 }
+
+/* ---- causes of death (v0.32): every death is logged with a plain cause, the year and the age group, so the player can see what is killing people ---- */
+const DEATH_KINDS = {
+  age: { label: 'Old age', col: '#9aa5ae', tip: 'A natural end. Better health care and food let people live longer.' },
+  starved: { label: 'Hunger', col: '#e0a458', tip: 'Build more farms and storehouses, keep a larger food reserve, send hands to the fields.' },
+  cold: { label: 'Cold', col: '#6a8fd0', tip: 'Stock firewood before winter and build enough warm homes; warmer clothes and fuel tech help.' },
+  wolf: { label: 'Wolves', col: '#b8896a', tip: 'Raise the watch, hunt the packs and keep children close to the village.' },
+  fever: { label: 'Illness', col: '#c678dd', tip: 'Medicine, clean water and quarantine slow plague and fever.' },
+  sea: { label: 'The sea', col: '#4fa3c7', tip: 'Fewer voyages in storm seasons and better ships and navigation.' },
+  fight: { label: 'Fighting', col: '#e07a6a', tip: 'Raids, war and unrest: soldiers, watchtowers, treaties and a calmer council.' }
+};
+function deathKey(why) {
+  return /old age/.test(why) ? 'age' : /starv/.test(why) ? 'starved' : /froze/.test(why) ? 'cold' : /wolf/.test(why) ? 'wolf' : /fever|plague|sick/.test(why) ? 'fever' : /sea/.test(why) ? 'sea' : /raid|battle|unrest/.test(why) ? 'fight' : 'age';
+}
+function noteDeath(w, v, why) {
+  const k = deathKey(why), y = w.year, g = v.isChild() ? 'child' : v.isElder() ? 'elder' : 'adult';
+  const Y = (w.dyr[y] = w.dyr[y] || {}); Y[k] = (Y[k] || 0) + 1; Y[g] = (Y[g] || 0) + 1;
+  w.dlog.unshift({ day: w.day, name: v.name, age: Math.floor(v.age / (CFG.DPS * 4)), k, g }); if (w.dlog.length > 40) w.dlog.length = 40;
+}

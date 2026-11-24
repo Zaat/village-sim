@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.31 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code, a deterministic seeded simulation, plain script tags: no build step, no dependencies.<br><sub>v0.32 · <a href="CHANGELOG.md">Changelog</a> · open <code>index.html</code> to play</sub></p>
 
 <p align="center"><img src="docs/screenshots/v0.24-feature.png" width="860" alt="The ages panel in v0.24"></p>
 
@@ -32,6 +32,13 @@ The optional **Claude counsel** (right panel) only works on the published page, 
 ## Trade, money and taxes (new in 0.6)
 - **Trade** research lets the council build a **market** (stalls, a coin sign, a merchant wagon on caravan days). Prices rise with scarcity of wood, stone and food. Caravans arrive every 5–9 days; with **Sea trade** and a dock, trading ships come too. The council (or Claude counsel, if on) decides how much to sell or buy.
 - Before **Coinage** trades are barter; after it, the village keeps a **treasury** funded by a tax whose rate follows the Taxes policy (10–40%), and villagers earn, save and buy fine goods that lift mood. Wealth feeds opinions on taxes and can drive crime. See the Trade & treasury card.
+
+## Settlements, causes of death and housing (new in 0.32)
+- **Click another settlement** on the map (or its name in the World tab) for a full panel: people, temper, strength, treaty and dealings, what they know that we do not (and the reverse), origin and recent history.
+- **Causes of death** card in the Society tab: totals by cause with bars, this year against last year, age groups, the main preventable cause with advice, and the most recent deaths.
+- **Housing:** when the ground near the village is full, new homes are now sited further out (suburbs and hamlets, up to about 74 tiles) and the Housing concern says so. Larger villages spread their homes more.
+- **Fixes:** the tree of knowledge window now fits the stage on small screens; "Recently eased" in Concerns stays open; culture no longer saturates at 100; plague is a little more likely.
+- Tests: `tests/ui_settle.js` and `tests/housing_events.js`.
 
 ## Society depth (new in 0.31)
 - **Culture (`src/culture.js`):** weddings (a couple holds one feast), funerals (the village gathers for the dead and eases mourning) and winter story nights lift moods and build a slow 0-100 culture score that needs keeping up. Culture and curious minds, plus a library, add a little to the research in hand.

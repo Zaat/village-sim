@@ -99,7 +99,7 @@ function housingRules(w, C, found) {
   const ad = Math.max(1, w.vills.filter(v => v.isAdult()).length), out = P.out, crowd = P.crowd, winter = w.season === 3;
   const sev = out >= Math.max(4, ad * 0.12) && winter ? 2 : out >= Math.max(3, ad * 0.08) || crowd >= ad * 0.3 ? 1 : 0; if (!sev) return;
   found.push({ key: 'housing', sev, text: out >= 3 ? `${out} people have no bed of their own${winter ? ' and are sleeping in the cold' : ''}.` : `${crowd} people are sharing a roof against their nature.`,
-    why: `${w.beds()} beds for ${w.vills.length} people${crowd ? '; ' + crowd + ' are crowded in with people they would rather not live with' : ''}${w.bps.some(b => b.type === 'house') ? '; new homes are being built' : ''}.`, m: { v: ad - out, ok: ad, bad: ad * 0.8 }, fix: ['hands_build', 'allhands'] });
+    why: `${w.beds()} beds for ${w.vills.length} people${crowd ? '; ' + crowd + ' are crowded in with people they would rather not live with' : ''}${w.bps.some(b => b.type === 'house') ? '; new homes are being built' : ''}${w.noRoom != null && w.day - w.noRoom < 12 ? '; there is hardly any free, reachable ground left near the village for more homes' : w.sprawl ? '; homes are now going up further out' : ''}.`, m: { v: ad - out, ok: ad, bad: ad * 0.8 }, fix: ['hands_build', 'allhands'] });
 }
 function unityRules(w, C, found) {
   const R = w.regime, S = w.strife; if (!R || w.vills.length < 14) return;
