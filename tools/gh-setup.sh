@@ -31,7 +31,6 @@ grep '^mk ' tools/make-releases.sh | while IFS= read -r line; do
     n=$(gh api "repos/$R/milestones?state=open&per_page=100" --jq ".[] | select(.title==\"$t\") | .number") && \
     [ -n "$n" ] && gh api -X PATCH "repos/$R/milestones/$n" -f state=closed >/dev/null
 done
-ms "v0.33.1 Housing demand" open "Home building follows crowding; lifespans measurement."
 ms "v0.34 Crowds" open "Metropolis scale: focus villagers plus aggregate residents, budgets at 300, 1000, 3000."
 ms "v0.35 Control and mobile" open "Controls, mobile layout, date display panel."
 ms "v0.36 Look and polish" open "Visual polish, Events tab redesign."
@@ -62,7 +61,7 @@ iss "Population plateaus at 150 to 200 with beds to spare" "sim,high" "v0.34 Cro
 iss "Housing stuck at 54 homes in Albert's run" "sim,needs-data" "" open "Not reproduced on seed 351323045. v0.33 adds the housing funnel ('why no house was placed') to Concerns and Diagnostics. Paste the world line and the Diagnostics text from the stuck run here."
 iss "Built-in diagnostics: study the best examples" "ui,design,medium" "" open "First form shipped in v0.33 (world line, Diagnostics section, action log). Study how the best games do it before extending (report buttons, state dumps, replay seeds)."
 
-iss "Not enough homes concern never clears and homes stay flat then jump" "sim,medium" "v0.33.1 Housing demand" open "The concern comes from the privacy model (people with no bed of their own, or sharing a roof against their nature) but planTown only compares beds with population. Measured on seed 351323045: the concern is on 32 of 32 days in years 1 and 2 with 28 beds for 19 villagers; in 30 years homes stay at 40 for years 6 to 12 then step to 46 and 58. Fix: demand follows crowding and people without a bed, smoother build-ahead target."
+iss "Not enough homes concern never clears and homes stay flat then jump" "sim,medium" "v0.34 Crowds" open "The concern comes from the privacy model (people with no bed of their own, or sharing a roof against their nature) but planTown only compares beds with population. Measured on seed 351323045: the concern is on 32 of 32 days in years 1 and 2 with 28 beds for 19 villagers; in 30 years homes stay at 40 for years 6 to 12 then step to 46 and 58. Fix: demand follows crowding and people without a bed, smoother build-ahead target."
 
 # closed (retroactive)
 iss "Causes of death card" "ui,done" "$M32" closed "Shipped in v0.32."
