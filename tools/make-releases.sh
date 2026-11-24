@@ -2,7 +2,7 @@
 # Creates one GitHub Release per version from docs/releases/*.md (needs gh, run from repo root).
 # Tags point at the commit in tools/release-commits.txt; edit it if a tag should move.
 set -e
-R=Zaat/village-claudia
+R=Zaat/village-sim
 # Safe to run any time: versions that already have a release are skipped.
 have=$(gh release list --repo $R --limit 200 --json tagName -q '.[].tagName')
 mk() { if echo "$have" | grep -qx "$1"; then echo "skip $1 (exists)"; else gh release create "$@"; fi; }

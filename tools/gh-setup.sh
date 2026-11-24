@@ -3,7 +3,7 @@
 # Run on the Mac inside a clone of the repo:  bash tools/gh-setup.sh
 # Needs gh logged in with repo scope. Skips anything that already exists.
 set -u
-R=Zaat/village-claudia
+R=Zaat/village-sim
 BASE="https://github.com/$R/blob/main/docs/releases"
 
 label() { gh label create "$1" -R $R --color "$2" --description "$3" --force >/dev/null 2>&1 && echo "label $1"; }
