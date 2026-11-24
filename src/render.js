@@ -427,6 +427,7 @@ function render(w, sel, now) {
   }
   if (sel instanceof Villager && sel.alive && sel.path.length) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sel.x * T, sel.y * T); for (const p of sel.path) g.lineTo((p % W + .5) * T, ((p / W | 0) + .5) * T); g.stroke() }
   if (sel && sel.type && sel.w) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T - .5, sel.y * T - .5, sel.w * T + 1, sel.h * T + 1); if (sel.maxHp) { const pr = Math.max(0, sel.hp / sel.maxHp); rc(g, 'rgba(0,0,0,.7)', sel.x * T, sel.y * T - 6, sel.w * T, 4); rc(g, conditionColor(sel), sel.x * T + 1, sel.y * T - 5, Math.round((sel.w * T - 2) * pr), 2) } }
+  if (w.play && w.play.on && typeof playDraw === 'function') playDraw(g, w, now);
   if (w.festival) bunting(g, w, now);
   if (w.fog && w.seen) { updateFog(w); g.imageSmoothingEnabled = true; g.drawImage(R.fog, 0, 0, W * T, H * T); g.imageSmoothingEnabled = false }      // unexplored lands and sea stay in the mist, covering everything beneath
   if (w.neigh) for (const n of w.neigh) if (n.found && Math.abs(n.x * T - c.x) < R.vw / z && Math.abs(n.y * T - c.y) < R.vh / z) neighLabel(g, n);

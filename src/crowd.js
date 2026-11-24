@@ -52,7 +52,7 @@ function flow(C, key, x) { const a = C.acc[key] = (C.acc[key] || 0) + x, n = Mat
 function crowdPeople(w, C) {
   // the crowd has children at the pace the villagers in play show: births per fertile adult per day, smoothed over about ten days
   const fert = w.vills.filter(v => v.isAdult() && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)).length, ab = w.abirths || 0, db = ab - (C.seenB || 0); C.seenB = ab; C.rate = (C.rate || 0.011) * 0.9 + (db / Math.max(4, fert)) * 0.1;
-  const ls = w.lifeScale || 1, gp = w.gov && w.gov.policy ? w.gov.policy.growth : 0, pop = w.pop;
+  const ls = (w.lifeScale || 1) * CFG.LIFE_BASE, gp = w.gov && w.gov.policy ? w.gov.policy.growth : 0, pop = w.pop;
   // growing up and growing old
   const up = Math.min(C.kids, flow(C, 'up', C.kids / (CFG.ADULT_DAYS * ls)));
   const old = Math.min(C.adults, flow(C, 'old', C.adults / ((CFG.ELDER_DAYS - CFG.ADULT_DAYS) * ls)));
@@ -60,7 +60,7 @@ function crowdPeople(w, C) {
   // deaths: old age, ordinary sickness and accidents, and hunger when the stores are bare
   const hungry = w.stock.food <= 0 ? 1 : 0, dE = Math.min(C.elders, flow(C, 'de', C.elders / (45 * ls))), dA = Math.min(C.adults, flow(C, 'da', C.adults * 0.0012 + hungry * C.adults * 0.03)), dK = Math.min(C.kids, flow(C, 'dk', C.kids * 0.0015 + hungry * C.kids * 0.04));
   C.elders -= dE; C.adults -= dA; C.kids -= dK;
-  const dead = dE + dA + dK; C.died += dead; w.deaths += dead; if (dead) noteFlow(w, 'died', dead);
+  const dead = dE + dA + dK; C.died += dead; w.deaths += dead; if (dead) { noteFlow(w, 'died', dead); statCount(w, 'died', dead); if (dE) statCount(w, 'died_age', dE); if (dA + dK) statCount(w, hungry ? 'died_hunger' : 'died_fever', dA + dK) }
   const Y = (w.dyr[w.year] = w.dyr[w.year] || {});
   const mark = (k, g, n) => { if (!n) return; w.causes[k] = (w.causes[k] || 0) + n; const dk = deathKey(k); Y[dk] = (Y[dk] || 0) + n; Y[g] = (Y[g] || 0) + n };
   mark('passed away peacefully of old age', 'elder', dE); mark(hungry ? 'starved' : 'succumbed to the fever', 'adult', dA); mark(hungry ? 'starved' : 'succumbed to the fever', 'child', dK);
@@ -69,7 +69,7 @@ function crowdPeople(w, C) {
   if (pop + 1 <= w.beds() && w.stock.food >= pop * 3.5 * (1 - 0.25 * gp) * (w.settings.survival ? 1.3 : 1)) {
     born = Math.min(flow(C, 'born', (C.adults + 0.1 * C.elders) * (C.rate || 0.011)), Math.max(0, w.beds() - pop));
   }
-  C.kids += born; C.born += born; w.births += born; if (born) noteFlow(w, 'born', born);
+  C.kids += born; C.born += born; w.births += born; if (born) { noteFlow(w, 'born', born); statCount(w, 'born', born) }
   C.n = C.kids + C.adults + C.elders;
 }
 
@@ -80,9 +80,10 @@ function crowdWork(w, C) {
   const cover = w.stock.food / Math.max(1, pop);
   let fs = cover < 4 ? 0.62 : cover < 8 ? 0.45 : cover < 14 ? 0.3 : 0.18;
   const fieldHands = Math.max(0, farms * 5 - w.vills.filter(v => v.role === 'farmer').length);
-  const food = Math.min(hands * fs, fieldHands);
-  const wood = hands * (0.12 + (w.stock.wood < pop * 3 ? 0.1 : 0) + (s === 2 ? 0.06 : 0)) * (w.trees < 40 ? 0.3 : 1);
-  const stone = hands * (w.stock.stone < 10 + pop * 0.4 ? 0.09 : 0.04);
+  const sh = w.play && w.play.share;                                   // Play: the player splits the crowd's hands
+  const food = sh ? Math.min(hands * sh.food, fieldHands) : Math.min(hands * fs, fieldHands);
+  const wood = sh ? hands * sh.wood * (w.trees < 40 ? 0.3 : 1) : hands * (0.12 + (w.stock.wood < pop * 3 ? 0.1 : 0) + (s === 2 ? 0.06 : 0)) * (w.trees < 40 ? 0.3 : 1);
+  const stone = sh ? hands * sh.stone : hands * (w.stock.stone < 10 + pop * 0.4 ? 0.09 : 0.04);
   const serve = Math.max(0, hands - food - wood - stone);
   const tech = 1 + 0.1 * ['plow', 'rotation', 'crop3', 'orchards', 'agronomy'].filter(t => w.has(t)).length;
   const seasonal = winter ? 0.25 : s === 2 ? 1.5 : s === 1 ? 1.1 : 0.9;

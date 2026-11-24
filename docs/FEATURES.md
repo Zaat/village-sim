@@ -294,6 +294,14 @@ Open the **Diagnostics** panel (it shows ok / slow / N errors). It lists actual 
 
 Safety nets: every subsystem and every villager/animal update is isolated, so one bug is logged and skipped instead of stopping the village; a villager that keeps failing is removed. A daily self-check repairs corrupted numbers and frees villagers who have stopped making progress. A watchdog restarts a stalled frame loop and, if the village stops advancing, resets all jobs and then reloads the last autosave. The page also **resumes your saved village automatically** when it opens (switchable).
 
+## Play (v0.35)
+- **Watch / Play:** Watch is the village on its own. Play adds a toolbar: Select, Build, Road, Zone, Research, Crowd and three "Village plans" switches (Buildings, Research, Jobs).
+- **Orders:** pick villagers (click, Shift-click, Shift-drag a box) and right-click a tree, rock, berry bush, building site or damaged building. On touch, tap the place and press the order button in the inspector, or press and hold for a menu. A plain click or tap only selects.
+- **Building:** a footprint follows the pointer, green or red with the reason. Player sites are built first. Roads are dragged. Zones (homes, farms, work, civic) are painted and steer where the village builds. Sites can be cancelled before work starts.
+- **Control:** the player picks research; each of buildings, research and jobs can be switched from "the village plans it" to "I do". The Crowd panel sets how the crowd splits its work.
+- **Lives and game over:** villagers live about 8 to 12 years. A village with nobody left, or fewer than five people for a month, ends with a summary and a choice to carry on, restart the seed or start anew.
+- **Menu:** Resume, New world, Save, Load, Settings, How to play, About (version, news, links, a report button), and a first-visit welcome.
+
 ## Performance and stability notes
 - A long run (500 simulated days, 160+ villagers) completes with no errors. The year-12 freeze was an infinite loop in the naming of social circles (a sixth circle with the same base name never found a unique suffix). It is fixed, and every loop in the code is now bounded or provably terminating.
 - Pathfinding failures were the main cost; fields and game that cannot be reached are now skipped before searching, and wildlife uses a spatial grid. Roughly 3x faster at 70+ villagers.

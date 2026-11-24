@@ -37,7 +37,7 @@ const STAT_SERIES = [
   { id: 'adults', label: 'Adults', group: 'People', get: w => w.vills.filter(v => v.isAdult() && !v.isElder()).length },
   { id: 'elders', label: 'Elders', group: 'People', get: w => w.vills.filter(v => v.isElder()).length },
   { id: 'young', label: 'Children and youths', group: 'People', get: w => w.vills.filter(v => !v.isAdult()).length },
-  { id: 'age', label: 'Average age (years)', group: 'People', get: w => w.vills.length ? w.vills.reduce((s, v) => s + v.age, 0) / w.vills.length / CFG.DPS / 4 : 0 },
+  { id: 'age', label: 'Average age (years)', group: 'People', get: w => w.vills.length ? w.vills.reduce((s, v) => s + v.age, 0) / w.vills.length * CFG.LIFE_BASE / CFG.DPS / 4 : 0 },
   { id: 'births', label: 'Births per 4 days', group: 'People', delta: 'born' },
   { id: 'deaths', label: 'Deaths per 4 days', group: 'People', delta: 'died' },
   { id: 'food', label: 'Food stock', group: 'Resources', get: w => w.stock.food },

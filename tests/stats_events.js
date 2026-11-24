@@ -14,7 +14,7 @@ const causes=['died_age','died_hunger','died_cold','died_fever','died_wolf','die
 const yr=S.ev.died.y.reduce((a,b)=>a+b,0);ok(yr===S.ev.died.n,'yearly columns add up to the total');
 console.log('events:',ctx.STAT_EVENTS.map(e=>(S.ev[e.key]?e.key+'='+S.ev[e.key].n:null)).filter(Boolean).join(' '));
 console.log('never seen:',ctx.STAT_EVENTS.filter(e=>!S.ev[e.key]).map(e=>e.key).join(' '));
-const sm=ctx.statsSummary(w);ok(sm.pop===w.vills.length||Math.abs(sm.pop-w.vills.length)<10,'summary pop');ok(Object.values(sm).every(v=>Number.isFinite(v)),'summary numbers are finite');
+const sm=ctx.statsSummary(w);ok(Math.abs(sm.pop-w.pop)<10,'summary pop');ok(Object.values(sm).every(v=>Number.isFinite(v)),'summary numbers are finite');
 const csv=ctx.statsCSV(w);ok(csv.split('\n').length>S.days.length,'csv has rows');ok(csv.startsWith('day,year,pop'),'csv header');
 ok(ctx.statsRecords(w).length>=6,'records: '+ctx.statsRecords(w).length);ok(ctx.evRate(w,'born',3)>0,'rate of births');
 const d=ctx.serializeWorld(w);const w2=ctx.deserializeWorld(JSON.parse(JSON.stringify(d)));ok(ctx.ST(w2).days.length===S.days.length&&ctx.evTotal(w2,'died')===ctx.evTotal(w,'died'),'stats survive save/load');

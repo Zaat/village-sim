@@ -28,7 +28,9 @@
   "perf",
   "housing_events",
   "city_events",
-  "crowd_events"
+  "crowd_events",
+  "play_events",
+  "gameover_events"
  ],
  "first": [
   "save",
@@ -50,7 +52,10 @@
   "ui_culture",
   "ui_settle",
   "ui_city",
-  "ui_crowd"
+  "ui_crowd",
+  "ui_play",
+  "ui_over",
+  "ui_help"
  ],
  "ui_only": [
   "render",
@@ -59,7 +64,10 @@
   "concernsui",
   "voicesui",
   "ui",
-  "treeui"
+  "treeui",
+  "playui",
+  "overui",
+  "helpui"
  ],
  "touch": {
   "voices": [
@@ -113,6 +121,20 @@
    "housing_events",
    "privacy_events",
    "city_events"
+  ],
+  "play": [
+   "play_events",
+   "gameover_events",
+   "save",
+   "golden",
+   "crowd_events",
+   "city_events",
+   "housing_events"
+  ],
+  "gameover": [
+   "gameover_events",
+   "save",
+   "golden"
   ]
  },
  "est": {
@@ -135,6 +157,11 @@
   "city_events": 90,
   "ui_city": 40,
   "crowd_events": 50,
-  "ui_crowd": 20
+  "play_events": 45,
+  "gameover_events": 15,
+  "ui_crowd": 20,
+  "ui_play": 35,
+  "ui_over": 15,
+  "ui_help": 15
  }
 }

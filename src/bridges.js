@@ -52,7 +52,7 @@ function bridgeDay(w) {
     if (w.day - (b.lastDone || b.day) > 50) { if (b.bp && b.bp.alive) { b.bp.alive = false; w.bps.splice(w.bps.indexOf(b.bp), 1); w.bpAt.delete(b.bp.idx) } b.bp = null; b.state = 'abandoned'; B.skip[b.ax + ':' + b.ay] = w.day + 300; w.say(`The bridge at ${b.ax},${b.ay} is abandoned: the builders could not finish it.`); continue }
     if (!b.bp || !b.bp.alive) { if (b.done >= b.tiles.length) { b.state = 'done'; continue } nextTile(w, b) }
   }
-  if (w.day < B.nextPlan) return; B.nextPlan = w.day + 14;
+  if (w.day < B.nextPlan || !autoOn(w, 'build')) return; B.nextPlan = w.day + 14;
   if (!w.has('carpentry') || w.day < 40 || w.pop < 18 || B.list.some(b => b.state === 'building') || B.list.length >= 6) return;
   if (w.stock.wood < 30) return;
   const cands = findCrossings(w).filter(c => c.near < 48); if (!cands.length) return;

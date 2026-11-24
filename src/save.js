@@ -39,10 +39,11 @@ function serializeWorld(w) {
     log: w.log.slice(0, 120), hist: w.hist.slice(-600), rel: [...w.rel].map(([k, r]) => [k, Math.round(r * 10) / 10]),
     gov: w.gov, groups: w.groups,
     buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj, hp: b.hp, maxHp: b.maxHp, tier: b.tier, upg: b.upg, built: b.built, era: b.era, builtEra: b.builtEra, upgraded: b.upgraded, vh: b.vh, vser: b.vser, vtot: b.vtot, reg: b.reg, catch: b.catch, oh: b.oh, oser: b.oser, otot: b.otot, fert: b.fert, repairs: b.repairs, last: b.last, owner: b.owner, cabin: b.cabin })),
-    bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir, bridge: b.bridge, cost: b.type === 'bridge' ? b.cost : undefined })),
+    bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir, bridge: b.bridge, player: b.player, cost: b.type === 'bridge' ? b.cost : undefined })),
     regime: w.regime, strife: w.strife, wet: w.wet, flow: w.flow, neigh: w.neigh, voyageCd: w.voyageCd, dip: { fortifyUntil: w.fortifyUntil, dipDay: w.dipDay }, seen: w.seen ? packArr(w.seen) : null,
     tech: w.tech, econ: w.econ, proj: w.proj, chron: w.chron, boats: w.boats.map(b => ({ id: b.id, dock: b.dock, kind: b.kind, hold: b.hold })), trade2: w.trade2 ? { ...w.trade2, active: null } : null, war: w.war ? JSON.parse(JSON.stringify(w.war)) : null, cul: w.cul ? JSON.parse(JSON.stringify(w.cul)) : null, city: w.city ? JSON.parse(JSON.stringify(w.city)) : null,
-    crowd: w.crowd ? JSON.parse(JSON.stringify(w.crowd)) : null, alog: w.alog || [], out: w.out ? JSON.parse(JSON.stringify(w.out, (k, v) => k[0] === '_' ? undefined : v)) : null, stats: w.stats || null, concerns: w.concerns ? JSON.parse(JSON.stringify(w.concerns)) : null, liv: w.liv ? JSON.parse(JSON.stringify(w.liv)) : null, lives: w.lives ? JSON.parse(JSON.stringify(w.lives, (k, v) => v instanceof Set ? [...v] : v)) : null, bridges: w.bridges ? JSON.parse(JSON.stringify(w.bridges, (k, v) => k === 'bp' ? undefined : v)) : null,
+    over: w.over || null, lowDays: w.lowDays || 0, lastGone: w.lastGone || null,
+    play: w.play ? JSON.parse(JSON.stringify(w.play)) : null, crowd: w.crowd ? JSON.parse(JSON.stringify(w.crowd)) : null, alog: w.alog || [], out: w.out ? JSON.parse(JSON.stringify(w.out, (k, v) => k[0] === '_' ? undefined : v)) : null, stats: w.stats || null, concerns: w.concerns ? JSON.parse(JSON.stringify(w.concerns)) : null, liv: w.liv ? JSON.parse(JSON.stringify(w.liv)) : null, lives: w.lives ? JSON.parse(JSON.stringify(w.lives, (k, v) => v instanceof Set ? [...v] : v)) : null, bridges: w.bridges ? JSON.parse(JSON.stringify(w.bridges, (k, v) => k === 'bp' ? undefined : v)) : null,
     terra: w.terra ? JSON.parse(JSON.stringify(w.terra)) : null, disc: w.disc ? JSON.parse(JSON.stringify(w.disc)) : null, voices: w.voices ? JSON.parse(JSON.stringify(w.voices)) : null, sandbox: !!w.sandbox,
     vills: w.vills.map(v => pickKeys(v, VILL_KEYS)), animals: w.animals.filter(a => a.alive).map(a => pickKeys(a, ANIMAL_KEYS)),
   };
@@ -62,8 +63,10 @@ function deserializeWorld(d) {
     for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * CFG.W + b.x + dx; w.bmap[i] = b.id; if (CFG.SOLID[b.type]) w.blk[i] = 1 }
   }
   for (const b of w.buildings.values()) if (CFG.SOLID[b.type]) w.markAdj(b, w.adjFor(b.type));
-  for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.type === 'bridge' ? { cost: s.cost, bridge: s.bridge } : s.dir ? { dir: s.dir } : undefined); if (s.proj) { bp.proj = true; bp.maxWorkers = 6 } bp.id = s.id; bp.have = s.have; bp.prog = s.prog }
+  for (const s of d.bps) { const bp = makeBp(w, s.type, s.x, s.y, s.type === 'upgrade' ? { target: s.target, toStyle: s.toStyle } : s.type === 'bridge' ? { cost: s.cost, bridge: s.bridge } : s.dir ? { dir: s.dir } : undefined); if (s.proj) { bp.proj = true; bp.maxWorkers = 6 } bp.id = s.id; bp.have = s.have; bp.prog = s.prog; if (s.player) bp.player = true }
   if (d.voices) w.voices = d.voices;
+  if (d.play) w.play = d.play;
+  if (d.over) w.over = d.over; w.lowDays = d.lowDays || 0; if (d.lastGone) w.lastGone = d.lastGone;
   if (d.econ) w.econ = d.econ; if (d.proj) w.proj = d.proj; if (d.chron) w.chron = d.chron; if (d.regime) { w.regime = d.regime; if (!w.regime.ax) w.regime.ax = defaultAxes() } w.wet = d.wet || 0; if (d.trade2) w.trade2 = d.trade2; else initTrade2(w); if (d.out) w.out = d.out; else initOutposts(w); w.war = d.war || null; w.cul = d.cul || null; w.city = d.city || null; w.crowd = d.crowd || null; w.alog = d.alog || []; if (d.bridges) { w.bridges = d.bridges; restoreBridges(w) } else initBridges(w); if (d.terra) { w.terra = d.terra; restoreTerra(w) } else initTerra(w); if (d.disc) restoreDisc(w, d.disc); else initDisc(w); w.sandbox = !!d.sandbox || !!(w.settings && w.settings.openKnowledge); if (d.stats) { w.stats = d.stats; statsEnsure(w.stats) } else initStats(w); if (d.concerns) w.concerns = d.concerns; else initConcerns(w); if (d.liv) w.liv = d.liv; else initLiv(w); if (d.lives) { w.lives = d.lives; for (const f of w.lives.feuds) { f.ka = new Set(f.ka); f.kb = new Set(f.kb) } } else initLives(w); w.flow = d.flow || null; w.young = []; for (let i = 0; i < w.feat.length; i++) if ((w.feat[i] === FEAT.OAK || w.feat[i] === FEAT.PINE) && w.res[i] > 0 && w.res[i] < 4) w.young.push(i);
   w.rx = rxBuildings(w, rxFrom(w.regime.ax)); if (d.strife) w.strife = d.strife; else initStrife(w);
   if (d.neigh && w.neigh) { w.neigh = d.neigh; w.voyageCd = d.voyageCd || 0; if (d.dip) { w.fortifyUntil = d.dip.fortifyUntil || 0; w.dipDay = d.dip.dipDay || 0 } if (d.seen) { w.seen.set(unpackArr(d.seen, N)); w.seenVer++ } } else if (!d.neigh) { w.neigh = null; w.fog = false; w.seen = null } if (w.gov.policy.tax === undefined) w.gov.policy.tax = 0;
@@ -77,6 +80,7 @@ function deserializeWorld(d) {
   }
   for (const s of d.animals) { const a = Object.create(Animal.prototype); Object.assign(a, s); a.w = w; a.alive = true; a.target = null; w.animals.push(a) }
   w.nextId = d.counters.nextId; w.rng.s = d.rngState; w.mind = null; w.pendingMind = 0;
+  playRelink(w);
   return w;
 }
 const saveMeta = w => ({ year: w.year, day: w.day, season: w.season, pop: w.pop, seed: w.seed, savedAt: Date.now() });

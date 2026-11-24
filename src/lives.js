@@ -247,7 +247,7 @@ function rehomeDay(w) {
 }
 /* a very private adult builds a cabin out in the trees (a few at most) */
 function cabinDay(w) {
-  const pop = w.pop; if (pop < 20 || w.day < 40 || !w.has('carpentry')) return;
+  const pop = w.pop; if (pop < 20 || w.day < 40 || !w.has('carpentry') || !autoOn(w, 'build')) return;
   const have = [...w.buildings.values()].filter(b => b.cabin).length + w.bps.filter(b => b.cabin).length;
   if (have >= Math.floor(pop / 30) || w.stock.wood < 40 || w.stock.stone < 8 || w.r() > 0.25) return;
   const c = w.vills.filter(v => v.isAdult() && v.home != null && privOf(v) >= 0.72 && !propsOf(w, v).some(b => b.cabin) && !w.bps.some(b => b.forId === v.id));

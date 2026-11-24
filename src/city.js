@@ -144,7 +144,7 @@ function pathDay(w) {
   for (const i of hot) {
     const x = i % W, y = (i / W) | 0;
     if (w.road[i]) { if (w.road[i] < level && up < 4 && w.stock.stone >= 3) { w.road[i] = level; w.stock.stone -= 1; up++; C.surfaced++ } continue }
-    if (made >= 2 || open + made >= 10) continue;
+    if (made >= 2 || open + made >= 10 || !autoOn(w, 'build')) continue;
     if (w.terr[i] !== TERR.GRASS && w.terr[i] !== TERR.SAND) continue; if (w.feat[i] || w.bmap[i] || w.bpAt.has(i) || w.claim[i] >= 0) continue;
     let touch = false; for (let dy = -1; dy <= 1 && !touch; dy++) for (let dx = -1; dx <= 1; dx++) { if (!dx && !dy) continue; const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const j = yy * W + xx; if (w.road[j] || w.bmap[j] || w.bpAt.has(j)) { touch = true; break } }
     if (!touch) continue; makeBp(w, 'road', x, y); made++; C.paved++;
@@ -154,7 +154,7 @@ function pathDay(w) {
 /* ---------- daily hook ---------- */
 function cityDay(w) {
   landValueDay(w); pathDay(w);
-  if (w.day % 3 === 0) { foundHamlet(w); renewalDay(w); hamletStores(w) }
+  if (w.day % 3 === 0 && autoOn(w, 'build')) { foundHamlet(w); renewalDay(w); hamletStores(w) }
 }
 /* what the city looks like, for the card and the diagnostics */
 function cityStats(w) {

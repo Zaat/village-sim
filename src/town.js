@@ -25,6 +25,7 @@ function placeBuilding(w, type, wide, at) {       // `at` (a hamlet) restricts t
     const score = at ? Math.hypot(x - at.x, y - at.y) + w.r() * 2 : type === 'house' ? houseScore(w, x, y, d, pop) : type === 'farm' ? farmScore(w, x, y, d, pop) : type === 'workshop' ? workshopScore(w, x, y, d) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
     cands.push({ x, y, score });
   }
+  if (w.play && w.play.nz && PLACE[type]) { const zs = [], uz = []; for (const c of cands) { const f = zoneFit(w, type, c.x, c.y, bw, bh); if (f > 0) zs.push(c); else if (f === 0) uz.push(c) } cands.splice(0, cands.length, ...(zs.length ? zs : uz)) }       // painted zones (Play): inside the right zone first, never inside another
   cands.sort((a, b) => a.score - b.score);
   if (cands.length) {
     const s0 = w._st; w.search(w.cx - 1, w.cy, () => false, wide ? 320 : 120); if (w._st === s0) return null;       // one flood from camp tells which sites can be walked to (many floods for the best few used to fail together when they were all cut off)
@@ -120,6 +121,7 @@ function placeDock(w) {
   return null;
 }
 function planRoads(w) {
+  if (!autoOn(w, 'build')) return;
   if (w.bps.filter(b => b.type === 'road').length >= 8) return;
   const targets = [...w.houses(), ...w.of('farm'), ...w.of('store'), ...w.of('logcamp'), ...w.of('minecamp'), ...w.of('lodge'), ...w.of('market'), ...w.of('plaza'), ...w.of('tavern'), ...w.of('workshop')];
   for (const b of targets) {
@@ -151,6 +153,7 @@ function crowdWant(w, pending, pop) {
   return P.list.length >= Math.max(4, ad * 0.3) && empty + pending < 1 && houses.length < pop / 2.5 + 6 && w.stock.wood >= 24 && w.stock.food > pop * 3;
 }
 function planTown(w) {
+  if (!autoOn(w, 'build')) return;                  // Play: the player places the buildings (v0.35)
   const pop = w.pop, count = t => w.bps.filter(b => b.type === t).length;
   const houses = w.houses().length + count('house'), farms = w.of('farm').length + count('farm'), stores = w.of('store').length + count('store'), cap = w.beds() + count('house') * bedsOf({ style: styleNow(w) });
   const structBps = w.bps.filter(b => b.type !== 'road').length;
@@ -195,7 +198,8 @@ const DESIRE_ROLE = { wood: 'woodcutter', stone: 'miner', farm: 'farmer', build:
 const HEAVY = new Set(['builder', 'hunter', 'miner', 'woodcutter']);
 const aff = (r, v) => AFFINITY[r](v) + (v.desire && v.desire.kind === 'master' && DESIRE_ROLE[v.desire.key] === r ? 0.5 : 0);
 function assignRoles(w) {
-  const adults = w.vills.filter(v => !v.isChild() && !v.trade), n = adults.length; if (!n) return;       // people with a trade of their own are not conscripted into the heavy roles
+  if (!autoOn(w, 'jobs')) return;                  // Play: the player gives the roles (v0.35)
+  const adults = w.vills.filter(v => !v.isChild() && !v.trade && !v.roleLock), n = adults.length; if (!n) return;       // people with a trade of their own are not conscripted into the heavy roles
   const winter = w.season === 3, wolves = w.animals.some(a => a.kind === 'wolf' && a.alive);
   const farms = w.of('farm').length, building = w.bps.length, watch = Math.max(0, w.gov.policy.defense);
   const q = {

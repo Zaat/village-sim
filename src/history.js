@@ -78,5 +78,5 @@ function deathKey(why) {
 function noteDeath(w, v, why) {
   const k = deathKey(why), y = w.year, g = v.isChild() ? 'child' : v.isElder() ? 'elder' : 'adult';
   const Y = (w.dyr[y] = w.dyr[y] || {}); Y[k] = (Y[k] || 0) + 1; Y[g] = (Y[g] || 0) + 1;
-  w.dlog.unshift({ day: w.day, name: v.name, age: Math.floor(v.age / (CFG.DPS * 4)), k, g }); if (w.dlog.length > 40) w.dlog.length = 40;
+  w.dlog.unshift({ day: w.day, name: v.name, age: Math.floor(v.age * CFG.LIFE_BASE / (CFG.DPS * 4)), k, g }); if (w.dlog.length > 40) w.dlog.length = 40;
 }

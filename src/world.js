@@ -260,12 +260,13 @@ class World {
   tryConceive(f, m) {
     if (!f.isAdult() || !m.isAdult() || f.partner !== m.id) return;
     if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX * (this.lifeScale || 1)) return;
+    if (CFG.DEP_CAP && f.kids.reduce((n, id) => { const k = this.vills.find(x => x.id === id); return n + (k && !k.isAdult() ? 1 : 0) }, 0) >= CFG.DEP_CAP) return;   // families space their children: a limit on children still growing up
     if (this.pop + 1 > this.beds()) return;
     const gp = this.gov.policy.growth; if (this.stock.food < this.pop * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
-    if (this.r() < CFG.BIRTH_CHANCE * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
+    if (this.r() < CFG.BIRTH_CHANCE * CFG.BIRTH_MULT * (CFG.BIRTH_DAMP ? clamp(1.15 - this.pop / CFG.BIRTH_DAMP, 0.35, 1) : 1) * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
   }
   birth(f) {
-    if (this.vills.length >= CROWD.focus) { const C = crowdState(this); C.kids++; C.n++; C.born++; this.births++; this.abirths = (this.abirths || 0) + 1; noteFlow(this, 'born'); f.lastBirth = this.tick; f.story('Gave birth to a child who will grow up among the townsfolk.'); return }       // the focus is full: the child joins the crowd
+    if (this.vills.length >= CROWD.focus) { const C = crowdState(this); C.kids++; C.n++; C.born++; this.births++; this.abirths = (this.abirths || 0) + 1; noteFlow(this, 'born'); statCount(this, 'born'); f.lastBirth = this.tick; f.story('Gave birth to a child who will grow up among the townsfolk.'); return }       // the focus is full: the child joins the crowd
     const dad = this.vills.find(v => v.id === f.father), c = new Villager(this, this.r() < 0.5 ? 'f' : 'm', 0, f.tx, f.ty, null, [f, dad]);
     c.home = f.home; c.parentIds = [f.id, dad ? dad.id : null]; if (f.home != null) { const h = this.buildings.get(f.home); if (h) h.occ.push(c.id) }
     f.kids.push(c.id); if (dad) dad.kids.push(c.id); c.story(`Born to ${f.name}${dad ? ' and ' + dad.name : ''} of House ${c.family}.`); f.story(`Gave birth to ${c.name}.`); if (dad) dad.story(`Became a father to ${c.name}.`);
@@ -281,6 +282,7 @@ class World {
     for (const id of v.kids) grieve(id, 15, 4, `Lost their parent ${v.name}.`);
     for (const id of v.parentIds) if (id != null) grieve(id, 20, 5, `Lost their child ${v.name}.`);
     try { inheritFrom(this, v) } catch (e) { this.fault('inherit', e) }
+    this.lastGone = { name: `${v.name} ${v.family}`, day: this.day };
     this.emit('death', `${v.name} ${v.family} ${why}.`, { v, why });
   }
   removeBuilding(b) {
@@ -327,6 +329,8 @@ class World {
     buildingDay(this);
     try { cityDay(this) } catch (e) { this.fault('city', e) }
     try { crowdDay(this) } catch (e) { this.fault('crowd', e) }
+    try { gameoverDay(this) } catch (e) { this.fault('over', e) }
+    try { playDay(this) } catch (e) { this.fault('play', e) }
     characterDay(this);
     regimeDay(this);
     strifeDay(this);

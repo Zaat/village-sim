@@ -112,7 +112,7 @@ $('set_open').addEventListener('change', e => {            // a sandbox switch: 
 function adoptWorld(w) {
   try { $('mapnow').textContent = MAP_TYPES[w.arch].label + ' · ' + CFG.W + '×' + CFG.H + ' · seed ' + w.seed + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
   if (tt) { tt = null; $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false }
-  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = ''; renderWorldLine();
+  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = ''; renderWorldLine(); puWorld();
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
   world.dbg.onFault = () => dbgPersist(world); world.profReset();
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k]; $('set_hardship').value = String(world.settings.hardship == null ? 1 : world.settings.hardship); $('set_philosophy').value = world.settings.philosophy || 'balanced'; $('set_open').value = String(world.settings.openKnowledge || 0);
@@ -228,7 +228,7 @@ function skillWord(s) { return s > 0.7 ? 'expert' : s > 0.45 ? 'skilled' : s > 0
 function moodWord(m) { return m > 80 ? 'joyful' : m > 62 ? 'content' : m > 42 ? 'uneasy' : m > 25 ? 'unhappy' : 'miserable' }
 function nameOf(id) { const v = world.vills.find(x => x.id === id); return v ? v.name : null }
 function updateUI() {
-  renderConcerns();
+  overCheck(); renderConcerns();
   const w = world, hrs = (6 + w.tod * 24) % 24, hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60), s = w.season;
   $('hudDate').textContent = `Year ${w.year} · ${SEASONS[s]} · Day ${w.seasonDay}`;
   $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''} · ${AGES[techEra(w)]}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
@@ -539,7 +539,7 @@ const kvs = rows => `<div class="stats">${rows.filter(Boolean).map(([k, v]) => `
 const vlink = (v, extra) => `<a class="lnk" data-vid="${v.id}">${escapeHtml(v.name)}</a>${extra ? ' <span class="hint">' + extra + '</span>' : ''}`;
 const dateText = d => `Day ${d} (year ${Math.floor(d / (CFG.DPS * 4)) + 1})`;
 const humanAge = days => `${ageYears(days)} (about ${humanYears(days)} in human years)`;
-const ageYears = days => { const y = days / (CFG.DPS * 4); return y < 1 ? `${Math.round(days)} days` : `${y.toFixed(1)} years` };
+const ageYears = days => { const y = days * CFG.LIFE_BASE / (CFG.DPS * 4); return y < 1 ? `${Math.round(days * CFG.LIFE_BASE)} days` : `${y.toFixed(1)} years` };
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
 const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', workshop: 'Workshop', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
 const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][Math.min(2, s.style || 0)] : BUILDING_NAMES[s.type] || s.type;
@@ -595,7 +595,7 @@ function familyBlock(w, s, home) {
     ['Home', home ? `<a class="lnk" data-bid="${home.id}">cabin at ${home.x},${home.y}</a>${mates.length ? ' with ' + mates.map(v => vlink(v)).join(', ') : ''}` : 'none'], fav ? ['Often found at', escapeHtml(fav)] : null,
     s.isAdult() && (s.trade || s.side) ? ['Livelihood', escapeHtml(tradeName(w, s.trade || s.side)) + (s.trade ? '' : ' (side job)') + (s.shop ? ' · own shop' : '')] : null, s.isAdult() && dreamText(s) ? ['Dream', escapeHtml(dreamText(s))] : null,
     s.isAdult() && s.hobby ? ['Hobby', HOBBIES[s.hobby].label] : null, s.status !== undefined && s.isAdult() ? ['Standing', STATUS_WORDS(s.status) + (wealthOf(s) >= 1 ? ' · means ' + (wealthOf(s) < 8 ? 'modest' : wealthOf(s) < 30 ? 'comfortable' : 'considerable') : '')] : null, (() => { const ps = propsOf(w, s); return ps.length ? ['Owns', ps.map(b => b.type === 'house' ? 'a home' : 'a field').join(' and ')] : null })(), (() => { const f = feudOf(w, s); return f ? ['Feud', `${f.ka.has(s.id) ? escapeHtml(f.nb) : escapeHtml(f.na)}'s kin, over ${escapeHtml(f.cause)} (${Math.round(f.heat * 100)}% hot)`] : null })(),
-    s.output ? ['Work output', `${Math.round(s.output)} units gathered`] : null, ['Born', dateText(Math.max(0, Math.round(w.day - s.age)))]];
+    s.output ? ['Work output', `${Math.round(s.output)} units gathered`] : null, ['Born', dateText(Math.max(0, Math.round(w.day - s.age * CFG.LIFE_BASE)))]];
   return sec('Family &amp; life', `<div class="kvl">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><span>${v}</span></div>`).join('')}</div>`);
 }
 function updateInspector() {
@@ -635,7 +635,9 @@ function updateInspector() {
     if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
     if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
     ensureStats(w, s); el.innerHTML = buildingPanel(w, s, extra);
+  } else if (s && s.tile && puOn()) { el.innerHTML = puTilePanel(w, s)
   } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
+  puInspect(el, selected);
 }
 /* ---- side panel tabs ---- */
 let curTab = 'village'; try { curTab = localStorage.getItem('villagesim.tab') || 'village' } catch (e) { }
@@ -661,11 +663,11 @@ function drawChart() {
 }
 
 /* ---------- input ---------- */
-const cv = $('cv'); initRender(cv, $('mini'));
+const cv = $('cv'); initRender(cv, $('mini')); puInit(); overInit(); menuInit();
 let drag = null;
-cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
-cv.addEventListener('pointermove', e => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY; if (drag.moved > 5) { R.cam.x -= dx / R.cam.z; R.cam.y -= dy / R.cam.z; follow = false; clampCam() } });
-cv.addEventListener('pointerup', e => { cv.classList.remove('drag'); if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top) } drag = null });
+cv.addEventListener('pointerdown', e => { if (puDown(e)) return; try { cv.setPointerCapture(e.pointerId) } catch (_) { } drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
+cv.addEventListener('pointermove', e => { if (puMove(e)) return; if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY; if (drag.moved > 5) { R.cam.x -= dx / R.cam.z; R.cam.y -= dy / R.cam.z; follow = false; clampCam() } });
+cv.addEventListener('pointerup', e => { cv.classList.remove('drag'); cv._moved = drag ? drag.moved : 0; if (puUp(e)) { drag = null; return } if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top); puPicked(e, selected) } drag = null });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0016), e.clientX - r.left, e.clientY - r.top) }, { passive: false });
 function pick(sx, sy) {
   { const bv = bubbleAt(sx, sy); if (bv) { selected = bv; showTab('village'); updateUI(); return } }
@@ -694,7 +696,7 @@ $('playBtn').onclick = () => setSpeed(speed > 0 ? 0 : lastSpeed || 10); $('spDow
 $('zin').onclick = () => zoomAt(1.3, R.vw / 2, R.vh / 2); $('zout').onclick = () => zoomAt(1 / 1.3, R.vw / 2, R.vh / 2);
 $('fol').onclick = () => { follow = !follow && !!selected; $('fol').classList.toggle('on', follow) };
 addEventListener('keydown', e => {
-  if (e.target.tagName === 'INPUT') return; keys[e.key.toLowerCase()] = true;
+  if (e.target.tagName === 'INPUT') return; if (puKey(e)) return; keys[e.key.toLowerCase()] = true;
   if (e.code === 'Space') { e.preventDefault(); setSpeed(speed === 0 ? lastSpeed || 10 : 0) }
   if (e.key === '[') stepSpeed(-1); if (e.key === ']') stepSpeed(1); if (e.key === '.') advance(e.shiftKey); if (e.key === '>') advance(true);
   const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 999 }[e.key]; if (m) setSpeed(m);       // 5 is a hidden "as fast as it can go" for testing
@@ -830,5 +832,5 @@ initStatsUI(); concernsInit(); voicesInit(); voicesAiInit(); newWorld((Math.rand
     $('loadSave').disabled = false; let resumed = false;
     if ($('autoresume').checked) { autosaveOn = false; resumed = loadFromStorage(); if (resumed) { autosaveOn = true; setSpeed(m.speed > 0 ? m.speed : 10); saveInfo('Resumed your saved village automatically: ' + metaText(m) + '.') } }
     if (!resumed) { autosaveOn = false; setSpeed(0); $('resumeInfo').textContent = metaText(m) + (m.savedAt ? ' · saved ' + new Date(m.savedAt).toLocaleString() : ''); $('resume').style.display = 'flex'; saveInfo('A saved village is waiting: ' + metaText(m) + '.') }
-  }
+  } else if (!navigator.webdriver && !lsGet(WELCOME_KEY, '')) { setSpeed(0); welcomeOpen() }
 }

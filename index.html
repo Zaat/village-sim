@@ -20,8 +20,16 @@
       <button id="stepBtn" title="Advance one day ( . ) · hold Shift for one season">⏭</button>
       <span id="rate" class="rate wide"></span>
       <span class="sep"></span>
-      <button id="fol" title="Follow selected (F)">◎<span class="wide"> Follow</span></button><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙<span class="wide"> Settings</span></button>
+      <button id="menuBtn" title="Menu: new world, save, settings, how to play, about">☰</button><button id="fol" title="Follow selected (F)">◎<span class="wide"> Follow</span></button><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙<span class="wide"> Settings</span></button>
     </div>
+    <div id="ptool">
+      <span class="seg" id="modeSw" title="Watch the village live its life, or Play and take the lead"><button data-mode="watch" class="on">Watch</button><button data-mode="play">Play</button></span><span id="ptools" style="display:none">
+      <span class="grp"><button data-tool="select" class="on" title="Select and inspect (V)">Select</button><button data-tool="build" title="Place buildings (B)">Build</button><button data-tool="road" title="Lay roads (R)">Road</button><button data-tool="zone" title="Paint zones for the village to build in (Z)">Zone</button><button id="ppan" title="Move the map instead of painting (or hold Space)">✋</button></span>
+      <span class="sep"></span><button id="presearch" title="Choose what the village studies">Research</button><button id="pcrowd" title="How the townsfolk who are not individually in play share their work">Crowd</button>
+      <span class="sep"></span><span class="hint wide">Village plans</span><span class="grp"><button data-auto="build" data-tip="Buildings" class="on">Buildings</button><button data-auto="research" data-tip="Research" class="on">Research</button><button data-auto="jobs" data-tip="Jobs" class="on">Jobs</button></span>
+      </span>
+    </div>
+    <div id="pstack"><div id="ppanel" style="display:none"></div><div id="pcmd" style="display:none"></div></div><div id="pmenu" style="display:none"></div><div id="pnote"></div><div id="pghost" style="display:none"></div>
     <div id="zoomCtl"><button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button></div>
     <div id="drawer"><div class="drawerhead"><b>Settings &amp; tools</b><button id="drawerClose" title="Close (Esc)">✕</button></div>
     <div class="card"><h3>Settings</h3>
@@ -78,6 +86,15 @@
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
     <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
+    <div id="menu" style="display:none"><button data-mn="resume">Resume</button><button data-mn="new">New world…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><button data-mn="settings">Settings</button><button data-mn="help">How to play</button><button data-mn="about">About</button></div>
+    <div id="modal" style="display:none"><div class="nwbox"><div class="drawerhead"><h3 id="modal_t"></h3><button id="modal_x" title="Close (Esc)">✕</button></div><div id="modal_b" class="mbody"></div></div></div>
+    <div id="over" style="display:none"><div class="nwbox">
+      <h3 id="over_title"></h3><div id="over_text" style="margin-bottom:10px"></div>
+      <canvas id="over_chart" width="470" height="90" style="width:100%;height:90px;display:block;background:#10151a;border-radius:6px"></canvas>
+      <div id="over_facts" class="kvl" style="margin:10px 0"></div>
+      <div class="hint wline" id="over_line" style="margin-bottom:10px"></div>
+      <div class="btnrow"><button id="over_again" class="on" title="The same seed and settings, from the start">Same world again</button><button id="over_new">New world…</button><button id="over_cont" title="Keep watching what is left">Keep watching</button><button id="over_copy">Copy world line</button></div>
+    </div></div>
     <div id="nw" style="display:none"><div class="nwbox">
       <h3>New world</h3>
       <div class="nwrow"><span class="hint">Seed</span><input id="nw_seed" inputmode="numeric"><button id="nw_dice" title="Pick a random seed" aria-label="Random seed">🎲</button></div>
@@ -92,7 +109,7 @@
     </div></div>
     <canvas id="mini" title="Click to move the camera"></canvas>
     <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
-    <div id="hint">Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows · Space pause · [ ] speed · . next day</div>
+    <div id="hint">Drag to pan · wheel to zoom · click to inspect · WASD · Space pause · [ ] speed</div>
   </div>
   <aside id="side">
     <div class="tabbar" id="tabbar"><button data-tab="village" class="on">Village</button><button data-tab="society">Society</button><button data-tab="progress">Progress</button><button data-tab="world">World</button><button data-tab="stats">Stats</button><button data-tab="events">Events</button></div>
@@ -179,6 +196,8 @@
 <script src="src/city.js"></script>
 <script src="src/diag.js"></script>
 <script src="src/crowd.js"></script>
+<script src="src/play.js"></script>
+<script src="src/gameover.js"></script>
 <script src="src/routes.js"></script>
 <script src="src/save.js"></script>
 <script src="src/world.js"></script>
@@ -187,6 +206,9 @@
 <script src="src/statsui.js"></script>
 <script src="src/concernsui.js"></script>
 <script src="src/voicesui.js"></script>
+<script src="src/playui.js"></script>
+<script src="src/overui.js"></script>
+<script src="src/helpui.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/treeui.js"></script>
 </body>

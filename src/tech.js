@@ -88,6 +88,7 @@ function techPref(v, id) {         // each council member's taste
   const t = v.trait; return ({ nets: t.ind * 0.2, tools: t.ind * 0.4, granary: (1 - t.brave) * 0.3, carpentry: t.ind * 0.3, boats: t.cur * 0.4 + t.brave * 0.2, rotation: t.cur * 0.3, masonry: t.ind * 0.3, medicine: t.kind * 0.5, watchtowers: (1 - t.brave) * 0.4 + t.brave * 0.2, ironwork: t.ind * 0.2 + t.brave * 0.2, plow: t.ind * 0.3, navigation: t.cur * 0.5, forestry: t.ind * 0.4, mining: t.ind * 0.3 + (1 - t.soc) * 0.2, lodges: t.brave * 0.4, trade: t.soc * 0.4 + t.cur * 0.2, coinage: t.ind * 0.3 + t.cur * 0.1, seatrade: t.cur * 0.3 + t.brave * 0.3 })[id] ?? branchPref(v, id);
 }
 function chooseResearch(w, id, source) {
+  if (source !== 'player' && !autoOn(w, 'research')) return;           // Play: the player picks what is studied (v0.35)
   const t = w.tech; t.focus = id; t.wait = 0;
   w.say(`The village sets its mind to ${TECHS[id].name.toLowerCase()}${source === 'claude' ? ' (council deliberated with Claude)' : ''}.`);
 }
@@ -114,7 +115,7 @@ function techDay(w) {
   const t = w.tech, adults = w.vills.filter(v => v.isAdult()).length; t.today = 0; addKnowledge(w, adults * 0.06);
   t.peak = Math.max(t.peak || 0, w.pop); if (w.day % 10 === 0) { try { techLossDay(w) } catch (e) { w.fault('techloss', e) } try { neighbourTechDay(w) } catch (e) { w.fault('neightech', e) } }
   const avail = techAvailable(w); if (!avail.length) return;
-  if (!t.focus) {
+  if (!t.focus && autoOn(w, 'research')) {
     t.wait++;                                                           // the council normally chooses at a meeting; without one, the village drifts to the most useful idea
     if (!w.gov.council.length || t.wait >= 9) chooseResearch(w, avail.map(id => ({ id, s: techNeed(w, id) + Math.random() * 0 })).sort((a, b) => b.s - a.s)[0].id, 'rules');
   }
@@ -137,6 +138,7 @@ function researchAgenda(w, base, ms) {
 
 /* upgrading old buildings when the village learns better ways */
 function planUpgrades(w) {
+  if (!autoOn(w, 'build')) return;
   const pop = w.pop, open = w.bps.filter(b => b.type === 'upgrade').length;
   if (open >= 1 + Math.floor(pop / 60) || w.day < (w.nextUpgrade || 0)) return;
   const top = styleNow(w); if (!top) return;

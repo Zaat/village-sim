@@ -89,7 +89,7 @@ class Villager {
     this.hunger = Math.max(0, this.hunger - (this.sleeping ? 0.02 : 0.04) * (child ? 0.6 : 1) * (w.settings.survival ? 1.25 : 1) * (w.concerns && ordersOf(w).ration ? 0.8 : 1));
     this.energy = this.sleeping ? Math.min(100, this.energy + 0.15) : Math.max(0, this.energy - 0.025);
     this.social = Math.max(0, this.social - 0.012 - 0.025 * this.trait.soc);
-    this.age += 1 / CFG.TPD;
+    this.age += 1 / (CFG.TPD * CFG.LIFE_BASE);
     const stg = this.stage(); if (stg !== this._st) { this._st = stg; this.onStage(stg) }
     if (this.hunger <= 0) { this.health -= 0.05; this.cause = 'hunger' }
     else if (this.hunger > 40 && this.health < 100) this.health = Math.min(100, this.health + 0.02 + (w.has('medicine') ? 0.02 : 0) + 0.04 * techFx(w, 'health'));
@@ -204,6 +204,7 @@ class Villager {
     if (this.strikeUntil > w.tick) return this.planStrike();
     if (this.age < CFG.INFANT_DAYS) return this.planWander(3, true);
     if (this.isChild()) return this.planWander(7, true);
+    if (this.order && playPlan(w, this)) return;                       // the player's order (v0.35)
     const inCouncil = w.gov.council.some(c => c.id === this.id);
     if (w.tod > 0.52 && w.tod < 0.72 && (w.festival || (inCouncil && w.meetingDay === w.day && !w.meetingDone) || (this.social < 95 && w.r() < 0.35 + 0.55 * this.trait.soc))) return this.planFire();
     if (this.duty > w.tick && (this.planBuild() || this.planGather('wood'))) return;
@@ -313,7 +314,7 @@ class Villager {
     const w = this.w, ca = w.campAdj[kind];
     return [go((x, y, i) => w.storeAdj[i] === 1 || (ca && ca[i] === 1), null, 'Carrying to the depot', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { this.output = (this.output || 0) + this.carry.amt; w.stock[this.carry.kind] = Math.min(w.cap(), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
   }
-  planGather(kind) {
+  planGather(kind, focus) {
     const w = this.w;
     if (kind === 'food' && w.season >= 3) return false;
     let tgt = -1;
@@ -321,7 +322,7 @@ class Villager {
       for (const [dx, dy] of NB) {
         const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= CFG.W || ny >= CFG.H) continue; const n = ny * CFG.W + nx, f = w.feat[n];
         const ok = kind === 'wood' ? ((f === FEAT.OAK || f === FEAT.PINE) && w.res[n] >= 3) : kind === 'stone' ? f === FEAT.STONE : f === FEAT.BUSH && w.res[n] > 0;
-        if (ok && w.claim[n] < 0) { tgt = n; return true }
+        if (ok && w.claim[n] < 0 && (!focus || Math.hypot(nx - focus.x, ny - focus.y) <= focus.r)) { tgt = n; return true }
       } return false;
     };
     let path = w.search(this.tx, this.ty, goal, kind === 'wood' ? 110 : 75);
@@ -476,16 +477,16 @@ class Villager {
       work(6, 'Landing the catch', () => { this.x = dock.x + 0.5; this.y = dock.y + 0.5; boat.home(); this.boat = null; recordVisit(w, dock, this); if (this.carry) { dock.catch = (dock.catch || 0) + this.carry.amt; recordOutput(w, dock, this.carry.amt); this.output = (this.output || 0) + this.carry.amt; w.stock.food = Math.min(w.cap(), w.stock.food + this.carry.amt); this.carry = null } })];
     return true;
   }
-  planBuild() {
-    const w = this.w, near = bp => (x, y) => w.nearRect(x, y, bp);
-    for (const bp of w.bps) {
+  planBuild(only) {
+    const w = this.w, near = bp => (x, y) => w.nearRect(x, y, bp), list = only ? [only] : w.bps;
+    for (const bp of list) {
       if (bp.ready() && bp.workers < (bp.maxWorkers || 2)) {
         bp.workers++; this.bpWork = bp; this.jobKind = 'build'; const chunk = Math.min(30, bp.time - bp.prog);
         this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120 }), work(this.wt(chunk, 'build'), bp.type === 'upgrade' ? 'Upgrading a home' : bp.proj ? 'Raising the ' + PROJECTS[bp.type].name : 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
         return true;
       }
     }
-    for (const bp of w.bps) for (const type of ['wood', 'stone']) {
+    for (const bp of list) for (const type of ['wood', 'stone']) {
       const need = bp.cost[type] - bp.have[type] - bp.inc[type];
       if (need > 0 && w.stock[type] > 0) {
         const amt = Math.min(need, CFG.CARRY, w.stock[type]); bp.inc[type] += amt; const h = this.haul = { bp, type, amt, done: false }; this.jobKind = 'haul';
@@ -495,12 +496,12 @@ class Villager {
         return true;
       }
     }
-    return this.planRepair();
+    return only ? false : this.planRepair();
   }
-  /* mend the most worn building, if the stores can pay for it */
-  planRepair() {
-    const w = this.w; let best = null, br = 0.75;
-    for (const b of w.buildings.values()) { if (b.maxHp === undefined || b.type === 'campfire') continue; if ((b.skipUntil || 0) > w.tick || (b.repairer && b.repairer !== this.id && w.vills.some(x => x.id === b.repairer && x.alive))) continue; const r = b.hp / b.maxHp; if (r < br) { br = r; best = b } }
+  /* mend the most worn building, if the stores can pay for it (`only`: the one the player named) */
+  planRepair(only) {
+    const w = this.w; let best = null, br = only ? 0.96 : 0.75;
+    for (const b of (only ? [only] : w.buildings.values())) { if (b.maxHp === undefined || b.type === 'campfire') continue; if ((!only && (b.skipUntil || 0) > w.tick) || (b.repairer && b.repairer !== this.id && w.vills.some(x => x.id === b.repairer && x.alive))) continue; const r = b.hp / b.maxHp; if (r < br) { br = r; best = b } }
     if (!best) return false;
     const mw = Math.ceil(best.maxHp * 0.12 / 25), ms = (best.style === 2 || PROJECTS[best.type]) ? Math.ceil(best.maxHp * 0.06 / 25) : 0;
     if (w.stock.wood < mw + 4 || w.stock.stone < ms) return false;
