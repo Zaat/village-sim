@@ -139,7 +139,7 @@ class World {
   /* ----- buildings ----- */
   addBuilding(type, x, y) {
     const [w, h] = CFG.SIZE[type], b = { id: this.bnext++, type, x, y, w, h, occ: [], state: 0, g: 0, claim: 0 };
-    this.buildings.set(b.id, b);
+    this.buildings.set(b.id, b); this._bv = (this._bv | 0) + 1;
     for (let dy = 0; dy < h; dy++) for (let dx = 0; dx < w; dx++) { const i = (y + dy) * CFG.W + x + dx; this.bmap[i] = b.id; if (CFG.SOLID[type]) this.blk[i] = 1; this.road[i] = 0 }
     if (CFG.SOLID[type]) this.markAdj(b, this.adjFor(type));
     return b;
@@ -152,18 +152,28 @@ class World {
       const i = y * W + x; this.bldAdj[i] = 1; if (extra) extra[i] = 1;
     }
   }
-  houses() { const a = []; for (const b of this.buildings.values()) if (b.type === 'house') a.push(b); return a }
-  of(type) { const a = []; for (const b of this.buildings.values()) if (b.type === type) a.push(b); return a }
+  /* lists of buildings by kind, kept until a building is added or removed (they were rebuilt by walking every building on each call, which in a big town was done thousands of times a day); each caller gets its own copy */
+  houses() { return this.of('house') }
+  of(type) { let c = this._bc; if (!c || c.v !== this._bv) { c = this._bc = { v: this._bv, m: new Map() }; for (const b of this.buildings.values()) { let a = c.m.get(b.type); if (!a) c.m.set(b.type, a = []); a.push(b) } } const a = c.m.get(type); return a ? a.slice() : [] }
   adjFor(type) { return type === 'store' ? this.storeAdj : type === 'logcamp' ? this.campAdj.wood : type === 'minecamp' ? this.campAdj.stone : type === 'lodge' ? this.campAdj.food : null }
   /* is there a camp for this resource close by? (logging camp for wood, mining camp for stone, lodge for food) */
   campNear(kind, x, y, r = 14) { const type = kind === 'wood' ? 'logcamp' : kind === 'stone' ? 'minecamp' : 'lodge'; for (const b of this.buildings.values()) if (b.type === type && Math.hypot(b.x + 1 - x, b.y + 1 - y) <= r) return b; return null }
   has(id) { return !!this.tech.known[id] }
   beds() { let n = 0; for (const b of this.buildings.values()) if (b.type === 'house') n += bedsOf(b); return n }
-  cap() { return Math.round((60 + (100 + (this.has('granary') ? 40 : 0)) * this.of('store').length + (projBuilt(this, 'granaryhall') ? 120 : 0)) * (1 + techFx(this, 'store'))) }
+  /* storage (v0.37): food keeps in storehouses and granaries (cap); wood and stone keep outdoors in yards that grow with stores (bigger, better ones hold more), logging camps and quarries, and with technology */
+  capOf(kind) { return kind === 'food' ? this.cap() : this.yardCap(kind) }
+  yardCap(kind) {
+    let n = 150, camps = 0; for (const b of this.buildings.values()) { if (b.type === 'store') n += 130 + 50 * (b.style || 0); else if (b.type === (kind === 'stone' ? 'minecamp' : 'logcamp')) camps++ }
+    const tech = ['tools', 'carpentry', 'masonry', 'brickwork', 'canals', 'railways', 'steel'].filter(t => this.has(t)).length;
+    return Math.round((n + camps * 110) * (1 + 0.08 * tech + techFx(this, 'store')))
+  }
+  cap() { let n = 60 + (projBuilt(this, 'granaryhall') ? 120 : 0); const g = this.has('granary') ? 40 : 0; for (const b of this.of('store')) n += 100 + g + 50 * (b.style || 0); return Math.round(n * (1 + techFx(this, 'store'))) }       // v0.37: a better built storehouse (timber, then the stone granary) keeps more in the same ground
   passable(i) { const t = this.terr[i], f = this.feat[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK) && this.blk[i] === 0 && (f === FEAT.OAK || f === FEAT.PINE || f === FEAT.BUSH) }
   clearTile(i) { const f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) this.trees--; this.feat[i] = 0; this.res[i] = 0 }
   walkable(i) { const t = this.terr[i]; return (t === TERR.GRASS || t === TERR.SAND || t === TERR.ROCK || t === TERR.FORD || t === TERR.BRIDGE) && this.feat[i] === 0 && this.blk[i] === 0 }
   nearStock(x, y, i) { return this.storeAdj[i] === 1 }
+  /* a goal "next to this building or site" that also tells the search where it is, so the search can lean towards it (A*) instead of flooding every direction */
+  goalRect(b) { const f = (x, y) => this.nearRect(x, y, b); f.rect = b; return f }
   nearRect(x, y, b) { const dx = x < b.x ? b.x - x : x >= b.x + b.w ? x - (b.x + b.w - 1) : 0, dy = y < b.y ? b.y - y : y >= b.y + b.h ? y - (b.y + b.h - 1) : 0; return dx + dy <= 1 }
   assignHome(v) {
     if (v.home != null) return;
@@ -183,6 +193,7 @@ class World {
     if (bp.type === 'road') { this.road[bp.idx] = this.has('concrete') ? 4 : this.has('roads') ? 3 : this.has('masonry') ? 2 : 1; return }
     if (bp.type === 'bridge') { bridgeTileDone(this, bp); return }
     if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
+    if (bp.type === 'farm' || bp.type === 'house') { let got = 0; for (let dy = 0; dy < CFG.SIZE[bp.type][1]; dy++) for (let dx = 0; dx < CFG.SIZE[bp.type][0]; dx++) { const i = (bp.y + dy) * CFG.W + bp.x + dx, f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) { got += this.res[i]; this.clearTile(i) } } if (got) { this.stock.wood = Math.min(this.capOf('wood'), this.stock.wood + got); statCount(this, bp.type === 'farm' ? 'fields_cleared' : 'plots_cleared') } }
     const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' ? siteStyle(this, bp.x, bp.y) : bp.type === 'store' ? styleNow(this) : 0;
     ensureStats(this, b);
     if (PROJECTS[bp.type]) { projectDone(this, b, bp); return }
@@ -204,7 +215,8 @@ class World {
   search(sx, sy, goal, maxCost = 1e9, through = false) {
     if (this._nodes > SEARCH_BUDGET) { this.deferredSearch = true; this.dbg.deferred = (this.dbg.deferred || 0) + 1; return null }       // too many map floods this tick: the caller waits and tries again
     const { W, H } = CFG, dist = this._d, prev = this._p, seen = this._seen, ds = this._ds, hk = this._hk, hv = this._hv, st = ++this._st;
-    const s = sy * W + sx; dist[s] = 0; seen[s] = st; prev[s] = -1; let hs = 1; hk[0] = 0; hv[0] = s;
+    const rc = goal.rect, hf = rc ? (x, y) => 0.55 * Math.max(0, (x < rc.x ? rc.x - x : x >= rc.x + rc.w ? x - (rc.x + rc.w - 1) : 0) + (y < rc.y ? rc.y - y : y >= rc.y + rc.h ? y - (rc.y + rc.h - 1) : 0) - 1) : null;       // the cheapest step costs 0.55 (a road), so this never overestimates
+    const s = sy * W + sx; dist[s] = 0; seen[s] = st; prev[s] = -1; let hs = 1; hk[0] = hf ? hf(sx, sy) : 0; hv[0] = s;
     while (hs > 0) {
       const u = hv[0]; hs--;
       if (hs > 0) { const lk = hk[hs], lv = hv[hs]; let i = 0; for (; ;) { let c = 2 * i + 1; if (c >= hs) break; if (c + 1 < hs && hk[c + 1] < hk[c]) c++; if (hk[c] >= lk) break; hk[i] = hk[c]; hv[i] = hv[c]; i = c } hk[i] = lk; hv[i] = lv }
@@ -218,7 +230,7 @@ class World {
         const t = this.terr[v], nd = dist[u] + extra + (this.road[v] ? 0.55 : t === TERR.GRASS ? 1 : t === TERR.SAND ? 1.15 : 1.4);
         if (seen[v] !== st || nd < dist[v]) {
           dist[v] = nd; seen[v] = st; prev[v] = u;
-          let i = hs++; while (i > 0) { const p = (i - 1) >> 1; if (hk[p] <= nd) break; hk[i] = hk[p]; hv[i] = hv[p]; i = p } hk[i] = nd; hv[i] = v;
+          const key = hf ? nd + hf(nx, ny) : nd; let i = hs++; while (i > 0) { const p = (i - 1) >> 1; if (hk[p] <= key) break; hk[i] = hk[p]; hv[i] = hv[p]; i = p } hk[i] = key; hv[i] = v;
         }
       }
     }
@@ -319,7 +331,7 @@ class World {
     this.emit('death', `${v.name} ${v.family} ${why}.`, { v, why });
   }
   removeBuilding(b) {
-    this.buildings.delete(b.id); const { W } = CFG;
+    this.buildings.delete(b.id); this._bv = (this._bv | 0) + 1; const { W } = CFG;
     for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * W + b.x + dx; this.bmap[i] = 0; this.blk[i] = 0 }
     this.storeAdj.fill(0); this.bldAdj.fill(0); for (const k in this.campAdj) this.campAdj[k].fill(0); for (const x of this.buildings.values()) if (CFG.SOLID[x.type]) this.markAdj(x, this.adjFor(x.type));
     for (const id of b.occ) { const v = this.vills.find(x => x.id === id); if (v) { v.home = null; v.mood = Math.max(0, v.mood - 20); v.story('Lost their home.') } }
@@ -345,7 +357,7 @@ class World {
       if (this.stock.wood >= need) { this.stock.wood -= need; if (this.cold) this.say('Warm hearths again; the cold has eased.'); this.cold = false }
       else { this.stock.wood = 0; if (!this.cold) this.emit('cold', 'The firewood has run out. The village is freezing!'); this.cold = true }
     } else this.cold = false;
-    for (const k of ['wood', 'stone', 'food']) this.stock[k] = Math.min(this.stock[k], this.cap());
+    for (const k of ['wood', 'stone', 'food']) this.stock[k] = Math.min(this.stock[k], this.capOf(k));
     animalsNewDay(this);
     townNewDay(this);
     societyNewDay(this);
@@ -358,6 +370,7 @@ class World {
     bridgeDay(this);
     try { terraDay(this) } catch (e) { this.fault('terra', e) }
     try { discoveryDay(this) } catch (e) { this.fault('disc', e) }
+    try { timberDay(this) } catch (e) { this.fault('timber', e) }
     try { voicesDay(this) } catch (e) { this.fault('voices', e) }
     neighbourDay(this);
     buildingDay(this);

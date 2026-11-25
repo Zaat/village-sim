@@ -255,8 +255,8 @@ function planLivelihood(w, v, side) {
   const id = side ? v.side : v.trade, t = tradeOf(w, id); if (!t) return false;
   const hb = v.home != null ? w.buildings.get(v.home) : null, pl = t.at === 'market' ? w.of('market')[0] : t.at === 'tavern' ? w.of('tavern')[0] : t.at === 'plaza' ? w.of('plaza')[0] : t.at === 'workshop' ? (w.of('workshop').length ? w.of('workshop')[(v.id | 0) % w.of('workshop').length] : null) : null;
   let goal;
-  if (pl) goal = (x, y) => w.nearRect(x, y, pl); else if (t.at === 'any') { const P = gatherPlan(w, v, false, false); goal = P ? (x, y) => x === P.x && y === P.y : null } else if (hb) goal = (x, y) => w.nearRect(x, y, hb);
-  if (!goal && hb) goal = (x, y) => w.nearRect(x, y, hb); if (!goal) return false;
+  if (pl) goal = w.goalRect(pl); else if (t.at === 'any') { const P = gatherPlan(w, v, false, false); goal = P ? (x, y) => x === P.x && y === P.y : null } else if (hb) goal = w.goalRect(hb);
+  if (!goal && hb) goal = w.goalRect(hb); if (!goal) return false;
   const base = t.kind === 'care' ? 120 : 100, ticks = Math.max(30, Math.round(base * (1.2 - 0.4 * ((v.tskill && v.tskill[id]) || 0)) * (1.12 - 0.24 * v.mood / 100) * (1 + 0.08 * w.gov.policy.labor)));
   v.jobKind = 'craft'; v.steps = [go(goal, null, t.go, { maxCost: 90 }), work(ticks, t.lab, () => jobEffect(w, v, t, id))];
   return true;

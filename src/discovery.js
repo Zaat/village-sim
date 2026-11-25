@@ -171,7 +171,7 @@ function escortStart(w, v) {
 }
 /* what the party finds */
 function giveValue(w, V) {
-  const E = w.econ; if (money(w)) { E.treasury += V; return `${V} coins` } const each = Math.max(1, Math.round(V / 6)); w.stock.wood = Math.min(w.cap(), w.stock.wood + each); w.stock.stone = Math.min(w.cap(), w.stock.stone + each); w.stock.food = Math.min(w.cap(), w.stock.food + each); return `${each * 3} loads of goods`;
+  const E = w.econ; if (money(w)) { E.treasury += V; return `${V} coins` } const each = Math.max(1, Math.round(V / 6)); w.stock.wood = Math.min(w.capOf('wood'), w.stock.wood + each); w.stock.stone = Math.min(w.capOf('stone'), w.stock.stone + each); w.stock.food = Math.min(w.cap(), w.stock.food + each); return `${each * 3} loads of goods`;
 }
 function expedFind(w, ex, v, s) {
   const D = DISC(w), K = SITE_KINDS[s.kind], bits = []; ex.found = true;

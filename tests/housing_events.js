@@ -3,9 +3,9 @@ const { loadSim } = require('./lib'); const c = loadSim('World,CFG,placeBuilding
 const w = new c.World(321, { map: 'continent' }); for (let i = 0; i < 1200 * 4; i++) w.step();
 const near = placeBuilding_(); function placeBuilding_() { return c.placeBuilding(w, 'house') }
 ok(near && w.sprawl == null, 'with room near the village a house is placed close (no sprawl)');
-// reserve the close ground (within 38 tiles) so nothing near is free
+// reserve the close ground (within 38 tiles, woodland included: homes may now clear it) so nothing near is free
 const { W, H } = c.CFG; let filled = 0;
-for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (Math.hypot(x - w.cx, y - w.cy) < 42 && w.terr[y * W + x] === c.TERR.GRASS && !w.feat[y * W + x] && !w.bmap[y * W + x]) { w.claim[y * W + x] = 0; filled++ }
+for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (Math.hypot(x - w.cx, y - w.cy) < 42 && w.terr[y * W + x] === c.TERR.GRASS && (!w.feat[y * W + x] || w.feat[y * W + x] === c.FEAT.OAK || w.feat[y * W + x] === c.FEAT.PINE) && !w.bmap[y * W + x]) { w.claim[y * W + x] = 0; filled++ }
 w.bps.length = 0; w.bpAt.clear();
 const far = c.placeBuilding(w, 'house');
 ok(filled > 200, 'close ground filled: ' + filled);

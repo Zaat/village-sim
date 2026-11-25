@@ -409,6 +409,7 @@ function render(w, sel, now) {
     else if (w.road[i]) roadTile(g, w, x, y);
   }
   if (R.lvShow && w._lv) lvOverlay(g, w, x0, x1, y0, y1);
+  if (R.distShow) distOverlay(g, w, x0, x1, y0, y1);
   R.gcol = new Map(w.groups.map(gr => [gr.id, gr.color])); R.crown = new Set(w.gov.council.map(c => c.id));
   for (const sc of w.scars) if (w.tick < sc.until && inViewR(sc, x0, x1, y0, y1)) scarArt(g, sc, w);
   const rows = []; for (let y = y0; y <= y1 + 3; y++) rows[y] = [];
@@ -743,6 +744,17 @@ function lvOverlay(g, w, x0, x1, y0, y1) {
   for (let gy = Math.max(0, Math.floor(y0 / C)); gy <= Math.min(gh - 1, Math.floor(y1 / C)); gy++) for (let gx = Math.max(0, Math.floor(x0 / C)); gx <= Math.min(gw - 1, Math.floor(x1 / C)); gx++) {
     const v = w._lv[gy * gw + gx]; if (v < 3) continue; const k = clamp(v / vm, 0, 1);
     g.fillStyle = `rgba(${Math.round(60 + 190 * k)},${Math.round(190 - 130 * k)},70,${(0.12 + 0.3 * k).toFixed(2)})`; g.fillRect(gx * C * T, gy * C * T, C * T, C * T);
+  }
+}
+
+/* districts (City card button): each district's block tinted by how many live there, ordered ones outlined, the chosen one framed */
+function distOverlay(g, w, x0, x1, y0, y1) {
+  const { T } = CFG, c = DIST.cell, D = districtsView(w), mx = Math.max(1, ...D.list.map(d => d.pop)), orders = (w.play && w.play.on && w.play.dorders) || {}, big = R.cam.z >= 0.7;
+  for (const d of D.list) {
+    const X = d.gx * c, Y = d.gy * c; if (X > x1 || Y > y1 || X + c < x0 || Y + c < y0) continue; const k = d.pop / mx;
+    g.fillStyle = `rgba(${Math.round(80 + 170 * k)},${Math.round(150 - 70 * k)},${Math.round(210 - 150 * k)},${(0.14 + 0.34 * k).toFixed(2)})`; g.fillRect(X * T, Y * T, c * T, c * T);
+    g.lineWidth = d.key === R.distSel ? 3 : orders[d.key] ? 2 : 1; g.strokeStyle = d.key === R.distSel ? '#ffe58a' : orders[d.key] ? '#8fd18b' : 'rgba(255,255,255,.28)'; g.strokeRect(X * T + 1, Y * T + 1, c * T - 2, c * T - 2);
+    if (big) { g.font = 'bold 15px system-ui,sans-serif'; g.textAlign = 'center'; g.fillStyle = 'rgba(255,255,255,.92)'; g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 3; g.strokeText(String(d.pop), (X + c / 2) * T, (Y + c / 2) * T); g.fillText(String(d.pop), (X + c / 2) * T, (Y + c / 2) * T); g.textAlign = 'start' }
   }
 }
 

@@ -19,13 +19,18 @@ function worldLine(w) {
   const sw = ['survival', 'disasters', 'crime', 'raids'].map(k => k + ' ' + (s[k] ? 'on' : 'off')).join(', ');
   return `${ver} · seed ${w.seed} · ${w.arch} · ${sz} · hardship ${HARD_NAMES[s.hardship == null ? 1 : s.hardship] || s.hardship} · ${s.philosophy || 'balanced'} · open knowledge ${['off', 'relaxed', 'unlimited'][s.openKnowledge || 0] || s.openKnowledge} · ${sw} · year ${yr} day ${dy} (tick ${w.tick})`;
 }
+/* the short form shown in Settings; the full line (copied on click) is what the Seed box can parse */
+function worldLineShort(w) {
+  const s = w.settings || {}, ver = typeof APP_VERSION !== 'undefined' ? 'v' + APP_VERSION : 'v?', sz = SIZE_NAMES[CFG.W] || (CFG.W + 'x' + CFG.H), yr = Math.floor((w.day - 1) / (CFG.DPS * 4)) + 1, dy = ((w.day - 1) % (CFG.DPS * 4)) + 1;
+  return `${ver} · seed ${w.seed} · ${w.arch} · ${sz} · ${HARD_NAMES[s.hardship == null ? 1 : s.hardship] || s.hardship} · year ${yr} day ${dy}`;
+}
 function logAction(w, kind, text) {
   const L = w.alog || (w.alog = []); L.push({ t: w.tick, k: kind, a: text }); if (L.length > 300) L.splice(0, L.length - 300);
 }
 function diagText(w) {
   const pop = w.pop, bps = w.bps.filter(b => b.type !== 'road'), out = [worldLine(w)];
   out.push(`people ${pop} · homes ${w.houses().length} · beds ${w.beds()} · projects open ${bps.length} (${bps.filter(b => !b.ready()).length} waiting for materials)`);
-  out.push(`stock: wood ${Math.floor(w.stock.wood)}, stone ${Math.floor(w.stock.stone)}, food ${Math.floor(w.stock.food)}`);
+  out.push('stock: ' + Object.keys(w.stock).map(k => k + ' ' + Math.floor(w.stock[k])).join(', ') + ` · trees ${w.trees} of ${w.trees0 || '?'} · boats ${(w.boats || []).length} · season ${['spring', 'summer', 'autumn', 'winter'][w.season] || w.season}${w.cold ? ' · COLD (out of firewood)' : ''}`);
   if (w.beds() < pop + 2 && typeof housingDiag === 'function') { try { const h = housingDiag(w); out.push('housing held up: ' + (h.why.join('; ') || 'no cause found') + `\nfree sites near ${JSON.stringify(h.close)}\nfree sites wide ${JSON.stringify(h.wide)}`) } catch (e) { } }
   const cn = typeof openConcerns === 'function' ? openConcerns(w) : []; if (cn.length) out.push('concerns: ' + cn.map(c => c.key + '(' + c.sev + ')').join(', '));
   if (w.dbg) out.push(`deferred searches ${w.dbg.deferred || 0} · faults ${w.dbg.total || 0}`);

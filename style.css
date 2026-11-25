@@ -23,7 +23,7 @@ canvas#mini{position:absolute;right:12px;bottom:12px;width:224px;height:157px;bo
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 12px}.grid span{color:var(--mut)}
 .big{font-size:17px;font-weight:600}.hint{color:var(--mut);font-size:12px}
 .bar{height:6px;background:var(--panel2);border-radius:3px;overflow:hidden;margin:1px 0 5px}.bar i{display:block;height:100%}
-.res{display:grid;grid-template-columns:48px 1fr 70px;gap:6px;align-items:center;margin:2px 0}.res .bar{margin:0}.res b{text-align:right;font-variant-numeric:tabular-nums;font-size:12px}
+.res{display:grid;grid-template-columns:48px 1fr 92px;gap:6px;align-items:center;margin:2px 0}.res .bar{margin:0}.res b{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-size:12px}
 .chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}.chip{font-size:11px;padding:1px 7px;border-radius:10px;background:var(--panel2);border:1px solid var(--line)}.chip i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
 #log,#chron{max-height:230px;overflow:auto;font-size:12.5px;color:#c4ccd3}
 #log div{padding:2px 0;border-bottom:1px solid #20282f}#log b{color:var(--mut);font-weight:500;margin-right:6px}
@@ -101,7 +101,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .polb .fill{position:absolute;top:0;height:6px;border-radius:3px;opacity:.55}.polends{display:flex;justify-content:space-between;font-size:10px;color:var(--mut);margin-top:3px}
 
 #nw{position:absolute;inset:0;background:rgba(5,8,11,.62);display:flex;align-items:center;justify-content:center;z-index:30}
-.nwbox{width:min(520px,92vw);max-height:92vh;overflow-y:auto;background:rgba(18,24,30,.98);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.nwbox{width:min(520px,92vw);max-height:92vh;max-height:min(92dvh,calc(100% - 16px));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;background:rgba(18,24,30,.98);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
 .nwbox h3{margin:0 0 10px}.nwrow{display:flex;gap:6px;align-items:center}.nwrow input{flex:1}
 .nwchoices{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;margin-top:4px}
 .nwchoices button{text-align:left;padding:7px 9px;display:block}.nwchoices button b{display:block}.nwchoices button span{display:block;font-size:11px;color:var(--mut);line-height:1.25;margin-top:2px}
@@ -202,3 +202,7 @@ body.playing #mini{bottom:62px}
 .tale{font-size:13px;margin:3px 0;line-height:1.35}
 .ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;vertical-align:-4px;margin-right:4px;flex:none}.pgrid button .ic{width:24px;height:24px;margin:0;vertical-align:baseline;color:var(--mut);grid-row:1 / span 2}.pgrid button:has(.ic){display:grid;grid-template-columns:auto 1fr;column-gap:7px;align-items:center;padding:4px 8px}.pgrid button:has(.ic) small{grid-column:2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.pgrid button:has(.ic){min-width:0}.pgrid button.on .ic{color:#0d1a0d}.pgrid button:disabled .ic{opacity:.5}#ppan .ic{margin:0}
 .scen{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:7px 0;border-top:1px solid var(--line)}.scen button{flex:none}
+
+/* mobile (#187): a dialog is never taller than the stage that holds it, and its close button stays in view while it scrolls */
+.nwbox .drawerhead{position:sticky;top:-16px;z-index:2;background:rgba(18,24,30,.98);margin:-16px -18px 8px;padding:12px 18px 8px;border-bottom:1px solid var(--line)}
+.res .bar{position:relative}.res .bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#dfe6ec;opacity:.75;text-decoration:none}.resnote{margin:-2px 0 4px 0;line-height:1.3;color:#e0a458}

@@ -99,7 +99,7 @@ function tradeVisit(w, n) {
 }
 function envoyVisit(w, n) {
   startVisit(w, n, 'envoy', 2); const gift = n.kind === 'farmers' ? ['food', 12] : n.kind === 'traders' ? ['wood', 10] : n.kind === 'raiders' ? ['stone', 6] : ['food', 6];
-  w.stock[gift[0]] = Math.min(w.cap(), w.stock[gift[0]] + gift[1]); n.rel += 2.5;
+  w.stock[gift[0]] = Math.min(w.capOf(gift[0]), w.stock[gift[0]] + gift[1]); n.rel += 2.5;
   dlog(w, n, `An envoy from ${n.name} arrives with greetings and a gift of ${gift[1]} ${gift[0]}.`, 'envoy');
 }
 function migrantVisit(w, n) {

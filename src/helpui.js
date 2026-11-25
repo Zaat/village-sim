@@ -3,8 +3,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.36', name: 'Insight, look and sound',
-  news: ['Villages now grow far beyond the old 250 plateau: couples try for children every day, young people pair up, and births follow the beds and food the village really has. Island villages reach 500 to 700 people in 30 years.', 'Music: tap the speaker (or press M) for generated stereo music that follows the village. It never changes quickly at high speed, but a battle or a disaster stirs it.', 'Max speed (key 6), touch building with a ghost and an Undo, icons on the build palette, scenarios in the Menu, and a game-over screen with the best tales of your village.', 'Hardship now also changes the harvest: Gentle is kinder, Harsh is a real struggle that good play can survive.', 'Lumber camps are found for far-away trees, and faith and openness can live in the same person.'],
+  version: '0.37', name: 'Metropolis',
+  news: ['Towns now grow big: a continent town passes 3,000 people. Most of a large town is a counted crowd, so the game stays fast.', 'The districts overlay (World tab) tints the map by district; click one for its people, mood, homes, jobs, food and wood, and in Play give it an order.', 'Storage is real: yards for wood and stone, storehouses and granaries for food. Fishers draw on the real fish stock, and boats fetch wood from far shores.', 'Hardship is measured: Gentle passes 1,000 people, Harsh is hard but survivable.', 'Phone fixes: the Menu and About cards scroll and close, pinch and pan no longer stick, and Diagnostics is filled in.'],
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>

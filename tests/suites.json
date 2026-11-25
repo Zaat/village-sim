@@ -26,12 +26,18 @@
   "war_events",
   "culture_events",
   "perf",
+  "perf_metropolis",
   "housing_events",
   "city_events",
   "crowd_events",
   "growth_events",
   "play_events",
-  "gameover_events"
+  "gameover_events",
+  "timber_events",
+  "resources_rows",
+  "districts_events",
+  "storage_events",
+  "economy_events"
  ],
  "first": [
   "save",
@@ -57,7 +63,9 @@
   "ui_play",
   "ui_over",
   "ui_help",
-  "ui_sound"
+  "ui_sound",
+  "ui_mobile",
+  "ui_districts"
  ],
  "ui_only": [
   "render",
@@ -73,8 +81,36 @@
   "sound"
  ],
  "touch": {
-    "lives": ["growth_events", "lives_events", "privacy_events", "housing_events", "crowd_events", "city_events", "concerns_events", "livelihoods_events", "living", "play_events", "stats_events", "save", "golden", "perf"],
-    "society": ["regime_events", "strife_events", "culture_events", "war_events", "concerns_events", "tech_events", "play_events", "save", "golden", "perf"],
+  "lives": [
+   "growth_events",
+   "lives_events",
+   "privacy_events",
+   "housing_events",
+   "crowd_events",
+   "city_events",
+   "concerns_events",
+   "livelihoods_events",
+   "living",
+   "play_events",
+   "stats_events",
+   "save",
+   "golden",
+   "perf",
+   "perf_metropolis"
+  ],
+  "society": [
+   "regime_events",
+   "strife_events",
+   "culture_events",
+   "war_events",
+   "concerns_events",
+   "tech_events",
+   "play_events",
+   "save",
+   "golden",
+   "perf",
+   "perf_metropolis"
+  ],
   "voices": [
    "voices_events",
    "save",
@@ -91,9 +127,10 @@
   "concerns": [
    "concerns_events",
    "concerns_states",
-   "stats_legacy",
+   "golden",
    "save",
-   "golden"
+   "stats_legacy",
+   "timber_events"
   ],
   "stats": [
    "stats_events",
@@ -140,6 +177,36 @@
    "gameover_events",
    "save",
    "golden"
+  ],
+  "timber": [
+   "timber_events",
+   "save",
+   "living",
+   "routes",
+   "concerns_events",
+   "golden",
+   "perf",
+   "resources_rows",
+   "perf_metropolis"
+  ],
+  "resources": [
+   "resources_rows",
+   "ui_mobile"
+  ],
+  "districts": [
+   "districts_events",
+   "crowd_events",
+   "play_events",
+   "save",
+   "ui_mobile",
+   "ui_districts"
+  ],
+  "world": [],
+  "economy": [
+   "economy_events",
+   "crowd_events",
+   "storage_events",
+   "districts_events"
   ]
  },
  "est": {
@@ -168,6 +235,14 @@
   "ui_play": 35,
   "ui_over": 15,
   "ui_help": 15,
-  "ui_sound": 25
+  "ui_mobile": 10,
+  "ui_sound": 25,
+  "timber_events": 40,
+  "resources_rows": 5,
+  "districts_events": 10,
+  "storage_events": 10,
+  "ui_districts": 10,
+  "economy_events": 60,
+  "perf_metropolis": 90
  }
 }

@@ -66,7 +66,7 @@ function planHobby(w, v) {
   const h = v.hobby, [goLabel, stay] = HOBBY_JOB[h], hb = v.home != null ? w.buildings.get(v.home) : null, done = () => hobbyEffect(w, v, h);
   let goal = null, ticks = 100;
   if (h === 'angling') goal = (x, y, i) => { if (!w.walkable(i)) return false; for (const [dx, dy] of NB) { const j = (y + dy) * CFG.W + x + dx; if (j >= 0 && w.terr[j] <= TERR.SHALLOW) return true } return false };
-  else if (h === 'carving' || h === 'gardening') goal = hb ? (x, y) => w.nearRect(x, y, hb) : (x, y, i) => w.nearStock(x, y, i);
+  else if (h === 'carving' || h === 'gardening') goal = hb ? w.goalRect(hb) : (x, y, i) => w.nearStock(x, y, i);
   else if (h === 'stargazing') goal = (x, y, i) => w.terr[i] === TERR.ROCK && w.walkable(i) && Math.hypot(x - w.cx, y - w.cy) > 6;
   else if (h === 'singing' || h === 'storytelling') { const P = gatherPlan(w, v, false, false); if (!P) return false; goal = (x, y) => x === P.x && y === P.y; ticks = 120 }
   else { for (let k = 0; k < 8 && !goal; k++) { const gx = Math.round(w.cx + (w.r() * 2 - 1) * 18), gy = Math.round(w.cy + (w.r() * 2 - 1) * 14); if (gx > 1 && gy > 1 && gx < CFG.W - 1 && gy < CFG.H - 1 && w.walkable(gy * CFG.W + gx)) goal = (x, y) => x === gx && y === gy } if (!goal) return false; ticks = 70 }
@@ -86,7 +86,7 @@ function planErrand(w, v) {
     return true;
   }
   const pl = w.of('plaza')[0]; if (!pl) return false;
-  v.jobKind = 'leisure'; v.steps = [go((x, y) => w.nearRect(x, y, pl), null, 'To the well', { maxCost: 80 }), work(40, 'Fetching water', () => { LV(w).stats.errands++; v.social = Math.min(100, v.social + 3) })]; return true;
+  v.jobKind = 'leisure'; v.steps = [go(w.goalRect(pl), null, 'To the well', { maxCost: 80 }), work(40, 'Fetching water', () => { LV(w).stats.errands++; v.social = Math.min(100, v.social + 3) })]; return true;
 }
 
 /* ================= property, wealth, status ================= */

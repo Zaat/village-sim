@@ -222,6 +222,11 @@ addEventListener('pagehide', () => { if (autosaveOn && $('autosave').checked) sa
 
 /* ---------- panels ---------- */
 function bar(label, val, col) { return `<div class="hint">${label} ${Math.round(val)}</div><div class="bar"><i style="background:var(--acc);width:${clamp(val, 0, 100)}%;background:${col}"></i></div>` }
+/* a resource bar with a mark where the store should be, a trend arrow and, when short, why (v0.37) */
+function resRow2(w, id, cap) {
+  const I = resourceInfo(w, id), pct = v => clamp(v / cap * 100, 0, 100), arrow = I.trend > 0.5 ? '▲' : I.trend < -0.5 ? '▼' : '▬', tc = I.state === 'short' ? '#e07a5f' : I.state === 'watch' ? '#e0a458' : '#8fd18b';
+  return `<div class="res" title="${escapeHtml(I.name + ': ' + I.use + '. Instead of it or to get more: ' + I.subs + '.' + (I.note ? ' ' + I.note + '.' : ''))}"><span class="hint">${I.name}</span><div class="bar"><i style="width:${pct(I.have)}%;background:${I.col}"></i><u style="left:${pct(I.want)}%"></u></div><b>${Math.floor(I.have)} / ${cap} <span style="color:${tc}">${arrow}</span></b></div>${I.state !== 'ok' && I.note ? `<div class="hint resnote">${escapeHtml(I.note)}</div>` : ''}`;
+}
 function resRow(name, val, cap, col) { return `<div class="res"><span class="hint">${name}</span><div class="bar"><i style="background:var(--acc);width:${clamp(val / cap * 100, 0, 100)}%;background:${col}"></i></div><b>${Math.floor(val)} / ${cap}</b></div>` }
 function opBar(label, v) { const a = Math.abs(v) * 50; return `<div class="opr"><span>${label}</span><div class="opb"><i style="left:${v < 0 ? 50 - a : 50}%;width:${a}%;background:${v < 0 ? '#6a8fd0' : '#e0a458'}"></i></div></div>` }
 function skillWord(s) { return s > 0.7 ? 'expert' : s > 0.45 ? 'skilled' : s > 0.2 ? 'capable' : 'novice' }
@@ -239,7 +244,7 @@ function updateUI() {
   $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.pop}${w.crowd && w.crowd.n ? `<span class="hint" style="font-weight:400;font-size:12px"> (${w.vills.length} in play)</span>` : ''}</div><div class="hint">mood ${moodWord(mood)}</div></div>
     ${flowLine(w)}
     <div class="hint" style="margin-bottom:4px">${stg.infant || 0} infants · ${stg.child || 0} children · ${stg.youth || 0} youths · ${stg.adult || 0} adults · ${stg.elder || 0} elders</div>
-    ${resRow('Food', w.stock.food, cap, '#e0a458')}${resRow('Wood', w.stock.wood, cap, '#a8743c')}${resRow('Stone', w.stock.stone, cap, '#9aa3ab')}
+    ${resRow2(w, 'food', w.capOf('food'))}${resRow2(w, 'wood', w.capOf('wood'))}${resRow2(w, 'stone', w.capOf('stone'))}
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
@@ -366,7 +371,19 @@ function renderNeigh() {
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
 /* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
 const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a'];
-function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLine(w); a.title = 'Click to copy'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } const d = $('diagText'); if (d && d.parentElement.open) d.textContent = diagText(w) } catch (e) { } }
+function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
+function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } const d = $('diagText'); if (d && d.parentElement.open) d.textContent = diagText(w) + '\n' + diagExtras() } catch (e) { } }
+/* the district list and the chosen district's card, with group orders while playing (v0.37) */
+function districtCard(w) {
+  const D = districtsView(w), sel = D.list.find(d => d.key === R.distSel), playing = !!(w.play && w.play.on), orders = (w.play && w.play.dorders) || {};
+  let h = `<div class="hint" style="margin-top:8px">${D.list.length} districts, ${D.total} people. Click the map or a name to choose one.</div><div style="display:flex;flex-wrap:wrap;gap:3px;margin:3px 0">${D.list.slice().sort((a, b) => b.pop - a.pop).slice(0, 14).map(d => `<button class="btn" data-dsel="${d.key}" style="padding:1px 6px;${d.key === R.distSel ? 'outline:1px solid #ffe58a' : ''}">${escapeHtml(d.name)} ${d.pop}</button>`).join('')}</div>`;
+  if (!sel) return h;
+  const ord = orders[sel.key], tiers = sel.tiers.map((n, i) => n ? `${n} ${HOUSE_STYLES[i].toLowerCase()}${n === 1 ? '' : 's'}` : '').filter(Boolean).join(', '), notes = [];
+  if (sel.full) notes.push('no spare beds'); if (!sel.stores && w.of('store').length) notes.push('no store of its own'); if (!sel.farms && sel.pop > 40) notes.push('no fields here');
+  h += `<div style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-top:4px"><b>${escapeHtml(sel.name)}</b> <span class="hint">${sel.pop} people (${sel.focus} followed, ${sel.crowd} in the crowd)</span><div class="hint">${sel.homes} homes, ${sel.beds} beds: ${tiers || 'none'}. ${sel.farms} farms, ${sel.stores} stores, ${sel.shops} workshops and markets, ${sel.camps} camps.${notes.length ? ' <span style="color:#e0b86a">' + notes.join('; ') + '.</span>' : ''}</div>`;
+  h += playing ? `<div class="hint" style="margin-top:4px">Group order: its crowd works at</div><div style="display:flex;gap:3px;margin-top:2px">${[['', 'auto'], ['farm', 'farming'], ['wood', 'firewood'], ['stone', 'stone']].map(([k, l]) => `<button class="btn" data-dkey="${sel.key}" data-dord="${k}" style="padding:1px 7px;${(ord || '') === k ? 'outline:1px solid #8fd18b' : ''}">${l}</button>`).join('')}</div>` : '<div class="hint" style="margin-top:4px">Switch to Play to give this district a group order.</div>';
+  return h + '</div>';
+}
 function renderCity() {
   const w = world, el = $('cityCard'); if (!el) return; if (!w._lv) { el.innerHTML = '<div class="hint">The town is still too small to map.</div>'; return }
   const s = cityStats(w), b = s.bias, tot = s.beds.reduce((a, c) => a + c, 0) || 1, lay = b.compact > 0.75 ? 'tight and orderly' : b.compact > 0.5 ? 'fairly compact' : b.compact > 0.3 ? 'loose' : 'spread out';
@@ -379,8 +396,12 @@ function renderCity() {
   const bits = []; if (s.cleared.farm) bits.push(`${s.cleared.farm} field${s.cleared.farm === 1 ? '' : 's'} given up to building`); if (s.cleared.ruin) bits.push(`${s.cleared.ruin} ruin${s.cleared.ruin === 1 ? '' : 's'} cleared`); if (s.paved) bits.push(`${s.paved} path tiles paved where people walk`); if (s.surfaced) bits.push(`${s.surfaced} busy road tiles improved`);
   if (bits.length) html += `<div class="hint" style="margin-top:4px">So far: ${bits.join(', ')}.</div>`;
   const hd = w.hdiag; if (hd && hd.why.length && w.beds() < w.pop + 2) html += `<div class="hint" style="margin-top:4px;color:#e0b86a">Housing is held up: ${escapeHtml(hd.why.join('; '))}.</div>`;
-  html += `<div style="margin-top:6px"><button id="lvBtn" class="btn">${R.lvShow ? 'Hide' : 'Show'} land value on the map</button></div>`;
+  html += `<div style="margin-top:6px"><button id="lvBtn" class="btn">${R.lvShow ? 'Hide' : 'Show'} land value on the map</button> <button id="distBtn" class="btn">${R.distShow ? 'Hide' : 'Show'} districts on the map</button></div>`;
+  if (R.distShow) html += districtCard(w);
   el.innerHTML = html; const bt = $('lvBtn'); if (bt) bt.onclick = () => { R.lvShow = !R.lvShow; renderCity() };
+  const db = $('distBtn'); if (db) db.onclick = () => { R.distShow = !R.distShow; if (!R.distShow) R.distSel = null; renderCity() };
+  el.querySelectorAll('[data-dsel]').forEach(b => b.onclick = () => { R.distSel = +b.dataset.dsel; renderCity() });
+  el.querySelectorAll('[data-dord]').forEach(b => b.onclick = () => { districtOrder(world, +b.dataset.dkey, b.dataset.dord || null); renderCity() });
 }
 function renderWar() {
   const w = world, el = $('warCard'), box = el.parentElement; if (!w.neigh) { box.style.display = 'none'; return } box.style.display = '';
@@ -559,7 +580,7 @@ function buildingPanel(w, s, extra) {
     const fe = s.fert ?? 1;
     people = sec('Field', `<div class="hint">${['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]}</div><div class="hint">Soil: <b>${fe >= 1.03 ? 'rich' : fe >= 0.9 ? 'good' : fe >= 0.75 ? 'tired' : 'worn out'}</b> (${Math.round(fe * 100)}% yield). ${fe < 0.85 ? 'Fields left bare in winter recover faster; crop rotation wears the soil half as fast.' : ''}</div>`);
   } else if (s.type === 'store') {
-    people = sec('Stores', `<div class="hint">The village holds ${Math.round(w.stock.food)} food, ${Math.round(w.stock.wood)} firewood and ${Math.round(w.stock.stone)} stone of ${w.cap()} it can keep. Stores raise the limit by ${100 + (w.has('granary') ? 40 : 0)}.</div>`);
+    people = sec('Stores', `<div class="hint">The village holds ${Math.round(w.stock.food)} food, ${Math.round(w.stock.wood)} firewood and ${Math.round(w.stock.stone)} stone of ${w.capOf('food')} food, ${w.capOf('wood')} firewood and ${w.capOf('stone')} stone it can keep. Food keeps in storehouses and granaries; firewood and stone stack in yards that grow with stores, logging camps and quarries, and better stores and tools hold more.</div>`);
   } else if (s.type === 'dock') {
     const bs = w.boats.filter(b => b.dock === s.id);
     const tr = dockTier(s), kinds = {}; for (const b of bs) { const k = b.kind || 'fishing'; kinds[k] = (kinds[k] || 0) + 1 }
@@ -669,10 +690,15 @@ let drag = null;
 const ptrs = new Map(); let pinch = null;
 const pinchNow = () => { const [a, b] = [...ptrs.values()]; return { d: Math.max(8, Math.hypot(a.x - b.x, a.y - b.y)), x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
 function pinchEnd(e) { if (e.pointerType !== 'touch') return false; ptrs.delete(e.pointerId); if (pinch) { if (ptrs.size < 2) pinch = null; drag = null; cv.classList.remove('drag'); return true } return false }
-cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size >= 2) { PU.paint = null; PU.box = null; clearTimeout(PU.hold); PU.hold = null; drag = null; try { cv.setPointerCapture(e.pointerId) } catch (_) { } if (ptrs.size === 2) pinch = pinchNow(); return } } if (puDown(e)) return; try { cv.setPointerCapture(e.pointerId) } catch (_) { } drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
+cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { if (e.isPrimary) { ptrs.clear(); pinch = null } ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size >= 2) { PU.paint = null; PU.box = null; clearTimeout(PU.hold); PU.hold = null; drag = null; try { cv.setPointerCapture(e.pointerId) } catch (_) { } if (ptrs.size === 2) pinch = pinchNow(); return } } if (puDown(e)) return; try { cv.setPointerCapture(e.pointerId) } catch (_) { } drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
 cv.addEventListener('pointermove', e => { if (e.pointerType === 'touch' && ptrs.has(e.pointerId)) { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch && ptrs.size === 2) { const n = pinchNow(), r = cv.getBoundingClientRect(); zoomAt(n.d / pinch.d, pinch.x - r.left, pinch.y - r.top); R.cam.x -= (n.x - pinch.x) / R.cam.z; R.cam.y -= (n.y - pinch.y) / R.cam.z; follow = false; clampCam(); pinch = n; return } } if (pinch) return; if (puMove(e)) return; if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY; if (drag.moved > 5) { R.cam.x -= dx / R.cam.z; R.cam.y -= dy / R.cam.z; follow = false; clampCam() } });
 cv.addEventListener('pointercancel', e => { pinchEnd(e); drag = null; cv.classList.remove('drag') });
 cv.addEventListener('pointerup', e => { if (pinchEnd(e)) return; cv.classList.remove('drag'); cv._moved = drag ? drag.moved : 0; if (puUp(e)) { drag = null; return } if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top); puPicked(e, selected) } drag = null });
+/* a finger lifted over a button or outside the canvas never reaches the canvas: clean up at window level, and when the page loses focus (#188) */
+const ptrsDrop = e => { if (e.pointerType === 'touch') { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null } };
+window.addEventListener('pointerup', ptrsDrop, true); window.addEventListener('pointercancel', ptrsDrop, true);
+const ptrsReset = () => { ptrs.clear(); pinch = null; drag = null; cv.classList.remove('drag') };
+window.addEventListener('blur', ptrsReset); document.addEventListener('visibilitychange', () => { if (document.hidden) ptrsReset() });
 cv.addEventListener('wheel', e => { e.preventDefault(); const r = cv.getBoundingClientRect(); zoomAt(Math.exp(-e.deltaY * 0.0016), e.clientX - r.left, e.clientY - r.top) }, { passive: false });
 function pick(sx, sy) {
   { const bv = bubbleAt(sx, sy); if (bv) { selected = bv; showTab('village'); updateUI(); return } }
@@ -681,6 +707,7 @@ function pick(sx, sy) {
   for (const a of world.animals) if (a.alive) { const d = Math.hypot(a.x * T - p.x, a.y * T - 5 - p.y); if (d < bd) { bd = d; best = a } }
   if (!best && world.out) for (const o of world.out.list) if (o.state === 'active') { const d = Math.hypot(o.x * T + 8 - p.x, o.y * T + 4 - p.y); if (d < Math.max(34, 30 / R.cam.z)) { best = o; break } }
   if (!best && world.neigh) for (const n of world.neigh) if (n.found) { const d = Math.hypot(n.x * T + 8 - p.x, n.y * T + 8 - p.y); if (d < Math.max(5 * T, 30 / R.cam.z)) { best = n; break } }
+  if (!best && R.distShow) { const dd = districtAt(world, Math.floor(p.x / T), Math.floor(p.y / T)); if (dd) { R.distSel = dd.key; showTab('world'); renderCity(); return } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
   if (best !== selected) voiceUnpin(); selected = best; if (!best) follow = false; else showTab('village'); updateUI();
 }
@@ -735,7 +762,7 @@ async function reportAction(kind) {
   const text = JSON.stringify(dbgReport(world, speed), null, 2);
   if (kind === 'save') return saveTextFile(`village-diagnostics-y${world.year}-d${world.day}.json`, text, 'Saved report ');
   let ok = false; try { await navigator.clipboard.writeText(text); ok = true } catch (e) { }
-  const ta = $('diagText'); if (ok) { saveInfo('Report copied to the clipboard.'); ta.style.display = 'none' } else { ta.value = text; ta.style.display = ''; ta.focus(); ta.select(); saveInfo('The browser blocked copying. The report is in the box below: select all and copy it.') }
+  const ta = $('diagBox'); if (ok) { saveInfo('Report copied to the clipboard.'); ta.style.display = 'none' } else { ta.value = text; ta.style.display = ''; ta.focus(); ta.select(); saveInfo('The browser blocked copying. The report is in the box below: select all and copy it.') }
 }
 $('diagCopy').onclick = () => reportAction('copy'); $('diagSave').onclick = () => reportAction('save');
 $('diagProf').onclick = () => { world.profReset(); world.dbg.errors.clear(); DBG.session.clear(); DBG.previous = []; try { localStorage.removeItem(ERR_KEY) } catch (e) { } updateDiag() };
@@ -825,7 +852,11 @@ setInterval(() => {
     wd.stage = Math.min(2, wd.stage + 1); wd.changedAt = nowT; dbgPersist(world);
   }
 }, 1000);
-addEventListener('error', e => { dbgNote('window', e.error || new Error(e.message)); if (world) dbgPersist(world) });
+addEventListener('error', e => {      // "Script error." with no file is a masked error from outside the game (a browser extension or the system); say so, and keep file and line when there are some
+  const masked = !e.error && !e.filename && /^Script error/i.test(e.message || ''), where = e.filename ? ' at ' + String(e.filename).split('/').slice(-2).join('/') + ':' + e.lineno + ':' + e.colno : '';
+  const err = e.error || new Error(masked ? 'Script error from outside the game (masked by the browser; usually an extension or the system, not Village Sim)' : (e.message || 'error') + where);
+  if (masked) err.stack = ''; dbgNote(masked ? 'external' : 'window', err); if (world) dbgPersist(world)
+});
 addEventListener('unhandledrejection', e => { dbgNote('promise', e.reason); if (world) dbgPersist(world) });
 
 window.__sim = { get world() { return world }, select(o) { selected = o; updateUI() }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };

@@ -6,7 +6,7 @@
    The crowd never uses w.r(): it has its own per-day stream, like war.js and culture.js.
    Villagers leave the focus quietly (no death, no grief) when the town outgrows it, and come forward from the crowd
    when the focus thins out, so a family line can pass from the crowd back into the story. */
-const CROWD = { focus: 160, hyst: 6, maxMove: 12 };
+const CROWD = { focus: 160, hyst: 6, maxMove: 12, draw: 0.012 };       // draw: share of the empty beds that newcomers fill each day at full prospects
 const crowdR = (w, salt) => { let h = (w.seed ^ 0x3C0D1D07 ^ Math.imul(w.day + 1, 0x9E3779B1) ^ Math.imul((salt | 0) + 11, 0x85EBCA6B)) | 0; h = Math.imul(h ^ h >>> 16, 0x45D9F3B); h = Math.imul(h ^ h >>> 16, 0x45D9F3B); const r = mulberry32((h ^ h >>> 16) >>> 0); r(); r(); return r };
 const crowdState = w => w.crowd || (w.crowd = { n: 0, kids: 0, adults: 0, elders: 0, acc: {}, made: { food: 0, wood: 0, stone: 0 }, eaten: 0, born: 0, died: 0, demoted: 0, promoted: 0, hungry: 0, workers: { food: 0, wood: 0, stone: 0, serve: 0 } });
 const crowdSize = w => (w.crowd ? w.crowd.n : 0);
@@ -69,28 +69,40 @@ function crowdPeople(w, C) {
   if (pop + 1 <= w.beds() && w.stock.food >= pop * 3.5 * (1 - 0.25 * gp) * (w.settings.survival ? 1.3 : 1)) {
     born = Math.min(flow(C, 'born', (C.adults + 0.1 * C.elders) * (C.rate || 0.011)), Math.max(0, w.beds() - pop));
   }
+  // newcomers: a town with empty homes, full larders and good prospects draws people from the countryside, as real cities always grew (births alone only replace the dead)
+  const spare = Math.max(0, w.beds() - pop), prosp = w.prosp == null ? 1 : w.prosp;
+  const pull = clamp((prosp - 0.7) * 1.4, 0, 1.2) * (w.stock.food > pop * 4 ? 1 : w.stock.food > pop * 2 ? 0.4 : 0) * hardOf(w).imm * (gp > -0.75 ? 1 + 0.8 * gp : 0) * (w.settings.survival ? 0.5 : 1) * (projBuilt(w, 'monument') ? 1.35 : 1);
+  const arrive = Math.min(spare, flow(C, 'arr', spare * CROWD.draw * pull)), arrAd = Math.round(arrive * 0.8);
+  if (arrive) { C.adults += arrAd; C.kids += arrive - arrAd; C.arrived = (C.arrived || 0) + arrive; noteFlow(w, 'arrived', arrive); statCount(w, 'arrivals', arrive) }
   C.kids += born; C.born += born; w.births += born; if (born) { noteFlow(w, 'born', born); statCount(w, 'born', born) }
   C.n = C.kids + C.adults + C.elders;
 }
 
-/* the crowd works at what the town needs most, eats, and heats its homes */
+/* the crowd works where the town's need is greatest (economy.js says what that work yields) */
 function crowdWork(w, C) {
-  const s = w.season, winter = s === 3, pop = w.pop;
-  const hands = C.adults * 0.62 + C.elders * 0.12, farms = w.of('farm').length;
-  const cover = w.stock.food / Math.max(1, pop);
-  let fs = cover < 4 ? 0.62 : cover < 8 ? 0.45 : cover < 14 ? 0.3 : 0.18;
-  const fieldHands = Math.max(0, farms * 5 - w.vills.filter(v => v.role === 'farmer').length);
-  const sh = w.play && w.play.share;                                   // Play: the player splits the crowd's hands
-  const food = sh ? Math.min(hands * sh.food, fieldHands) : Math.min(hands * fs, fieldHands);
-  const wood = sh ? hands * sh.wood * (w.trees < 40 ? 0.3 : 1) : hands * (0.12 + (w.stock.wood < pop * 3 ? 0.1 : 0) + (s === 2 ? 0.06 : 0)) * (w.trees < 40 ? 0.3 : 1);
-  const stone = sh ? hands * sh.stone : hands * (w.stock.stone < 10 + pop * 0.4 ? 0.09 : 0.04);
-  const serve = Math.max(0, hands - food - wood - stone);
-  const tech = 1 + 0.1 * ['plow', 'rotation', 'crop3', 'orchards', 'agronomy'].filter(t => w.has(t)).length;
-  const seasonal = winter ? 0.25 : s === 2 ? 1.5 : s === 1 ? 1.1 : 0.9;
-  const made = { food: food * 1.05 * seasonal * tech, wood: wood * 0.5 * (winter ? 0.8 : 1) * (w.has('tools') ? 1.1 : 1), stone: stone * 0.38 * (w.has('tools') ? 1.1 : 1) };
-  for (const k of ['food', 'wood', 'stone']) { w.stock[k] = Math.min(w.stock[k] + made[k], w.cap() + 40); C.made[k] += made[k] }
-  const eat = C.kids * 0.5 + (C.adults + C.elders) * 0.85;
-  C.eaten += eat; C.workers = { food: Math.round(food), wood: Math.round(wood), stone: Math.round(stone), serve: Math.round(serve) };
+  const s = w.season, winter = s === 3, pop = w.pop, hands = C.adults * 0.62 + C.elders * 0.12, eat = crowdEat(C);
+  const { tgt } = resourceTargets(w), sh = w.play && w.play.share, fields = crowdFields(w), perF = ECON.fph * fieldMean(w);
+  const Rw = gatherReach(w, 'wood'), Rs = gatherReach(w, 'stone'), pw = handYield(w, 'wood', Rw), ps = handYield(w, 'stone', Rs);
+  // what the town needs each day, in hands
+  const needF = eat * 1.05 + Math.max(0, tgt.food - w.stock.food) / 16, needW = winterWood(w) / 4 + Math.max(0, tgt.wood - w.stock.wood) / 12 + pop * 0.03, needS = Math.max(0, tgt.stone - w.stock.stone) / 12 + pop * 0.012;
+  const fCap = fields / ECON.fph, FR = fishReach(w), pfh = fishHand(w, FR), avail = hands * 0.9;
+  // the sea: fishers supply a share of the food where there is water to fish, and everything the fields cannot give
+  const landShort = w.noFarmRoom != null && w.day - w.noFarmRoom < 40;       // no ground left for another field: then the sea feeds what the fields cannot
+  let hfi = 0;
+  if (pfh > 0 && FR.cap > 0) hfi = Math.min(FR.cap, avail * 0.6, fishAllow(w, FR) / Math.max(0.1, fishTrips(w, FR)), Math.max(FISH.share * needF, landShort ? needF - fCap * perF : 0) / pfh);
+  if (sh) hfi = Math.min(hfi, hands * sh.food);
+  let hf = Math.min(Math.max(0, needF - hfi * pfh) / Math.max(0.1, perF), fCap), hw = pw > 0 ? needW / pw : 0, hs = ps > 0 ? needS / ps : 0;
+  const rest = Math.max(0, avail - hf - hfi), wsum = hw + hs; if (hf + hfi > avail) hf = Math.max(0, avail - hfi); if (wsum > rest) { const k = wsum > 0 ? rest / wsum : 0; hw *= k; hs *= k }
+  if (sh) { hf = Math.min(Math.max(0, hands * sh.food - hfi), fCap); hw = hands * sh.wood; hs = hands * sh.stone }
+  const dh = districtHands(w), dF = dh.food + dh.wood + dh.stone, ordered = (k, base, cap) => dF > 0 ? Math.min(cap, base * (1 - dF) + hands * dh[k] * 0.85) : base;       // a group order sends a district's hands to one job
+  hf = ordered('food', hf, fCap); hw = ordered('wood', hw, 1e9); hs = ordered('stone', hs, 1e9);
+  const serve = Math.max(0, hands - hf - hfi - hw - hs);
+  const caught = crowdFish(w, hfi * fishTrips(w, FR)), madeFish = caught * fishLoad(w), madeF = Math.min(hf * ECON.fph, fields) * fieldDay(w) + madeFish, madeW = hw * pw * (winter ? 0.85 : 1), madeS = hs * ps;
+  const fw = crowdFell(w, 'wood', madeW, Rw, 1), fs = crowdFell(w, 'stone', madeS, Rs, 2);             // only what the trees and rock can give is made
+  const made = { food: madeF, wood: fw, stone: fs };
+  for (const k of ['food', 'wood', 'stone']) { w.stock[k] = Math.min(w.stock[k] + made[k], w.capOf(k) + 40); C.made[k] += made[k] }
+  C.eaten += eat; C.fishAvg = (C.fishAvg || 0) * 0.9 + madeFish * 0.1; C.fished = (C.fished || 0) + caught; if (caught) statCount(w, 'fish_crowd', caught);
+  C.workers = { fish: Math.round(hfi), food: Math.round(hf), wood: Math.round(hw), stone: Math.round(hs), serve: Math.round(serve) };
   C.hungry = w.stock.food < eat ? C.hungry + 1 : 0; w.stock.food = Math.max(0, w.stock.food - eat);
   if (winter) w.stock.wood = Math.max(0, w.stock.wood - C.n * 0.05);
   if (w.econ && w.has('coinage')) w.econ.treasury += serve * 0.03;
@@ -100,5 +112,5 @@ function crowdDay(w) {
   if (!w.crowd && w.vills.length <= CROWD.focus + CROWD.hyst) return;
   rebalanceFocus(w);
   const C = w.crowd; if (!C || C.n <= 0) return;
-  crowdPeople(w, C); crowdWork(w, C);
+  districtsDay(w); crowdPeople(w, C); crowdWork(w, C);
 }

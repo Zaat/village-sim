@@ -195,7 +195,7 @@ function outTend(w, o) {
   const share = outShare(w, o), target = clamp(0.64 - 1.1 * (share - 0.42) - outFar(w, o.x, o.y) / 520 - (o.hungry > 2 ? 0.25 : 0) - 0.18 * Math.min(1.2, o.pop / Math.max(12, w.pop)) - Math.min(0.15, (w.day - o.day) / 1200) + o.aid + (w.rx ? -0.12 * w.rx.A + 0.08 * w.rx.C : 0) + (o.stage >= 2 ? -0.05 : 0) + (o.temper || 0) + 0.04 * Math.sin((w.day + o.id * 37) / 23), 0, 1);
   o.loyalty += (target - o.loyalty) * 0.05; o.aid *= 0.985;
   if (w.day >= o.nextHaul) haul(w, o, share);
-  const rest = []; for (const c of o.cargo) { if (w.day < c.at) { rest.push(c); continue } if (c.lost) { outLog(w, `A load from ${o.name} was lost on the way.`); continue } for (const k of ['wood', 'stone', 'food']) if (c[k]) { w.stock[k] = Math.min(w.stock[k] + c[k], w.cap() + 40); S.back[k] += c[k] } o.sentHome += (c.wood || 0) + (c.stone || 0) + (c.food || 0) } o.cargo = rest;
+  const rest = []; for (const c of o.cargo) { if (w.day < c.at) { rest.push(c); continue } if (c.lost) { outLog(w, `A load from ${o.name} was lost on the way.`); continue } for (const k of ['wood', 'stone', 'food']) if (c[k]) { w.stock[k] = Math.min(w.stock[k] + c[k], w.capOf(k) + 40); S.back[k] += c[k] } o.sentHome += (c.wood || 0) + (c.stone || 0) + (c.food || 0) } o.cargo = rest;
   if (o.loyalty < 0.2 && o.pop >= 8) { o.lowDays++; if (o.lowDays >= 8) return breakAway(w, o) } else o.lowDays = Math.max(0, o.lowDays - 1);
   if (o.loyalty < 0.4 && w.day >= (o.askAt || 0) && o.pop >= 6) { o.askAt = w.day + 24; askAboutOutpost(w, o) }
 }

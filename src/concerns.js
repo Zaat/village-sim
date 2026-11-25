@@ -32,9 +32,21 @@ function initConcerns(w) {
 }
 const CN = w => w.concerns || (initConcerns(w), w.concerns);
 
+/* what the boats have done about it, and what stopped them (timber.js) */
+function timberNote(w) {
+  const t = w.timber; if (!w.has('boats')) return ' Boats would let woodcutters fetch timber from far shores.';
+  if (!t) return ''; const a = t.runs ? ` Boats have brought ${t.wood} loads of timber in ${t.runs} runs.` : '';
+  return a + (t.why ? ` No timber run now: ${t.why}.` : '');
+}
 /* the firewood a winter will take (shared with the winter upkeep in world.js) */
 function winterWood(w) {
-  return Math.ceil((w.pop * 0.3 + w.houses().length * 0.7 + 1) * (w.harsh ? 1.8 : 1) * (w.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(w)));
+  return Math.ceil((w.pop * 0.22 + w.houses().length * 0.5 + 1) * (w.harsh ? 1.8 : 1) * (w.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(w)) * fuelFx(w) * hardOf(w).cold);
+}
+/* what technology saves on firewood (v0.37): stone hearths, brick chimneys, glazed windows, coal where it has been found, electric heat; never below 30 percent */
+function fuelFx(w) {
+  let k = 1; if (w.has('masonry')) k -= 0.08; if (w.has('brickwork')) k -= 0.08; if (w.has('glass')) k -= 0.06;
+  if (w.has('mining') && typeof matOk === 'function' && matOk(w, 'coal')) k -= 0.22; if (w.has('electricity')) k -= 0.2;
+  return Math.max(0.3, k);
 }
 
 /* which standing orders are in force right now */
@@ -88,11 +100,15 @@ function foodRules(w, C, found) {
   found.push({ key: 'food', sev, text: `Only ${Math.floor(w.stock.food)} food is stored for ${pop} people (${cover.toFixed(1)} each).${starved ? ' ' + plural(starved, 'person has', 'people have') + ' starved lately.' : ''}`,
     why: `${farms} farms with ${farmers} farmers${w.season === 3 ? '; the fields are frozen' : ''}${w.drought ? '; a drought has dried the fields' : ''}${w.harsh ? '; the winter is harsh' : ''}.`, m: { v: cover, ok: limit, bad: 0.5 }, fix: ['ration', 'hands_food', 'allhands', 'nudge_work'] });
 }
+/* winterWood is the burn per winter DAY; a whole winter is DPS days of it. fuelWant(w, f) is f of a winter's worth, never more than the stores can hold */
+function fuelWant(w, f) { return Math.min(winterWood(w) * CFG.DPS * f, w.capOf('wood') * 0.85) }
+/* wood that builders leave in the stores so the winter is not burnt on new houses (a village of 40 or more): a little in spring, more in summer, most in autumn, and in winter the days still to come */
+function woodReserve(w) { return w.pop < 40 ? 0 : w.season === 0 ? fuelWant(w, 0.2) : w.season === 1 ? fuelWant(w, 0.5) : w.season === 2 ? fuelWant(w, 1) : winterWood(w) * Math.max(1, CFG.DPS - w.seasonDay + 1) }
 function fuelRules(w, C, found) {
-  if (w.season < 1) return; const need = winterWood(w), have = Math.floor(w.stock.wood);
-  if (w.season === 3) { if (w.cold) found.push({ key: 'fuel', sev: 2, text: 'The firewood has run out and the village is freezing.', why: `The winter needed about ${need} firewood; only ${have} was stored.`, m: { v: have, ok: need, bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] }); return }
-  const sev = w.season === 2 && have < need ? 2 : have < need * (w.season === 2 ? 1.5 : 1.3) ? 1 : 0; if (!sev) return;
-  found.push({ key: 'fuel', sev, text: `${have} firewood is stored and winter will take about ${need}.`, why: `${w.vills.filter(v => v.role === 'woodcutter').length} woodcutters at work; ${w.houses().length} homes to heat for ${w.pop} people.`, m: { v: have, ok: need * (w.season === 2 ? 1.5 : 1.3), bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] });
+  if (w.season < 1) return; const per = winterWood(w), all = per * CFG.DPS, have = Math.floor(w.stock.wood);
+  if (w.season === 3) { if (w.cold) found.push({ key: 'fuel', sev: 2, text: 'The firewood has run out and the village is freezing.', why: `The winter burns about ${per} firewood a day (${all} in all); the stores ran dry.${timberNote(w)}`, m: { v: have, ok: per * 2, bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] }); return }
+  const goal = fuelWant(w, w.season === 2 ? 0.9 : 0.55), sev = w.season === 2 && have < fuelWant(w, 0.6) ? 2 : have < goal ? 1 : 0; if (!sev) return;
+  found.push({ key: 'fuel', sev, text: `${have} firewood is stored and a winter will burn about ${all}.`, why: `${w.vills.filter(v => v.role === 'woodcutter').length} woodcutters at work; ${w.houses().length} homes to heat for ${w.pop} people.${timberNote(w)}`, m: { v: have, ok: goal, bad: 0 }, fix: ['hands_fuel', 'allhands', 'nudge_work'] });
 }
 function housingRules(w, C, found) {
   const P = w.priv; if (!P || !w.houses().length) return;

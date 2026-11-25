@@ -11,26 +11,28 @@ function makeBp(w, type, x, y, extra) {
   return bp;
 }
 function placeBuilding(w, type, wide, at) {       // `at` (a hamlet) restricts the search to the ground around it
-  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, k = wide ? 1.9 : 1, dmax = at ? 200 : wide ? 74 : 40, pop = w.pop;
+  const [bw, bh] = CFG.SIZE[type], L = CFG.LATTICE, cands = [], { W, H } = CFG, pop = w.pop, sc = wide ? clamp(Math.sqrt(pop / 1200), 1, 2) : 1, k = wide ? 1.9 * sc : 1, dmax = at ? 200 : wide ? 74 * sc : 40;       // a bigger town reaches further for ground (a city of thousands covers more land than a village)
   const ax0 = at ? at.x - 10 : w.cx - Math.round(45 * k), ax1 = at ? at.x + 10 : w.cx + Math.round(45 * k), ay0 = at ? at.y - 8 : w.cy - Math.round(36 * k), ay1 = at ? at.y + 8 : w.cy + Math.round(36 * k);
   for (let y = ay0; y <= ay1; y += L) for (let x = ax0; x <= ax1; x += L) {
     if (x < 2 || y < 2 || x + bw >= W - 2 || y + bh >= H - 2) continue;
-    let ok = true;
+    let ok = true, trees = 0;
     for (let dy = 0; dy < bh && ok; dy++) for (let dx = 0; dx < bw; dx++) {
       const i = (y + dy) * W + x + dx;
-      if (w.terr[i] !== TERR.GRASS || w.feat[i] || w.bmap[i] || w.road[i] || w.bpAt.has(i) || w.claim[i] >= 0) { ok = false; break }
+      const ft = w.feat[i], wood = (type === 'farm' || (type === 'house' && wide)) && w.trees > w.trees0 * 0.55 && (ft === FEAT.OAK || ft === FEAT.PINE);       // a field, or a home when the close ground is full, may be made by clearing woodland while at least half the forest stands (it is the town's fuel and timber): the timber is kept
+      if (w.terr[i] !== TERR.GRASS || (ft && !wood) || w.bmap[i] || w.road[i] || w.bpAt.has(i) || w.claim[i] >= 0) { ok = false; break }
+      if (wood) trees++;
     }
     if (!ok) continue;
     const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5 || d > dmax) continue;
     const score = at ? Math.hypot(x - at.x, y - at.y) + w.r() * 2 : type === 'house' ? houseScore(w, x, y, d, pop) : type === 'farm' ? farmScore(w, x, y, d, pop) : type === 'workshop' ? workshopScore(w, x, y, d) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
-    cands.push({ x, y, score });
+    cands.push({ x, y, score: score + trees * 1.2 });
   }
   if (w.play && w.play.nz && PLACE[type]) { const zs = [], uz = []; for (const c of cands) { const f = zoneFit(w, type, c.x, c.y, bw, bh); if (f > 0) zs.push(c); else if (f === 0) uz.push(c) } cands.splice(0, cands.length, ...(zs.length ? zs : uz)) }       // painted zones (Play): inside the right zone first, never inside another
   cands.sort((a, b) => a.score - b.score);
   if (cands.length) {
     const s0 = w._st; w.search(w.cx - 1, w.cy, () => false, wide ? 320 : 120); if (w._st === s0) return null;       // one flood from camp tells which sites can be walked to (many floods for the best few used to fail together when they were all cut off)
     const seen = w._seen, st = w._st;
-    for (const c of cands.slice(0, 80)) {
+    for (const c of cands.slice(0, 700)) {       // the best sites first; a pocket the people cannot walk to (across water, behind woods) must not hide the ones they can
       let ok = false; for (let dy = -1; dy <= bh && !ok; dy++) for (let dx = -1; dx <= bw; dx++) { if ((dx < 0 || dx >= bw) && (dy < 0 || dy >= bh)) continue; const xx = c.x + dx, yy = c.y + dy; if (xx >= 0 && yy >= 0 && xx < W && yy < H && seen[yy * W + xx] === st) { ok = true; break } }
       if (ok) { if (wide) w.sprawl = (w.sprawl || 0) + 1; return makeBp(w, type, c.x, c.y) }
     }
@@ -142,7 +144,7 @@ const hardOf = w => HARDSHIP[w.settings.hardship == null ? 1 : w.settings.hardsh
 /* prosperity 0.3..1.8, refreshed daily: food in store, spare beds, mood and health. It nudges births, newcomers and how far ahead builders plan. */
 function prosperityDay(w) {
   const pop = Math.max(1, w.pop), food = clamp(w.stock.food / pop / 6, 0, 1.5), room = clamp((w.beds() - pop) / (pop * 0.15 + 2), 0, 1);
-  let mood = 0, hp = 0; for (const v of w.vills) { mood += v.mood; hp += v.health } mood /= pop * 100; hp /= pop * 100;
+  let mood = 0, hp = 0; for (const v of w.vills) { mood += v.mood; hp += v.health } const nv = Math.max(1, w.vills.length); mood /= nv * 100; hp /= nv * 100;       // the villagers in play speak for the town (dividing by the whole crowd made big towns look gloomy and sickly, and cut their births)
   const fa = w.vills.filter(v => v.isAdult() && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)); w.pairNeed = fa.length >= 6 ? clamp(1 - (fa.filter(v => v.partner != null).length / fa.length) / 0.55, 0, 1) : 0;       // few couples among the fertile: people are readier to settle down
   w.lifeScale = 1 + 0.5 * Math.min(0.75, techFx(w, 'health'));       // medicine, nutrition and sanitation stretch a life by up to about 37%
   w.prosp = clamp(0.4 + 0.35 * food + 0.35 * room + 0.5 * (mood - 0.5) + 0.3 * (hp - 0.7), 0.3, 1.8);
@@ -160,14 +162,14 @@ function planTown(w) {
   const structBps = w.bps.filter(b => b.type !== 'road').length;
   const drive = ordersOf(w).build;
   if (structBps < 2 + Math.floor(pop / 8) + (drive ? 4 : 0)) {
-    const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
+    const room = w.cap(), yard = w.capOf('wood'), full = (w.stock.food > room * 0.8 || w.stock.wood > yard * 0.9 || winterWood(w) * CFG.DPS * 0.9 > yard * 0.85) && stores < Math.ceil(pop / 9) + 1;
     if (cap < pop + 1) placeHouse(w);
-    else if (farms < Math.min(30 + Math.max(0, Math.floor((pop - 130) / (CFG.FARM_SLOPE || 5))), Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
-    else if (full && stores < 10) placeBuilding(w, 'store');
+    else if (farms < farmsWanted(w) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) { if (!placeBuilding(w, 'farm')) { w.noFarmRoom = w.day; if (cap < pop * 1.1 + 3 && w.stock.wood >= 10) placeHouse(w) } }       // no ground for a field: do not let that hold up the homes
+    else if (full && stores < Math.max(10, Math.ceil(pop / 20))) placeBuilding(w, 'store');
     else if (crowdWant(w, count('house'), pop)) placeHouse(w);                                       // crowded households need somewhere to move to
     else if (cap < pop * (1.1 + 0.2 * clamp((w.prosp || 1) - 0.8, 0, 1) + (drive ? 0.3 : 0)) + 3 && w.stock.food > pop * 3 && w.stock.wood >= 10) placeHouse(w);       // build ahead when life is good
   }
-  if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(3, 1 + Math.floor(pop / 40)) && w.stock.wood > 30) placeDock(w);
+  if (w.has('boats') && w.fishOK && !w.bps.some(b => b.type === 'dock') && w.of('dock').length < Math.min(8, 1 + Math.floor(pop / (pop > 150 ? 70 : 40))) && w.stock.wood > 30) placeDock(w);
   if (w.has('trade') && pop >= 20 && w.of('market').length + count('market') < Math.min(3, 1 + Math.floor(pop / 70)) && w.stock.wood > 30) placeBuilding(w, 'market');
   if (w.has('carpentry') && pop >= 14 && !w.of('plaza').length && !count('plaza') && w.stock.wood >= 14) placeBuilding(w, 'plaza');
   if (w.has('trade') && w.of('plaza').length && pop >= 30 && w.of('tavern').length + count('tavern') < Math.min(3, 1 + Math.floor(pop / 90)) && w.stock.wood > 40) placeBuilding(w, 'tavern');
@@ -184,7 +186,7 @@ function resourceTargets(w) {
     wood: 16 + 3 * pop + pend.wood + ((s === 2 ? pop * 3 + w.houses().length * 6 : 0) + (s === 3 ? pop * 2 : 0)) * (1 + 0.4 * lesson(w, 'cold')), stone: 6 + 2 * pop + pend.stone,
     food: (10 + 4 * pop + (s === 2 ? pop * 8 : 0) + (s === 1 ? pop * 3 : 0)) * (1 + 0.5 * lesson(w, 'famine'))
   };
-  for (const k in tgt) tgt[k] = Math.min(tgt[k], cap * 0.95);
+  for (const k in tgt) tgt[k] = Math.min(tgt[k], w.capOf(k) * 0.95);
   const eff = { wood: w.stock.wood + w.inbound.wood, stone: w.stock.stone + w.inbound.stone, food: w.stock.food + w.inbound.food };
   return { tgt, eff };
 }

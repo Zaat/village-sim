@@ -2,6 +2,33 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.37 — Metropolis
+Metropolis. Villages now grow into towns of two to three thousand people instead of stalling at a few hundred, and the game has the tools to run, show and measure a big town.
+
+**Big towns.** Most of a large town is now a crowd that is counted, not followed: the same people as the named villagers, with the same food, homes and work, but kept as numbers, dots and district colours so the game stays fast. People with stories stay individual. A continent town grows from about 340 people in year 6 to over 3,000 in year 31, at about 1.3 ms per tick.
+
+**Districts.** The new districts overlay on the World tab tints the map by district and shows names with head counts. Click one for its card: people, mood, homes, jobs, food and wood. In Play you can give a district an order, and each district can be Auto or Mine, like the Village plans switches.
+
+**Storage.** Wood and stone pile up in yards, while food needs storehouses and granaries and spoils if it is kept badly. Better-built storehouses (timber, then stone granaries) hold more in the same ground, and technology raises capacity. This replaces the single cap that grew with population.
+
+**Food and wood by sea.** Fishers now draw on the real fish stock, limited by shore frontage, by boats berthed at docks and by what the sea can replace each day. The planner builds up to eight docks and needs fewer fields for what the sea gives. Boats also fetch wood from far shores when the near forests run short.
+
+**Resources as a table.** Each resource now has a source, a stock, its consumers, a shortage concern and substitutes by technology, so new materials can be added by age without touching the rest.
+
+**Room to grow.** Homes may clear woodland when the close ground is full, and a failed field placement no longer blocks home building. Woodland is cleared only while at least half the forest stands, and the crowd replants more when trees get scarce. The search window and the hamlets grow with the town. Newcomers arrive when there are spare beds, full larders and good prospects. A bug that divided mood and health by the whole crowd, so big towns looked gloomy and had too few births, is fixed.
+
+**Speed.** Builders no longer re-search the whole map for sites that are too far to walk to, searches toward a building lean toward it, and building lists are cached. A new test, `perf_metropolis`, times a 2,900-person town.
+
+**Difficulty.** Hardship is now measured: a scorecard in the coverage report checks that Gentle passes 1,000 people, Harsh is hard but survivable, and Normal sits between them. In twelve 20-year worlds, median population at year 20 was about 2,300 on Gentle and Normal and about 1,200 on Harsh. Two 30-year worlds finished with no faults.
+
+**Phone fixes.** The About and Menu cards now scroll and close on a phone (#187), a stuck finger no longer breaks pinch and pan (#188), Diagnostics is filled in (#189), and a masked script error is now logged with where it came from.
+
+**Tests.** 38 suites plus 17 page tests, all green. The new and changed suites cover fishing, storage, districts, housing and resources; the calibration batch and the golden world were re-baselined.
+
+**What is next.** A slower, more realistic growth pace (the early game is still quicker than real populations), late farming that matches modern yields, then energy and the atomic and digital ages (v0.38) and space (v0.39).
+
+<img src="docs/screenshots/v0.37-feature.png" width="640" alt="Village Sim v0.37">
+
 ### v0.36 — Insight, look and sound
 Insight, look and sound. This is the first public release. Villages now keep growing instead of stalling around 250 people, the game has generated music and a cleaner look, and it can measure itself. **Growth:** couples try for children every day and singles pair up, so villages reach 450 to 650 people in 30 years instead of stalling near 250. **Hardship** also changes the harvest. **Music:** generated stereo music (M), following the village. **Controls:** icons on the build palette, Max speed, touch building with Undo, scenarios in the Menu, game-over tales. **Fixes:** lumber camps for far trees, faith and openness. **Insight:** coverage and dev-stats tools. 32 suites in about 11 minutes. Details in `docs/releases/v0.36.md` and `docs/coverage.md`.
 

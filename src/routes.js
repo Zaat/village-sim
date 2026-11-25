@@ -164,7 +164,7 @@ function tripSettle(w, run) {                                       // at the fa
 }
 function tripHome(w, run) {                                         // back at the dock: goods and coins reach the village
   const E = w.econ, coin = money(w), t = T2(w), L = t.ledger, p = run.plan, n = w.neigh.find(x => x.id === p.nid); let tax = 0;
-  for (const k of TRADE_KEYS) if (run.back[k]) w.stock[k] = Math.min(w.cap(), w.stock[k] + run.back[k]);
+  for (const k of TRADE_KEYS) if (run.back[k]) w.stock[k] = Math.min(w.capOf(k), w.stock[k] + run.back[k]);
   if (coin) {
     const net = run.net, comm = w.rx && w.rx.C > 0.4, rate = comm ? 1 : taxRate(w);
     if (net >= 0) { tax = net * rate; E.treasury += tax; distribute(w, net - tax) } else E.treasury = Math.max(0, E.treasury + net);
@@ -184,7 +184,7 @@ function tripEnd(w, why) {
   if (run) {
     if (why === 'lost' && run.ship && w.disc && run.plan) historyWreck(w, run.ship.x, run.ship.y, `A trading ship was lost on the way to ${(w.neigh.find(n => n.id === run.plan.nid) || {}).name || 'a far port'}.`);
     if (why === 'lost') { const pr = money(w) ? w.econ.prices : BASE_PRICE; t.ledger.lost += Math.round(TRADE_KEYS.reduce((s, k) => s + ((run.hold && run.hold[k]) || 0) * pr[k] + ((run.back && run.back[k]) || 0) * pr[k], 0)) }
-    else for (const part of [run.hold, run.back]) for (const k of TRADE_KEYS) if (part && part[k]) w.stock[k] = Math.min(w.cap(), w.stock[k] + part[k]);
+    else for (const part of [run.hold, run.back]) for (const k of TRADE_KEYS) if (part && part[k]) w.stock[k] = Math.min(w.capOf(k), w.stock[k] + part[k]);
     if (run.ship) { run.ship.hold = null; run.ship.home() }
   }
   t.nextPlan = w.day + 5;

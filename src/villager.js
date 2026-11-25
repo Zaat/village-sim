@@ -235,7 +235,7 @@ class Villager {
   planSleep() {
     const w = this.w; this.jobKind = 'sleep'; w.assignHome(this);
     const hb = this.home != null ? w.buildings.get(this.home) : null;
-    const goal = hb ? (x, y) => w.nearRect(x, y, hb) : (x, y, i) => w.nearStock(x, y, i);
+    const goal = hb ? w.goalRect(hb) : (x, y, i) => w.nearStock(x, y, i);
     this.steps = [go(goal, null, 'Heading to bed'), work(1200, 'Sleeping', null, { sleep: true, until: () => (!w.isNight() && this.energy >= 55) || this.energy >= 100 })];
   }
   planWander(r, home) {
@@ -312,7 +312,7 @@ class Villager {
   }
   deliverSteps(kind = 'food') {      // the nearest drop-off counts: the village stores, or a camp for that resource
     const w = this.w, ca = w.campAdj[kind];
-    return [go((x, y, i) => w.storeAdj[i] === 1 || (ca && ca[i] === 1), null, 'Carrying to the depot', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { this.output = (this.output || 0) + this.carry.amt; w.stock[this.carry.kind] = Math.min(w.cap(), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
+    return [go((x, y, i) => w.storeAdj[i] === 1 || (ca && ca[i] === 1), null, 'Carrying to the depot', { check: () => !!this.carry }), work(6, 'Storing', () => { if (this.carry) { this.output = (this.output || 0) + this.carry.amt; w.stock[this.carry.kind] = Math.min(w.capOf(this.carry.kind), w.stock[this.carry.kind] + this.carry.amt); this.carry = null } })];
   }
   planGather(kind, focus) {
     const w = this.w;
@@ -327,7 +327,7 @@ class Villager {
     };
     let path = w.search(this.tx, this.ty, goal, kind === 'wood' ? 110 : 75);
     if (!path && kind === 'stone' && w.stock.stone < 8 && w.beds() < w.pop + 4) path = w.search(this.tx, this.ty, goal, 140, true);       // the only rock may lie behind thick woods: cut a way through
-    if (!path || tgt < 0) return kind === 'wood' ? this.planReplant() : false;       // no trees within reach: plant some
+    if (!path || tgt < 0) return kind === 'wood' ? (timberStart(w, this) || this.planReplant()) : false;       // no trees within reach: plant some
     w.claim[tgt] = this.id; this.claim = tgt; this.jobKind = 'gather';
     const camp = w.campNear(kind, tgt % CFG.W, (tgt / CFG.W) | 0), load = CFG.CARRY + (camp && kind === 'stone' ? 2 : 0), bonus = camp ? 1.25 : 1;       // a camp nearby: bigger loads, better yield, shorter trips
     const amt = Math.round(Math.min(load, w.res[tgt]) * bonus); this.inb = { kind, amt }; w.inbound[kind] += amt;
@@ -478,21 +478,24 @@ class Villager {
     return true;
   }
   planBuild(only) {
-    const w = this.w, near = bp => (x, y) => w.nearRect(x, y, bp), list = only ? [only] : w.bps;
+    const w = this.w, near = bp => w.goalRect(bp), list = only ? [only] : w.bps, far = bp => Math.abs(this.tx - bp.x) + Math.abs(this.ty - bp.y), lost = bp => bp.nf && bp.nf.t > w.tick && far(bp) >= bp.nf.d, noSite = bp => () => { const d = far(bp); bp.nf = { d: bp.nf && bp.nf.t > w.tick ? Math.min(bp.nf.d, d) : d, t: w.tick + 1200 } };       // a site nobody could walk to from this far away is not tried again from as far or farther for a while (in a big town every builder used to re-flood the map for it every half-second)
     for (const bp of list) {
+      if (lost(bp)) continue;
       if (bp.ready() && bp.workers < (bp.maxWorkers || 2)) {
         bp.workers++; this.bpWork = bp; this.jobKind = 'build'; const chunk = Math.min(30, bp.time - bp.prog);
-        this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120 }), work(this.wt(chunk, 'build'), bp.type === 'upgrade' ? 'Upgrading a home' : bp.proj ? 'Raising the ' + PROJECTS[bp.type].name : 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
+        this.steps = [go(near(bp), null, 'To the building site', { maxCost: 120, onFail: noSite(bp) }), work(this.wt(chunk, 'build'), bp.type === 'upgrade' ? 'Upgrading a home' : bp.proj ? 'Raising the ' + PROJECTS[bp.type].name : 'Building a ' + bp.type, () => { if (!bp.alive) return; bp.prog += chunk; this.gain('build'); if (bp.prog >= bp.time) w.complete(bp) }, { check: () => bp.alive })];
         return true;
       }
     }
     for (const bp of list) for (const type of ['wood', 'stone']) {
+      if (lost(bp)) continue;
       const need = bp.cost[type] - bp.have[type] - bp.inc[type];
-      if (need > 0 && w.stock[type] > 0) {
-        const amt = Math.min(need, CFG.CARRY, w.stock[type]); bp.inc[type] += amt; const h = this.haul = { bp, type, amt, done: false }; this.jobKind = 'haul';
+      const keep = type === 'wood' && !bp.urgent ? woodReserve(w) : 0;
+      if (need > 0 && w.stock[type] > keep) {
+        const amt = Math.min(need, CFG.CARRY, w.stock[type] - keep); bp.inc[type] += amt; const h = this.haul = { bp, type, amt, done: false }; this.jobKind = 'haul';
         this.steps = [go((x, y, i) => w.nearStock(x, y, i), null, 'Fetching ' + type), work(6, 'Loading ' + type, () => {
           const take = Math.min(h.amt, w.stock[type]); w.stock[type] -= take; bp.inc[type] -= (h.amt - take); h.amt = take; if (take > 0) this.carry = { kind: type, amt: take };
-        }), go(near(bp), null, 'Hauling ' + type, { maxCost: 150 }), work(6, 'Delivering ' + type, () => { if (this.carry && bp.alive) { bp.have[type] += h.amt; bp.inc[type] -= h.amt; h.done = true } this.carry = null }, { check: () => bp.alive && !!this.carry })];
+        }), go(near(bp), null, 'Hauling ' + type, { maxCost: 150, onFail: noSite(bp) }), work(6, 'Delivering ' + type, () => { if (this.carry && bp.alive) { bp.have[type] += h.amt; bp.inc[type] -= h.amt; h.done = true } this.carry = null }, { check: () => bp.alive && !!this.carry })];
         return true;
       }
     }
@@ -506,7 +509,7 @@ class Villager {
     const mw = Math.ceil(best.maxHp * 0.12 / 25), ms = (best.style === 2 || PROJECTS[best.type]) ? Math.ceil(best.maxHp * 0.06 / 25) : 0;
     if (w.stock.wood < mw + 4 || w.stock.stone < ms) return false;
     w.stock.wood -= mw; w.stock.stone -= ms; best.repairer = this.id; this.repairB = best; this.repairPaid = { w: mw, s: ms }; this.jobKind = 'build';
-    const near = (x, y) => w.nearRect(x, y, best);
+    const near = w.goalRect(best);
     this.steps = [go(near, null, 'To the worn building', { maxCost: 120, check: () => best.repairer === this.id && w.buildings.has(best.id) }),
       work(this.wt(70, 'build'), 'Repairing the ' + (best.type === 'house' ? 'home' : best.type), () => { if (!w.buildings.has(best.id)) return; best.hp = Math.min(best.maxHp, best.hp + best.maxHp * 0.2); best.repairs = (best.repairs || 0) + 1; best.last = `repaired on day ${w.day}`; this.repairPaid = null; this.gain('build') }, { check: () => w.buildings.has(best.id) })];
     return true;

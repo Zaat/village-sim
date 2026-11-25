@@ -190,7 +190,7 @@ function resolveCampaign(w) {
   for (const v of dead) { v.health = -1; v.cause = 'war' } W.fallen += dead.length; W.slain += res.dLost;
   for (const r of ours) r.xp = Math.min(12, r.xp + (res.win === 'att' ? 2 : 1));
   if (res.win === 'att') {
-    const f = { food: Math.round(8 + n.pop * 0.6), wood: Math.round(5 + n.pop * 0.3), stone: Math.round(4 + n.pop * 0.2) }; for (const k of ['food', 'wood', 'stone']) w.stock[k] = Math.min(w.cap(), w.stock[k] + f[k]); W.plunder += f.food + f.wood + f.stone;
+    const f = { food: Math.round(8 + n.pop * 0.6), wood: Math.round(5 + n.pop * 0.3), stone: Math.round(4 + n.pop * 0.2) }; for (const k of ['food', 'wood', 'stone']) w.stock[k] = Math.min(w.capOf(k), w.stock[k] + f[k]); W.plunder += f.food + f.wood + f.stone;
     W.won++; W.morale = Math.min(1, W.morale + 0.15); n.strength = Math.max(5, n.strength - res.dLost * 2); n.raidCd = w.day + 70; n.tribute = w.day + 45; n.rel = Math.min(n.rel, -5); n.grudge = (n.grudge || 0) + 0.2;
     for (const v of w.vills) if (v.isAdult()) { v.mood = Math.min(100, v.mood + 3); experience(v, 'raid', 0.1) }
     w.emit('war', `The army returns from ${n.name} victorious${dead.length ? `, though ${dead.map(v => v.name).join(', ')} did not come home` : ''}. ${n.name} will pay tribute for a time. Plunder: ${f.food} food, ${f.wood} firewood, ${f.stone} stone.`, { n, kind: 'campaign', outcome: 'won', fallen: dead.length });

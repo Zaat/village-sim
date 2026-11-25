@@ -85,14 +85,14 @@ function planWorkshops(w) {
   if (w.of('workshop').length >= Math.min(5, 1 + Math.floor(pop / 55))) return; placeBuilding(w, 'workshop');
 }
 function foundHamlet(w) {
-  const C = cityState(w), pop = w.pop, { W, H } = CFG, L = CFG.LATTICE, b = layoutBias(w);
-  if (pop < 50 || C.hamlets.length >= Math.min(6, 1 + Math.floor(pop / 110)) || w.day < C.nextHam || !w._lv) return null;
+  const C = cityState(w), pop = w.pop, { W, H } = CFG, L = CFG.LATTICE, b = layoutBias(w), sc = clamp(Math.sqrt(pop / 1200), 1, 2), RR = Math.round(62 * sc);
+  if (pop < 50 || C.hamlets.length >= Math.min(Math.round(6 * sc), 1 + Math.floor(pop / 110)) || w.day < C.nextHam || !w._lv) return null;
   const closeFree = placeFunnel(w, 'house', false); const squeezed = closeFree.reach < 25 || (w.noRoom != null && w.day - w.noRoom < 24);
   if (!squeezed && !(b.spread > 0.5 && pop >= 80)) return null;
   C.nextHam = w.day + 24;
   const cands = [];
-  for (let y = w.cy - 62; y <= w.cy + 62; y += L * 2) for (let x = w.cx - 62; x <= w.cx + 62; x += L * 2) {
-    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 20 || d > 58 || x < 6 || y < 6 || x + 12 >= W - 2 || y + 9 >= H - 2) continue;
+  for (let y = w.cy - RR; y <= w.cy + RR; y += L * 2) for (let x = w.cx - RR; x <= w.cx + RR; x += L * 2) {
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 20 || d > 58 * sc || x < 6 || y < 6 || x + 12 >= W - 2 || y + 9 >= H - 2) continue;
     if (C.hamlets.some(h => Math.hypot(h.x - x, h.y - y) < 18)) continue;
     let free = 0, tot = 0; for (let dy = 0; dy < 9; dy += 2) for (let dx = 0; dx < 12; dx += 2) { tot++; const i = (y + dy) * W + x + dx; if (w.terr[i] === TERR.GRASS && !w.feat[i] && !w.bmap[i] && !w.road[i] && !w.bpAt.has(i) && w.claim[i] < 0) free++ }
     if (free < tot * 0.75) continue;

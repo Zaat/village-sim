@@ -52,7 +52,7 @@ function describeDeal(d, coin) {
 
 function executeDeal(w, d, merchants) {
   const E = w.econ, coin = money(w), pr = coin ? E.prices : BASE_PRICE; let revenue = 0, cost = 0;
-  for (const k of TRADE_KEYS) { if (d.sell[k]) { const n = Math.min(d.sell[k], w.stock[k]); w.stock[k] -= n; revenue += n * pr[k] * 0.9 * (1 + techFx(w, 'trade')) * tradeMod(w, E.caravan, 'sell', k); d.sell[k] = n } if (d.buy[k]) { w.stock[k] = Math.min(w.cap(), w.stock[k] + d.buy[k]); cost += d.buy[k] * pr[k] * 1.1 * tradeMod(w, E.caravan, 'buy', k) } }
+  for (const k of TRADE_KEYS) { if (d.sell[k]) { const n = Math.min(d.sell[k], w.stock[k]); w.stock[k] -= n; revenue += n * pr[k] * 0.9 * (1 + techFx(w, 'trade')) * tradeMod(w, E.caravan, 'sell', k); d.sell[k] = n } if (d.buy[k]) { w.stock[k] = Math.min(w.capOf(k), w.stock[k] + d.buy[k]); cost += d.buy[k] * pr[k] * 1.1 * tradeMod(w, E.caravan, 'buy', k) } }
   let msg = '';
   if (coin) {
     const net = revenue - cost;
