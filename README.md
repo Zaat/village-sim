@@ -2,11 +2,16 @@
 <h1 align="center">Village Sim</h1>
 <p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.36 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
-<p align="center"><img src="docs/village-timelapse.gif" width="760" alt="Five years of one village, a frame every four days"></p>
+<h2 align="center"><a href="https://zaat.github.io/village-sim/">▶&nbsp; Play it now in your browser</a></h2>
+<p align="center"><b>One click. No install, no account.</b> Works on a computer, a tablet or a phone.<br><sub>Start a world, then watch it live, or switch to Play and take the lead. <a href="https://zaat.github.io/village-sim/">zaat.github.io/village-sim</a></sub></p>
+
+<p align="center"><a href="https://zaat.github.io/village-sim/"><img src="docs/village-timelapse.gif" width="760" alt="Five years of one village, a frame every four days. Click to play."></a></p>
 <p align="center"><sub>Five years of one village in 44 frames. Nobody is steering: the people plan, build, trade, argue and grow.</sub></p>
 
 ## Play
-**Open `index.html` in any browser.** No install, no build, no server, and it works straight from `file://`. Pick a seed and a map in *New world* (islands, archipelago, continent, peninsula, lakeland, river land), watch, and click anyone or anything to find out why it is doing what it is doing.
+**[▶ Play it now](https://zaat.github.io/village-sim/)**: it runs in your browser, on a computer or a phone, with nothing to install. Pick a seed and a map in *New world* (islands, archipelago, continent, peninsula, lakeland, river land), watch, and click anyone or anything to find out why it is doing what it is doing. Flip *Watch* to *Play* to give orders, place buildings and lay roads yourself.
+
+**Prefer to run it yourself?** Download the repository and open `index.html` in any browser. No build, no server, and it works straight from `file://`.
 
 ## What you get
 - **A town that decides for itself.** People with personalities, opinions, hobbies and families choose jobs, marry, quarrel, vote on a council and found hamlets and outposts. Their law, rulers and customs differ from seed to seed.
