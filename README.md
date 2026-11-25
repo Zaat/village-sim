@@ -21,12 +21,6 @@
 - **A city with a shape.** Land value, density, suburbs and desire paths; thousands of people through a crowd model (up to about 2,800 at roughly 1 ms per tick).
 - **Tools to understand it.** A Concerns panel that warns you, a Stats tab with charts and export, a chronicle, an inspector for every villager, animal and building.
 
-## What's new
-**[v0.35 Play](docs/releases/v0.35.md) and [v0.35.1](docs/releases/v0.35.1.md):** the first version you can play, not only watch. A Watch / Play switch lets you take the lead: select villagers and give orders, place buildings, lay roads, paint zones, choose the research and decide what the village still plans for itself. Villagers live longer lives, a village that dies ends with a story, and there is a manual, a menu and an About card. v0.35.1 makes switching modes seamless, fixes the endless homes concern, and adds pinch to zoom.
-**[v0.34 Crowds](docs/releases/v0.34.md):** a growing town no longer slows down. The 160 people with the most story stay simulated one by one; everyone else lives on as numbers by age and is drawn as small figures at the houses. **v0.34.1:** faster tests, this redesigned page, an MIT license.
-
-<p align="center"><img src="docs/screenshots/v0.34-feature.png" width="860" alt="A crowded town in v0.34"></p>
-
 ## Gallery
 <table>
 <tr>
@@ -48,6 +42,12 @@
 </table>
 
 Every release has its own page with a screenshot of that version: see the table below.
+
+## What's new
+**[v0.35 Play](docs/releases/v0.35.md) and [v0.35.1](docs/releases/v0.35.1.md):** the first version you can play, not only watch. A Watch / Play switch lets you take the lead: select villagers and give orders, place buildings, lay roads, paint zones, choose the research and decide what the village still plans for itself. Villagers live longer lives, a village that dies ends with a story, and there is a manual, a menu and an About card. v0.35.1 makes switching modes seamless, fixes the endless homes concern, and adds pinch to zoom.
+**[v0.34 Crowds](docs/releases/v0.34.md):** a growing town no longer slows down. The 160 people with the most story stay simulated one by one; everyone else lives on as numbers by age and is drawn as small figures at the houses. **v0.34.1:** faster tests, this redesigned page, an MIT license.
+
+<p align="center"><img src="docs/screenshots/v0.34-feature.png" width="860" alt="A crowded town in v0.34"></p>
 
 ## Controls
 Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows pan · Space pause · 1–4 speed · F follow selected · G settings drawer · minimap click to jump.
