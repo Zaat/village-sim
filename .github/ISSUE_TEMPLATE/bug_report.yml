@@ -1,0 +1,37 @@
+name: Bug report
+description: Something looks wrong or broke
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping. The most useful thing you can paste is the **world line** and the **Diagnostics** text: open Settings (the gear), click the world line to copy it, and use the Diagnostics section's copy button.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: worldline
+    attributes:
+      label: World line
+      description: Click the world line in Settings to copy it, then paste it here. It lets me recreate your world.
+      render: text
+  - type: textarea
+    id: diag
+    attributes:
+      label: Diagnostics
+      description: Paste the Diagnostics text from Settings if you can.
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in Menu, About (for example 0.36).
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome on a Mac, Safari on an iPhone, and so on
