@@ -1,0 +1,35 @@
+ok     ui_liv                 1m37s  ui_liv: all passed
+ok     ui_crowd                 41s  ui_crowd passed
+ok     ui_play                  23s  ui_play passed
+ok     ui_voices                19s  ui_voices: passed 17 failed 0
+ok     ui_city                  15s  ui_city passed
+ok     ui_help                  14s  ui_help passed
+ok     ui_growth                12s  ui_growth: all passed
+ok     concerns_ui              10s  concerns_ui: all passed
+ok     ui_culture               10s  ui_culture passed
+ok     ui_war                    8s  ui_war passed
+ok     ui_disc                   8s  ui_disc: passed 9 failed 0
+ok     ui_over                   8s  ui_over passed
+ok     ui_tree                   8s  ui_tree: passed 12 failed 0
+ok     ui_sound                  7s  ui_sound passed
+ok     ui_settle                 3s  ui_settle passed
+
+ suite                     time   result
+ ui_liv                   1m37s   ui_liv: all passed
+ ui_crowd                   41s   ui_crowd passed
+ ui_play                    23s   ui_play passed
+ ui_voices                  19s   ui_voices: passed 17 failed 0
+ ui_city                    15s   ui_city passed
+ ui_help                    14s   ui_help passed
+ ui_growth                  12s   ui_growth: all passed
+ concerns_ui                10s   concerns_ui: all passed
+ ui_culture                 10s   ui_culture passed
+ ui_disc                     8s   ui_disc: passed 9 failed 0
+ ui_over                     8s   ui_over passed
+ ui_war                      8s   ui_war passed
+ ui_tree                     8s   ui_tree: passed 12 failed 0
+ ui_sound                    7s   ui_sound passed
+ ui_settle                   3s   ui_settle passed
+
+ 15 suites, 0 failed, 4m43s wall (4m43s of work on 1 workers)
+ page tests stamped for source 2b5b688eb3fa

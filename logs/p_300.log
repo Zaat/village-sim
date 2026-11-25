@@ -1,0 +1,19 @@
+year 6 pop 133 beds 258 food 960 born 0 died 0 hunger 0 faults 0
+year 7 pop 145 beds 258 food 977 born 0 died 0 hunger 0 faults 0
+year 8 pop 160 beds 279 food 955 born 0 died 0 hunger 0 faults 0
+year 9 pop 179 beds 281 food 705 born 0 died 0 hunger 0 faults 0
+year 10 pop 210 beds 286 food 818 born 0 died 0 hunger 0 faults 0
+year 11 pop 237 beds 291 food 883 born 0 died 0 hunger 0 faults 0
+year 12 pop 262 beds 308 food 902 born 1 died 0 hunger 0 faults 0
+year 13 pop 278 beds 330 food 815 born 0 died 0 hunger 0 faults 0
+year 14 pop 288 beds 330 food 1095 born 0 died 1 hunger 0 faults 0
+year 15 pop 291 beds 344 food 1097 born 0 died 0 hunger 0 faults 0
+year 16 pop 288 beds 344 food 1070 born 0 died 1 hunger 0 faults 0
+year 17 pop 287 beds 344 food 1080 born 0 died 1 hunger 0 faults 0
+year 18 pop 280 beds 344 food 1064 born 1 died 1 hunger 0 faults 0
+year 19 pop 274 beds 344 food 1032 born 0 died 0 hunger 0 faults 0
+year 20 pop 234 beds 344 food 906 born 0 died 0 hunger 0 faults 0
+year 21 pop 224 beds 344 food 854 born 0 died 1 hunger 0 faults 0
+year 22 pop 242 beds 344 food 958 born 0 died 0 hunger 0 faults 0
+year 23 pop 247 beds 344 food 951 born 1 died 1 hunger 0 faults 0
+ms/tick 2.18 BIRTH_DAMP=300

@@ -1,0 +1,12 @@
+version,date,elapsed_min,full_run_wall_min,suites,test_wall_min,full_runs,page_runs,failed_runs,src_lines,src_kb,notes
+v0.29.1,2026-11-08,,22.0,24,,,,,,,backfilled
+v0.29.2,2026-11-08,,17.0,24,,,,,,,backfilled
+v0.30,2026-11-10,,17.4,25,,,,,,,backfilled
+v0.31,2026-11-12,,18.0,26,,,,,,,backfilled
+v0.32,2026-11-15,,18.5,27,,,,,,,backfilled
+v0.33,2026-11-20,,17.1,28,,,,,,,backfilled
+v0.34,2026-11-22,,17.0,29,,,,,,,backfilled
+v0.34.1,2026-11-24,,13.4,29,,,,,,,backfilled
+v0.35,2026-11-24,,13.7,31,,,,,,,backfilled
+v0.35.1,2026-11-24,,15.8,31,,2,2,3,,,two full runs and two page runs; backfilled
+v0.36,2026-11-25,387,11.3,32,40.9,2,2,2,9594,945,Insight; look and sound: growth model; hardship harvest; music; icons; coverage tool; 32 suites

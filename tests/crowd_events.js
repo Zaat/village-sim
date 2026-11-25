@@ -18,6 +18,7 @@ ok(w.vills.length <= c.CROWD.focus + 8, 'villagers in play stay near the focus s
 // nobody vanishes: starting folk + births + arrivals - deaths - leavers = people now
 const F = w.flow ? w.flow.tot : { arrived: 0, left: 0 }, start = w.pop - (w.births + F.arrived - w.deaths - F.left);
 ok(start >= 0 && start <= 30, 'every person is accounted for (started with ' + start + ')');
+if (!(C.demoted > 0)) { c.CROWD.focus = 20; for (let t = 0; t < 1200 * 6; t++) w.step() }       // births now go straight to the crowd when the focus is full, so no one needs demoting by chance: squeeze the focus to force it
 ok(C.demoted > 0 && w.vills.every(v => v.alive), 'villagers moved into the crowd quietly and the rest are alive: ' + C.demoted);
 ok(C.made && C.made.food > 0, 'the crowd works: food made ' + Math.round(C.made.food));
 // the save carries the crowd and carries on identically

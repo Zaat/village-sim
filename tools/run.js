@@ -66,6 +66,7 @@ function done() {
   for (const s of Object.keys(results).sort((a, b) => results[b].sec - results[a].sec)) console.log(' ' + s.padEnd(24) + fmt(results[s].sec).padStart(6) + '   ' + (results[s].ok ? results[s].line : 'FAILED'));
   console.log(`\n ${list.length} suites, ${failed} failed, ${fmt(wall)} wall (${fmt(sum)} of work on ${JOBS} workers)`);
   fs.writeFileSync(TIMES, JSON.stringify(times, null, 1));
+  try { fs.appendFileSync(path.join(T, 'runlog.jsonl'), JSON.stringify({ t: new Date().toISOString(), mode, kind, n: list.length, failed, wall: Math.round(wall), work: Math.round(sum), jobs: JOBS, bad: Object.keys(results).filter(k => !results[k].ok) }) + '\n') } catch (e) { }       // every run leaves a line: tools/devstats.js reads them
   if (kind === 'node') { const pm = read(PASSED, {}); for (const n of Object.keys(results)) { if (results[n].ok) pm[n] = keyOf(H, n); else delete pm[n] } fs.writeFileSync(PASSED, JSON.stringify(pm, null, 1)) }
   if (!failed && Object.keys(results).length === list.length) {
     if (mode === 'full' || (mode === 'quick' && list.length === cfg.node.length) || (mode === 'resume' && cfg.node.every(n => read(PASSED, {})[n] === keyOf(H, n)))) { fs.writeFileSync(STAMP, JSON.stringify({ ...stamp, files: H, hash: total(H), simHash: simHash(H), time: new Date().toISOString(), suites: list.length }, null, 1)); console.log(' green stamp written: ' + total(H)) }

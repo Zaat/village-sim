@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.35.1 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.36 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
 <p align="center"><img src="docs/village-timelapse.gif" width="760" alt="Five years of one village, a frame every four days"></p>
 <p align="center"><sub>Five years of one village in 44 frames. Nobody is steering: the people plan, build, trade, argue and grow.</sub></p>

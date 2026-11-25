@@ -37,8 +37,18 @@ function learn(w, k, amt) {
   }
 }
 /* called from World.emit and World.kill */
+/* tales (v0.36): every event is scored by how rare it is for its kind; the best few are kept for the end screen, so the story told is the odd one, not the daily one */
+const TALE_BASE = { regime: 3, war: 3, feud: 2, faction: 2, discovery: 3, voyage: 3, era: 3, project: 2.5, outpost: 2.5, bridge: 2, election: 1, event: 1.5, death: 0.6, birth: 0.3, holiday: 1, lesson: 1, livelihood: 1.5, culture: 1.5, techloss: 3, diplomacy: 1.5, cold: 1, expedition: 2, terraform: 2.5, wolfslain: 2, crime: 0.8, group: 1.2 };
+const TALE_ODD = /\b(last|first|never|coup|stole|banish|fled|burn|fire|famine|storm|wolf|wolves|lost at sea|rival|duel|feud|revolt|secede|strike|prophe|miracle|twin|oldest|mended|refus)/i;
+function taleNote(w, type, text, data) {
+  const C = w.chron, base = TALE_BASE[type]; if (!C || !text || !base) return; const seen = C.seen || (C.seen = {}), n = seen[type] = (seen[type] || 0) + 1, tales = C.tales || (C.tales = []);
+  const score = base / (1 + 0.5 * (n - 1)) + (TALE_ODD.test(text) ? 1 : 0) + (n === 1 ? 1.5 : 0); if (score < 1.2) return;
+  tales.push({ day: w.day, year: w.year, kind: type, text, score: +score.toFixed(2) });
+  if (tales.length > 90) { let lo = 0; for (let i = 1; i < tales.length; i++) if (tales[i].score < tales[lo].score) lo = i; tales.splice(lo, 1) }
+}
+function topTales(w, n) { const t = (w.chron && w.chron.tales) || []; return t.slice().sort((a, b) => b.score - a.score || a.day - b.day).slice(0, n || 6).sort((a, b) => a.day - b.day) }
 function noteEvent(w, type, text, data) {
-  if (!w.chron) return;
+  if (!w.chron) return; taleNote(w, type, text, data);
   if (type === 'event' && data && data.kind) {
     const k = data.kind;
     if (k === 'fire') learn(w, 'fire', 0.25); else if (k === 'storm') learn(w, 'storm', 0.2); else if (k === 'fever') learn(w, 'fever', 0.04 + 0.0015 * (data.sick || 0));

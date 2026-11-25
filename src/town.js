@@ -83,17 +83,18 @@ function countFeat(w, x, y, r, pred) {
 }
 function placeCamp(w, type) {
   const info = CAMP_INFO[type], { W, H } = CFG, same = w.of(type), cands = [];
+  const miss = Math.min(5, w['miss_' + type] || 0), need = Math.max(info.min * 0.4, info.min * (1 - 0.15 * miss)), reach = 52 + 6 * miss;       // every miss in a row lowers the bar a little and looks further out (v0.36: far forests got no camp)
   for (let y = 4; y < H - 5; y += 2) for (let x = 4; x < W - 5; x += 2) {
-    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 10 || d > 52 || same.some(c => Math.hypot(c.x - x, c.y - y) < 14)) continue;
+    const d = Math.hypot(x - w.cx, y - w.cy); if (d < 10 || d > reach || same.some(c => Math.hypot(c.x - x, c.y - y) < 14)) continue;
     let ok = true;
     for (let dy = 0; dy < 2 && ok; dy++) for (let dx = 0; dx < 2; dx++) { const i = (y + dy) * W + x + dx, t = w.terr[i]; if (!(t === TERR.GRASS || t === TERR.ROCK || t === TERR.SAND) || w.feat[i] || w.bmap[i] || w.road[i] || w.bpAt.has(i) || w.claim[i] >= 0) { ok = false; break } }
     if (!ok) continue;
-    const sc = info.count(w, x + 1, y + 1, info.r); if (sc < info.min) continue;
+    const sc = info.count(w, x + 1, y + 1, info.r); if (sc < need) continue;
     cands.push({ x, y, score: sc - d * 0.35 + w.r() });
   }
   cands.sort((a, b) => b.score - a.score);
-  for (const c of cands.slice(0, 6)) if (w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: 2, h: 2 }), 180)) return makeBp(w, type, c.x, c.y);
-  return null;
+  for (const c of cands.slice(0, 6)) if (w.search(w.cx - 1, w.cy, (x, y) => w.nearRect(x, y, { x: c.x, y: c.y, w: 2, h: 2 }), 180 + 40 * miss)) { w['miss_' + type] = 0; return makeBp(w, type, c.x, c.y) }
+  w['miss_' + type] = (w['miss_' + type] || 0) + 1; return null;
 }
 function planCamps(w) {
   const pop = w.pop, count = type => w.bps.filter(b => b.type === type).length;
@@ -133,9 +134,9 @@ function planRoads(w) {
 }
 /* ---------- growth: how forgiving the world is, and how well life is going ---------- */
 const HARDSHIP = [
-  { name: 'Gentle', fert: 1.25, imm: 1.4, wolf: 0.6, sick: 0.7, cold: 0.7, note: 'more births and newcomers, fewer wolves, fevers and hard winters' },
-  { name: 'Normal', fert: 1, imm: 1, wolf: 1, sick: 1, cold: 1, note: 'the usual balance' },
-  { name: 'Harsh', fert: 0.8, imm: 0.7, wolf: 1.4, sick: 1.3, cold: 1.3, note: 'fewer births and newcomers, more wolves, fevers and hard winters' },
+  { name: 'Gentle', fert: 1.25, imm: 1.4, wolf: 0.6, sick: 0.7, cold: 0.7, crop: 1.08, note: 'more births and newcomers, fewer wolves, fevers and hard winters' },
+  { name: 'Normal', fert: 1, imm: 1, wolf: 1, sick: 1, cold: 1, crop: 1, note: 'the usual balance' },
+  { name: 'Harsh', fert: 0.8, imm: 0.7, wolf: 1.4, sick: 1.3, cold: 1.3, get crop() { return CFG.HARSH_CROP || 0.8 }, note: 'fewer births and newcomers, more wolves, fevers and hard winters' },
 ];
 const hardOf = w => HARDSHIP[w.settings.hardship == null ? 1 : w.settings.hardship] || HARDSHIP[1];
 /* prosperity 0.3..1.8, refreshed daily: food in store, spare beds, mood and health. It nudges births, newcomers and how far ahead builders plan. */
@@ -161,7 +162,7 @@ function planTown(w) {
   if (structBps < 2 + Math.floor(pop / 8) + (drive ? 4 : 0)) {
     const room = w.cap(), full = (w.stock.food > room * 0.8 || w.stock.wood > room * 0.9) && stores < Math.ceil(pop / 9) + 1;
     if (cap < pop + 1) placeHouse(w);
-    else if (farms < Math.min(30 + Math.max(0, Math.floor((pop - 130) / 5)), Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
+    else if (farms < Math.min(30 + Math.max(0, Math.floor((pop - 130) / (CFG.FARM_SLOPE || 5))), Math.ceil((pop + 1) / (3.2 / (1 + 0.15 * lesson(w, 'famine'))))) && !(w.stock.food > room * 0.85 && farms >= Math.ceil(pop / 5))) placeBuilding(w, 'farm');
     else if (full && stores < 10) placeBuilding(w, 'store');
     else if (crowdWant(w, count('house'), pop)) placeHouse(w);                                       // crowded households need somewhere to move to
     else if (cap < pop * (1.1 + 0.2 * clamp((w.prosp || 1) - 0.8, 0, 1) + (drive ? 0.3 : 0)) + 3 && w.stock.food > pop * 3 && w.stock.wood >= 10) placeHouse(w);       // build ahead when life is good

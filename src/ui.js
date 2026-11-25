@@ -112,7 +112,7 @@ $('set_open').addEventListener('change', e => {            // a sandbox switch: 
 function adoptWorld(w) {
   try { $('mapnow').textContent = MAP_TYPES[w.arch].label + ' · ' + CFG.W + '×' + CFG.H + ' · seed ' + w.seed + '. ' + MAP_TYPES[w.arch].blurb } catch (e) { }
   if (tt) { tt = null; $('ttGo').disabled = false; $('ttCancel').disabled = true; $('ttSel').disabled = false }
-  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = ''; renderWorldLine(); puWorld();
+  world = w; world.mind = mindApi; selected = null; follow = false; R.terrKey = ''; renderWorldLine(); puWorld(); if (typeof sndWorld === 'function') sndWorld(w);
   world.listeners.push(type => { if (type === 'season' && !tt && autosaveOn && $('autosave').checked) saveToStorage(false) });
   world.dbg.onFault = () => dbgPersist(world); world.profReset();
   for (const k of Object.keys(SETTING_DEFAULTS)) $('set_' + k).checked = !!world.settings[k]; $('set_hardship').value = String(world.settings.hardship == null ? 1 : world.settings.hardship); $('set_philosophy').value = world.settings.philosophy || 'balanced'; $('set_open').value = String(world.settings.openKnowledge || 0);
@@ -687,7 +687,7 @@ function pick(sx, sy) {
 const mini = $('mini');
 function miniGo(e) { const r = mini.getBoundingClientRect(); R.cam.x = (e.clientX - r.left) / r.width * CFG.W * CFG.T; R.cam.y = (e.clientY - r.top) / r.height * CFG.H * CFG.T; follow = false; clampCam() }
 mini.addEventListener('pointerdown', e => { mini.setPointerCapture(e.pointerId); miniGo(e); mini._d = true }); mini.addEventListener('pointermove', e => { if (mini._d) miniGo(e) }); mini.addEventListener('pointerup', () => mini._d = false);
-const SPEED_STEPS = [0.25, 0.5, 1, 3, 10, 30, 100]; let lastSpeed = 10, pendingTicks = 0;
+const SPEED_STEPS = [0.25, 0.5, 1, 3, 10, 30, 100, 999]; let lastSpeed = 10, pendingTicks = 0;
 const speedText = s => s <= 0 ? 'Paused' : s >= 999 ? 'Max' : s === 0.25 ? '¼×' : s === 0.5 ? '½×' : s + '×';
 function setSpeed(s) {
   speed = s; if (s > 0) lastSpeed = s;
@@ -704,7 +704,7 @@ addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return; if (puKey(e)) return; keys[e.key.toLowerCase()] = true;
   if (e.code === 'Space') { e.preventDefault(); setSpeed(speed === 0 ? lastSpeed || 10 : 0) }
   if (e.key === '[') stepSpeed(-1); if (e.key === ']') stepSpeed(1); if (e.key === '.') advance(e.shiftKey); if (e.key === '>') advance(true);
-  const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 999 }[e.key]; if (m) setSpeed(m);       // 5 is a hidden "as fast as it can go" for testing
+  const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 100, '6': 999 }[e.key]; if (m) setSpeed(m);       // 6 is Max: as fast as the machine can go
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
   if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer();
   if (e.key === 'Escape') { if ($('nw').style.display !== 'none') nwClose(); else if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
@@ -809,7 +809,7 @@ setInterval(() => {
   if (++diagTimer % 10 === 0) { world.profReset(); renderWorldLine() }
   try { updateDiag() } catch (e) { }
   const drawn = frames - (wd.fr || 0); wd.fr = frames;
-  { const eff = DBG.tps / CFG.TPS; $('rate').textContent = speed > 0 && speed < 100 && eff < speed * 0.8 ? 'running at ' + (eff < 1 ? eff.toFixed(1) : Math.round(eff)) + '×' : pendingTicks > 0 ? 'stepping…' : '' }
+  { const eff = DBG.tps / CFG.TPS; const dps = DBG.tps / CFG.TPD; $('rate').textContent = speed >= 100 ? (dps >= 10 ? Math.round(dps) : dps.toFixed(1)) + ' days a second' : speed > 0 && eff < speed * 0.8 ? 'running at ' + (eff < 1 ? eff.toFixed(1) : Math.round(eff)) + '×' : pendingTicks > 0 ? 'stepping…' : '' }
   if (document.hidden) { wd.changedAt = nowT; wd.tick = world.tick; lastFrameAt = nowT; return }      // browsers pause hidden pages; that is not a freeze
   if (drawn === 0) {                                                // no frame was drawn this second
     wd.changedAt = nowT; wd.tick = world.tick; wd.stage = 0;       // nothing can move without frames, so this is never counted as the village freezing (an unfocused or covered window is throttled by the system)
@@ -830,7 +830,7 @@ addEventListener('unhandledrejection', e => { dbgNote('promise', e.reason); if (
 
 window.__sim = { get world() { return world }, select(o) { selected = o; updateUI() }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };
 dbgLoadPrevious();
-initStatsUI(); concernsInit(); voicesInit(); voicesAiInit(); newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
+if (typeof sndInit === 'function') sndInit(); initStatsUI(); concernsInit(); voicesInit(); voicesAiInit(); newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
 {
   const m = readMeta();
   if (m) {

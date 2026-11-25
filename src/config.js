@@ -8,7 +8,7 @@ const CFG = {
   TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
   DPS: 8,                           // days per season (year = 4 seasons)
   INFANT_DAYS: 3, CHILD_DAYS: 8, ADULT_DAYS: 14, ELDER_DAYS: 80, FERTILE_MAX: 85, OLD_DAYS: 120,   // life stages (in days)
-  BIRTH_DAMP: 300, BIRTH_MULT: 1, DEP_CAP: 3, LIFE_BASE: 2.8,                      // ageing slows by this factor (v0.35: all stage thresholds above stay in 'life days'); real days of life = life days x LIFE_BASE
+  BIRTH_DAMP: 0, COUPLE_TRY: 0.1, COURT_TRY: 0.03, FARM_SLOPE: 5, BIRTH_MULT: 1, DEP_CAP: 3, LIFE_BASE: 2.8,                      // ageing slows by this factor (v0.35: all stage thresholds above stay in 'life days'); real days of life = life days x LIFE_BASE
   START_VILLAGERS: 8,
   START_STOCK: { wood: 24, stone: 6, food: 40 },
   COST: { house: { wood: 8, stone: 3 }, farm: { wood: 3, stone: 0 }, store: { wood: 10, stone: 4 }, road: { wood: 0, stone: 1 }, dock: { wood: 12, stone: 0 }, logcamp: { wood: 14, stone: 0 }, minecamp: { wood: 12, stone: 4 }, lodge: { wood: 16, stone: 2 }, market: { wood: 16, stone: 4 }, bridge: { wood: 3, stone: 0 } },

@@ -8,6 +8,7 @@
    ========================================================================== */
 const PU = { tool: 'select', type: 'house', zone: 'home', brush: 1, sel: [], hover: null, paint: null, box: null, panel: null, pan: false, hold: null, note: '', noteT: 0, menu: null, ok: null, fx: [] };
 const PU_NAMES = { house: 'House', farm: 'Farm', store: 'Store', workshop: 'Workshop', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge', market: 'Market', plaza: 'Plaza', tavern: 'Tavern' };
+const puIc = n => `<svg class="ic"><use href="#i-${n}"/></svg>`;
 const PU_ZCOL = { home: '229,192,123', farm: '152,195,121', work: '97,175,239', civic: '198,120,221' };
 const PU_ROLES = [['builder', 'Builder'], ['farmer', 'Farmer'], ['woodcutter', 'Woodcutter'], ['miner', 'Miner'], ['hunter', 'Hunter'], ['fisher', 'Fisher']];
 const puOn = () => !!(world && world.play && world.play.on);
@@ -19,13 +20,14 @@ function puNote(t) { PU.note = t; PU.noteT = performance.now(); const el = $('pn
 
 /* ---------- the mode ---------- */
 function puMode(on) {
-  if (!world) return; playSet(world, 'on', on); if (!on) { PU.tool = 'select'; PU.panel = null; PU.sel = []; PU.menu = null; PU.hover = null; PU.ok = null; puGhostTip() }
+  if (!world) return; playSet(world, 'on', on); if (!on) { puPendClear(); PU.tool = 'select'; PU.panel = null; PU.sel = []; PU.menu = null; PU.hover = null; PU.ok = null; puGhostTip() }
   document.body.classList.toggle('playing', !!on); $('ptool').scrollLeft = 0; puRefresh(); if (typeof updateUI === 'function') updateUI();
   if (on) { if (!world.play.auto.build && typeof tipShow === 'function') tipShow('playmode', '<b>You are in charge.</b> The council has stopped building: you place the buildings, roads and fields (Build B, Road R, Zone Z in the bar below) or give villagers orders. Research and jobs stay automatic until you switch them in Village plan. Switch back to Watch and the council takes over again; your choices are kept.', true) }
   else if (typeof tipHide === 'function') tipHide();
 }
 function puWorld() { PU.sel = []; PU.tool = 'select'; PU.panel = null; PU.menu = null; document.body.classList.toggle('playing', puOn()); puRefresh() }
-function puTool(t) { PU.tool = t; PU.menu = null; PU.paint = null; PU.box = null; if (t !== 'build') { PU.ok = null; puGhostTip() } PU.panel = t === 'select' ? null : t; if (t === 'zone') PU.panel = 'zone'; puRefresh() }
+function puPendClear() { PU.pend = false; PU.dragG = null; const c = $('pconf'); if (c) c.style.display = 'none' }
+function puTool(t) { puPendClear(); PU.tool = t; PU.menu = null; PU.paint = null; PU.box = null; if (t !== 'build') { PU.ok = null; puGhostTip() } PU.panel = t === 'select' ? null : t; if (t === 'zone') PU.panel = 'zone'; puRefresh() }
 
 /* ---------- giving orders ---------- */
 function puOrder(o, label) {
@@ -74,11 +76,11 @@ function puCost(c) { return Object.entries(c).filter(([, n]) => n).map(([k, n]) 
 function puPanel() {
   const el = $('ppanel'), w = world, p = PU.panel; if (!p || !puOn()) { el.style.display = 'none'; return } el.style.display = 'block'; let h = '';
   if (p === 'build') {
-    h = '<div class="ph">Build <span class="hint">pick one, then click the map. Esc or right-click to stop.</span></div><div class="pgrid">' + Object.keys(PLACE).map(t => {
+    h = '<div class="ph">Build <span class="hint">' + (PU.touch ? 'pick one, then tap the map. Drag the ghost, then press ✓.' : 'pick one, then click the map. Esc or right-click to stop.') + '</span></div><div class="pgrid">' + Object.keys(PLACE).map(t => {
       const sp = PLACE[t], lock = sp.tech && !w.has(sp.tech), tip = lock ? 'Needs ' + (TECHS[sp.tech] ? TECHS[sp.tech].name.toLowerCase() : sp.tech) : puCost(CFG.COST[t]);
-      return `<button data-ptype="${t}" class="${PU.type === t ? 'on' : ''}" ${lock ? 'disabled' : ''} title="${escapeHtml(tip)}">${PU_NAMES[t]}<small>${escapeHtml(tip)}</small></button>`
+      return `<button data-ptype="${t}" class="${PU.type === t ? 'on' : ''}" ${lock ? 'disabled' : ''} title="${escapeHtml(tip)}">${puIc(t)}<span>${PU_NAMES[t]}</span><small>${escapeHtml(tip)}</small></button>`
     }).join('') + '</div>';
-    if (PU.ok && PU.hover) h += `<div class="hint" style="margin-top:6px">${PU.ok.ok ? 'Tap the green spot again, or press Place.' : escapeHtml(PU.ok.why)}</div><div class="btnrow"><button id="pplace" ${PU.ok.ok ? '' : 'disabled'} class="on">Place here</button></div>`;
+    if (PU.ok && PU.hover) h += `<div class="hint" style="margin-top:6px">${PU.ok.ok ? (PU.touch ? 'Drag the ghost to move it, then press ✓.' : 'Click the green spot, or press Place.') : escapeHtml(PU.ok.why)}</div><div class="btnrow"><button id="pplace" ${PU.ok.ok ? '' : 'disabled'} class="on">Place here</button></div>`;
   } else if (p === 'road') {
     h = '<div class="ph">Roads <span class="hint">drag along the ground to lay a road. Costs 1 stone a tile. Use ✋ or hold Space to move the map.</span></div>';
   } else if (p === 'zone') {
@@ -94,7 +96,7 @@ function puPanel() {
     if (n) h += ['food', 'wood', 'stone'].map(k => `<div class="prow"><span>${k[0].toUpperCase() + k.slice(1)}</span><input type="range" min="0" max="80" step="5" value="${Math.round((sh[k] || 0) * 100)}" data-pshare="${k}"><b>${Math.round((sh[k] || 0) * 100)}%</b></div>`).join('') + `<div class="btnrow"><button data-pshare-auto class="${w.play.share ? '' : 'on'}">Let the town decide</button></div><div class="hint">The rest of the crowd works on crafts, trade and service.</div>`;
   }
   el.innerHTML = h;
-  el.querySelectorAll('[data-ptype]').forEach(b => b.onclick = () => { PU.type = b.dataset.ptype; PU.ok = null; puRefresh() });
+  el.querySelectorAll('[data-ptype]').forEach(b => b.onclick = () => { PU.type = b.dataset.ptype; PU.ok = null; if (PU.pend && PU.hover) puGhostCheck(); else puPendClear(); puRefresh() });
   el.querySelectorAll('[data-pzone]').forEach(b => b.onclick = () => { PU.zone = b.dataset.pzone; puRefresh() });
   el.querySelectorAll('[data-pbrush]').forEach(b => b.onclick = () => { PU.brush = +b.dataset.pbrush; puRefresh() });
   el.querySelectorAll('[data-pclear]').forEach(b => b.onclick = () => { const all = Object.keys(w.play.zones).map(i => [i % CFG.W, (i / CFG.W) | 0]); playZone(w, all, null); puRefresh() });
@@ -133,7 +135,9 @@ function puDown(e) {
   if (!puOn()) return false;
   if (e.button === 2) return true;
   const [sx, sy] = puCanvasXY(e), t = puTile(sx, sy); PU.menu = null; $('pmenu').style.display = 'none';
-  if (PU.touch) { PU.hover = { x: t.x, y: t.y, sx, sy }; if (PU.tool === 'build') puGhostCheck() }          // a tap goes where the finger is, not where the last move left the ghost
+  if (PU.touch && PU.tool === 'build' && PU.pend && PU.gx != null) {                      // a finger on the pending ghost drags it; elsewhere pans the map as usual
+    const [bw, bh] = CFG.SIZE[PU.type]; if (t.x >= PU.gx - 1 && t.x <= PU.gx + bw && t.y >= PU.gy - 1 && t.y <= PU.gy + bh) { PU.dragG = { dx: t.x - PU.gx, dy: t.y - PU.gy }; try { cv.setPointerCapture(e.pointerId) } catch (_) { } return true }
+  }
   if (puPaintMode()) { PU.paint = { tiles: [], last: [t.x, t.y], seen: new Set() }; puPaintAdd(t.x, t.y); try { cv.setPointerCapture(e.pointerId) } catch (_) { } return true }
   if (PU.tool === 'select' && e.shiftKey && e.pointerType === 'mouse') { PU.box = { x0: sx, y0: sy, x1: sx, y1: sy }; try { cv.setPointerCapture(e.pointerId) } catch (_) { } return true }
   if (PU.tool === 'select' && e.pointerType !== 'mouse' && puGroup().length) { PU.hold = setTimeout(() => { PU.hold = null; PU.holdFired = true; puMenuAt(sx, sy, e.clientX, e.clientY) }, 520) }
@@ -145,7 +149,10 @@ function puPaintAdd(x, y) {
 }
 function puMove(e) {
   if (!puOn()) return false;
-  const [sx, sy] = puCanvasXY(e), t = puTile(sx, sy); PU.hover = { x: t.x, y: t.y, sx, sy };
+  const [sx, sy] = puCanvasXY(e), t = puTile(sx, sy);
+  if (PU.dragG) { const [bw, bh] = CFG.SIZE[PU.type]; PU.hover = { x: t.x - PU.dragG.dx + (bw >> 1), y: t.y - PU.dragG.dy + (bh >> 1), sx, sy }; puGhostCheck(); return true }
+  if (PU.touch && PU.pend) return false;                                                    // panning the map must not carry the pending ghost along
+  PU.hover = { x: t.x, y: t.y, sx, sy };
   if (PU.hold && e.buttons) { PU.holdMoved = (PU.holdMoved || 0) + 1; if (PU.holdMoved > 6) { clearTimeout(PU.hold); PU.hold = null } }
   if (PU.tool === 'build') puGhostCheck();
   if (PU.paint) { const l = PU.paint.last; if (l[0] !== t.x || l[1] !== t.y) { const seg = []; puLine(l, [t.x, t.y], seg); for (const [a, b] of seg) puPaintAdd(a, b); PU.paint.last = [t.x, t.y] } return true }
@@ -156,15 +163,28 @@ function puGhostCheck() { const h = PU.hover; if (!h || PU.tool !== 'build') { P
 function puGhostTip() {
   const el = $('pghost'), h = PU.hover; if (!el) return; if (!h || PU.tool !== 'build' || !PU.ok) { el.style.display = 'none'; return }
   el.style.display = 'block'; el.className = PU.ok.ok ? 'ok' : 'bad'; el.textContent = PU.ok.ok ? (PU.ok.note || PU_NAMES[PU.type] + ': ' + puCost(PU.ok.cost)) : PU.ok.why;
+  if (PU.pend) { puConfPos(); return }
   const vw = cv.clientWidth, vh = cv.clientHeight, ew = el.offsetWidth, eh = el.offsetHeight, touch = PU.touch;       // keep it on screen, and above the finger on a touchscreen
   el.style.left = Math.max(4, Math.min(vw - ew - 4, h.sx + (touch ? -ew / 2 : 14))) + 'px'; el.style.top = Math.max(4, Math.min(vh - eh - 4, touch ? h.sy - eh - 44 : h.sy + 14)) + 'px';
 }
 function puPlaceAt() {
   if (PU.gx == null) return; const r = playPlace(world, PU.type, PU.gx, PU.gy);
-  if (r.ok) { puNote(`${PU_NAMES[PU.type]} marked. Builders will start soon.`); PU.fx.push({ x: PU.gx + 0.5, y: PU.gy + 0.5, t: performance.now() }); puGhostCheck(); puRefresh() } else puNote(r.why);
+  if (r.ok) { puNote(`${PU_NAMES[PU.type]} marked. Builders will start soon.`); PU.fx.push({ x: PU.gx + 0.5, y: PU.gy + 0.5, t: performance.now() }); if (PU.touch) { puPendClear(); PU.hover = null; PU.ok = null; puGhostTip(); puUndoChip(r.bp.id) } else puGhostCheck(); puRefresh() } else puNote(r.why);
+}
+function puUndoChip(id) {                                                                  // a short Undo after a touch placement
+  const el = $('pundo'); if (!el) return; clearTimeout(PU._ut); el.style.display = 'flex'; el.innerHTML = `<span>${PU_NAMES[PU.type]} marked</span><button id="pundob">Undo</button>`;
+  $('pundob').onclick = () => { const ok = playCancelBp(world, id); el.style.display = 'none'; puNote(ok ? 'Taken back. The materials are returned.' : 'Too late: builders have started.'); puRefresh() };
+  PU._ut = setTimeout(() => { el.style.display = 'none' }, 6000);
+}
+function puConfPos() {                                                                     // the ✓ ✕ pair sits just under the pending ghost, kept on screen
+  const c = $('pconf'); if (!c) return; if (!PU.pend || PU.tool !== 'build' || PU.gx == null || !puOn()) { c.style.display = 'none'; return }
+  const [bw, bh] = CFG.SIZE[PU.type], z = R.cam.z, T = CFG.T, cx = ((PU.gx + bw / 2) * T - R.cam.x) * z + R.vw / 2, by = ((PU.gy + bh) * T - R.cam.y) * z + R.vh / 2, ty = ((PU.gy) * T - R.cam.y) * z + R.vh / 2;
+  c.style.display = 'flex'; $('pcok').disabled = !(PU.ok && PU.ok.ok); const w = c.offsetWidth, h = c.offsetHeight;
+  c.style.left = Math.max(4, Math.min(R.vw - w - 4, cx - w / 2)) + 'px'; c.style.top = Math.max(4, Math.min(R.vh - h - 4, by + 10 > R.vh - h - 4 ? ty - h - 10 : by + 10)) + 'px';
+  const g = $('pghost'); if (g && PU.ok) { g.style.left = Math.max(4, Math.min(R.vw - g.offsetWidth - 4, cx - g.offsetWidth / 2)) + 'px'; g.style.top = Math.max(4, ty - g.offsetHeight - 6 - (by + 10 > R.vh - h - 4 ? h + 10 : 0)) + 'px' }
 }
 function puUp(e) {
-  if (e.pointerType && e.pointerType !== 'mouse') { clearTimeout(PU._gt); PU._gt = setTimeout(() => { const g = $('pghost'); if (g) g.style.display = 'none' }, 1800) }
+  if (e.pointerType && e.pointerType !== 'mouse') { clearTimeout(PU._gt); PU._gt = setTimeout(() => { const g = $('pghost'); if (g && !PU.pend) g.style.display = 'none' }, 1800) }
   if (!puOn()) return false;
   if (PU.hold) { clearTimeout(PU.hold); PU.hold = null } PU.holdMoved = 0;
   if (PU.holdFired) { PU.holdFired = false; cv.classList.remove('drag'); return true }
@@ -182,9 +202,10 @@ function puUp(e) {
     const a = screenToWorld(x0, y0), c = screenToWorld(x1, y1), inb = world.vills.filter(v => v.x * T >= a.x && v.x * T <= c.x && v.y * T - 6 >= a.y && v.y * T - 6 <= c.y);
     PU.sel = e.ctrlKey || e.metaKey ? [...new Set([...puGroup(), ...inb])] : inb; selected = PU.sel[0] || null; if (selected) showTab('village'); puNote(PU.sel.length ? `${PU.sel.length} selected. Right-click to order, or use the bar below.` : 'Nobody in the box.'); puRefresh(); updateUI(); return true;
   }
+  if (PU.dragG) { PU.dragG = null; puGhostCheck(); puRefresh(); return true }
   if (PU.tool === 'build' && !(cv._moved > 5)) {
-    const t = puTile(sx, sy), [bw, bh] = CFG.SIZE[PU.type]; PU.hover = { x: t.x, y: t.y, sx, sy }; puGhostCheck();
-    if (e.pointerType === 'mouse') { puPlaceAt(); } else if (PU._tapped && PU._tapped.x === PU.gx && PU._tapped.y === PU.gy && PU.ok && PU.ok.ok) { puPlaceAt(); PU._tapped = null } else { PU._tapped = { x: PU.gx, y: PU.gy }; puRefresh() }
+    const t = puTile(sx, sy); PU.hover = { x: t.x, y: t.y, sx, sy }; puGhostCheck();
+    if (e.pointerType === 'mouse') puPlaceAt(); else { PU.pend = true; puConfPos(); puRefresh() }     // touch: the tap only sets the ghost down; the tick confirms it
     return true;
   }
   return false;
@@ -224,7 +245,7 @@ function playDraw(g, w, now) {
     if (PU.sel.includes(v)) { g.strokeStyle = '#ffd866'; g.beginPath(); g.ellipse(x, y, 8, 4, 0, 0, 7); g.stroke(); const o = v.order; if (o && o.x != null) { g.strokeStyle = 'rgba(255,216,102,.5)'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(x, y); g.lineTo((o.x + .5) * T, (o.y + .5) * T); g.stroke(); g.setLineDash([]) } }
     if (v.order || v.roleLock) { g.fillStyle = '#ffd866'; g.fillRect(x - 1, y - 17, 3, 3) } }
   for (const f of PU.fx) { const a = (now - f.t) / 900; if (a > 1) continue; g.strokeStyle = `rgba(255,216,102,${1 - a})`; g.beginPath(); g.arc(f.x * T, f.y * T, 4 + a * 14, 0, 7); g.stroke() } PU.fx = PU.fx.filter(f => now - f.t < 900);
-  const h = PU.hover;
+  const h = PU.hover; if (PU.pend) puConfPos();
   if (PU.tool === 'build' && h && PU.ok && PU.gx != null) { const [bw, bh] = CFG.SIZE[PU.type]; g.fillStyle = PU.ok.ok ? 'rgba(80,220,120,.38)' : 'rgba(235,80,80,.38)'; g.fillRect(PU.gx * T, PU.gy * T, bw * T, bh * T); g.strokeStyle = PU.ok.ok ? '#6bff9b' : '#ff7070'; g.strokeRect(PU.gx * T + .5, PU.gy * T + .5, bw * T - 1, bh * T - 1) }
   if (PU.paint) { g.fillStyle = PU.tool === 'road' ? 'rgba(210,190,150,.7)' : 'rgba(' + (PU_ZCOL[PU.zone] || '255,255,255') + ',.5)'; for (const [x, y] of PU.paint.tiles) g.fillRect(x * T, y * T, T, T) }
   else if ((PU.tool === 'road' || PU.tool === 'zone') && h) { g.strokeStyle = '#fff'; const tiles = PU.tool === 'road' ? [[h.x, h.y]] : puBrushTiles(h.x, h.y, PU.brush); for (const [x, y] of tiles) g.strokeRect(x * T + .5, y * T + .5, T - 1, T - 1) }
@@ -259,3 +280,5 @@ cv.addEventListener('contextmenu', e => {
   addEventListener('keyup', e => { if (e.key === ' ') puKeysDown[' '] = false });
   puRefresh();
 }
+
+if (typeof document !== 'undefined') { const ok = document.getElementById('pcok'), no = document.getElementById('pcno'); if (ok) ok.onclick = () => puPlaceAt(); if (no) no.onclick = () => { puPendClear(); PU.hover = null; PU.ok = null; puGhostTip(); puRefresh() } }

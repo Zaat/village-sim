@@ -29,6 +29,7 @@
   "housing_events",
   "city_events",
   "crowd_events",
+  "growth_events",
   "play_events",
   "gameover_events"
  ],
@@ -55,7 +56,8 @@
   "ui_crowd",
   "ui_play",
   "ui_over",
-  "ui_help"
+  "ui_help",
+  "ui_sound"
  ],
  "ui_only": [
   "render",
@@ -67,10 +69,11 @@
   "treeui",
   "playui",
   "overui",
-  "helpui"
+  "helpui",
+  "sound"
  ],
  "touch": {
-    "lives": ["lives_events", "privacy_events", "housing_events", "crowd_events", "city_events", "concerns_events", "livelihoods_events", "living", "play_events", "stats_events", "save", "golden", "perf"],
+    "lives": ["growth_events", "lives_events", "privacy_events", "housing_events", "crowd_events", "city_events", "concerns_events", "livelihoods_events", "living", "play_events", "stats_events", "save", "golden", "perf"],
     "society": ["regime_events", "strife_events", "culture_events", "war_events", "concerns_events", "tech_events", "play_events", "save", "golden", "perf"],
   "voices": [
    "voices_events",
@@ -164,6 +167,7 @@
   "ui_crowd": 20,
   "ui_play": 35,
   "ui_over": 15,
-  "ui_help": 15
+  "ui_help": 15,
+  "ui_sound": 25
  }
 }

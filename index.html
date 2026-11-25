@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-select" viewBox="0 0 24 24"><path d="M5 3l13 8-6 1.5L9.5 19z"/></symbol><symbol id="i-build" viewBox="0 0 24 24"><path d="M13 5l5 5-2 2-5-5zM12 8L5 15l4 4 7-7"/></symbol><symbol id="i-road" viewBox="0 0 24 24"><path d="M9 3L5 21M15 3l4 18M12 5v3M12 11v3M12 17v3"/></symbol><symbol id="i-zone" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 12h16M12 4v16"/></symbol><symbol id="i-research" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6L5 19a1.5 1.5 0 0 0 1.4 2h11.2A1.5 1.5 0 0 0 19 19l-5-10V3M8 15h8"/></symbol><symbol id="i-house" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-5h4v5"/></symbol><symbol id="i-farm" viewBox="0 0 24 24"><path d="M3 18l3-8h12l3 8zM8 10l-2 8M12 10v8M16 10l2 8"/></symbol><symbol id="i-store" viewBox="0 0 24 24"><path d="M3 9l9-5 9 5v11H3zM8 20v-6h8v6"/></symbol><symbol id="i-workshop" viewBox="0 0 24 24"><path d="M4 9h14c0 3-2 4-5 4v3h3v3H8v-3h3v-3C7 13 5 12 4 9zM18 9h3"/></symbol><symbol id="i-logcamp" viewBox="0 0 24 24"><path d="M12 3l5 7h-3l4 6H6l4-6H7zM12 16v5"/></symbol><symbol id="i-minecamp" viewBox="0 0 24 24"><path d="M4 8c4-4 12-4 16 0M12 7v14M10 21h4"/></symbol><symbol id="i-lodge" viewBox="0 0 24 24"><path d="M3 20L12 4l9 16zM9.5 20l2.5-5 2.5 5"/></symbol><symbol id="i-market" viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5M3 9c0 1.7 1.3 2.5 3 2.5S9 10.7 9 9c0 1.7 1.3 2.5 3 2.5s3-.8 3-2.5c0 1.7 1.3 2.5 3 2.5s3-.8 3-2.5M5 12v8h14v-8"/></symbol><symbol id="i-plaza" viewBox="0 0 24 24"><path d="M3 8l9-4 9 4M5 9v9M10 9v9M14 9v9M19 9v9M3 20h18"/></symbol><symbol id="i-tavern" viewBox="0 0 24 24"><path d="M6 5h10v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM16 8h2a2 2 0 0 1 0 6h-2M9 9v6M12 9v6"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><path d="M4 8l8-4 8 4v8l-8 4-8-4zM4 8l8 4 8-4M12 12v8"/></symbol><symbol id="i-hand" viewBox="0 0 24 24"><path d="M8 12V6a1.5 1.5 0 0 1 3 0v5M11 11V4.5a1.5 1.5 0 0 1 3 0V11M14 11V6a1.5 1.5 0 0 1 3 0v8c0 4-2 6-5 6-3 0-4-1.5-6-4l-1.5-2.5a1.5 1.5 0 0 1 2.3-1.8L8 14"/></symbol></svg>
 <div id="app">
   <div id="stage">
     <canvas id="cv"></canvas>
@@ -16,20 +17,21 @@
     <div id="ctl">
       <button id="playBtn" title="Pause / play (Space)">⏸</button>
       <span class="stepper"><button id="spDown" title="Slower ( [ )">◂</button><span id="spLabel" title="Simulation speed">10×</span><button id="spUp" title="Faster ( ] )">▸</button></span>
-      <span class="presets wide"><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button><button data-sp="100">100×</button></span>
+      <span class="presets wide"><button data-sp="1">1×</button><button data-sp="3">3×</button><button data-sp="10" class="on">10×</button><button data-sp="30">30×</button><button data-sp="100">100×</button><button data-sp="999" title="As fast as your machine can go">Max</button></span>
       <button id="stepBtn" title="Advance one day ( . ) · hold Shift for one season">⏭</button>
       <span id="rate" class="rate wide"></span>
       <span class="sep"></span>
-      <button id="menuBtn" title="Menu: new world, save, settings, how to play, about">☰</button><button id="fol" title="Follow selected (F)">◎<span class="wide"> Follow</span></button><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙<span class="wide"> Settings</span></button>
+      <button id="sndBtn" title="Music is off (M)">♪</button><button id="menuBtn" title="Menu: new world, save, settings, how to play, about">☰</button><button id="fol" title="Follow selected (F)">◎<span class="wide"> Follow</span></button><button id="gear" title="Settings, saving, Claude counsel and diagnostics (G)">⚙<span class="wide"> Settings</span></button>
     </div>
+    <div id="sndPanel" style="display:none"><b id="sndName">No track yet</b><div class="hint" id="sndSub"></div><div class="sndrow"><button id="sndOnOff">Turn on</button><button id="sndSkip" title="Next track">Skip</button><button id="sndUp" title="I like this one">Like</button><button id="sndDown" title="Not for me">Dislike</button></div><label class="sndrow"><span class="hint">Volume</span><input type="range" id="sndVol" min="0" max="100" value="60"></label><div id="sndShareRow" style="display:none" class="sndrow"><label class="hint"><input type="checkbox" id="sndShare"> Share my ratings (just the track number and a thumb)</label></div><div class="hint">Made in your browser as you play. Press M to turn it on or off.</div></div>
     <div id="ptool">
       <span class="seg" id="modeSw" title="Watch the village live its life, or Play and take the lead"><button data-mode="watch" class="on">Watch</button><button data-mode="play">Play</button></span><span id="ptools" style="display:none">
-      <span class="grp"><button data-tool="select" class="on" title="Select and inspect (V)">Select</button><button data-tool="build" title="Place buildings (B)">Build</button><button data-tool="road" title="Lay roads (R)">Road</button><button data-tool="zone" title="Paint zones for the village to build in (Z)">Zone</button><button id="ppan" title="Move the map instead of painting (or hold Space)">✋</button></span>
+      <span class="grp"><button data-tool="select" class="on" title="Select and inspect (V)"><svg class="ic"><use href="#i-select"/></svg>Select</button><button data-tool="build" title="Place buildings (B)"><svg class="ic"><use href="#i-build"/></svg>Build</button><button data-tool="road" title="Lay roads (R)"><svg class="ic"><use href="#i-road"/></svg>Road</button><button data-tool="zone" title="Paint zones for the village to build in (Z)"><svg class="ic"><use href="#i-zone"/></svg>Zone</button><button id="ppan" title="Move the map instead of painting (or hold Space)"><svg class="ic"><use href="#i-hand"/></svg></button></span>
       <span class="sep"></span><button id="presearch" title="Choose what the village studies">Research</button><button id="pcrowd" title="How the townsfolk who are not individually in play share their work">Crowd</button>
       <span class="sep"></span><span class="hint wide">Village plans</span><span class="grp"><button data-auto="build" data-tip="Buildings" class="on">Buildings</button><button data-auto="research" data-tip="Research" class="on">Research</button><button data-auto="jobs" data-tip="Jobs" class="on">Jobs</button></span>
       </span>
     </div>
-    <div id="pstack"><div id="ppanel" style="display:none"></div><div id="pcmd" style="display:none"></div></div><div id="pmenu" style="display:none"></div><div id="pnote"></div><div id="tip" style="display:none"></div><div id="pghost" style="display:none"></div>
+    <div id="pstack"><div id="ppanel" style="display:none"></div><div id="pcmd" style="display:none"></div></div><div id="pmenu" style="display:none"></div><div id="pnote"></div><div id="tip" style="display:none"></div><div id="pconf" style="display:none"><button id="pcok" title="Build here">✓</button><button id="pcno" title="Cancel">✕</button></div><div id="pundo" style="display:none"></div><div id="pghost" style="display:none"></div>
     <div id="zoomCtl"><button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button></div>
     <div id="drawer"><div class="drawerhead"><b>Settings &amp; tools</b><button id="drawerClose" title="Close (Esc)">✕</button></div>
     <div class="card"><h3>Settings</h3>
@@ -86,12 +88,12 @@
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
     <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
-    <div id="menu" style="display:none"><button data-mn="resume">Resume</button><button data-mn="new">New world…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><button data-mn="settings">Settings</button><button data-mn="tips">Show tips again</button><button data-mn="help">How to play</button><button data-mn="about">About</button></div>
+    <div id="menu" style="display:none"><button data-mn="resume">Resume</button><button data-mn="new">New world…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><button data-mn="scen">Scenarios…</button><button data-mn="settings">Settings</button><button data-mn="tips">Show tips again</button><button data-mn="help">How to play</button><button data-mn="about">About</button></div>
     <div id="modal" style="display:none"><div class="nwbox"><div class="drawerhead"><h3 id="modal_t"></h3><button id="modal_x" title="Close (Esc)">✕</button></div><div id="modal_b" class="mbody"></div></div></div>
     <div id="over" style="display:none"><div class="nwbox">
       <h3 id="over_title"></h3><div id="over_text" style="margin-bottom:10px"></div>
       <canvas id="over_chart" width="470" height="90" style="width:100%;height:90px;display:block;background:#10151a;border-radius:6px"></canvas>
-      <div id="over_facts" class="kvl" style="margin:10px 0"></div>
+      <div id="over_facts" class="kvl" style="margin:10px 0"></div><div id="over_tales"></div>
       <div class="hint wline" id="over_line" style="margin-bottom:10px"></div>
       <div class="btnrow"><button id="over_again" class="on" title="The same seed and settings, from the start">Same world again</button><button id="over_new">New world…</button><button id="over_cont" title="Keep watching what is left">Keep watching</button><button id="over_copy">Copy world line</button></div>
     </div></div>
@@ -209,6 +211,7 @@
 <script src="src/playui.js"></script>
 <script src="src/overui.js"></script>
 <script src="src/helpui.js"></script>
+<script src="src/sound.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/treeui.js"></script>
 </body>

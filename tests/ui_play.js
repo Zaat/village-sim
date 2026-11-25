@@ -64,7 +64,7 @@ const { chromium } = require('playwright');
   // build: a ghost follows the pointer, red where it cannot go and green where it can; clicking places a player site
   await ev(() => { R.cam.x = world.cx * CFG.T; R.cam.y = world.cy * CFG.T; R.cam.z = 2.4; PU.sel = []; selected = null; puRefresh() });
   await p.keyboard.press('b'); await p.waitForTimeout(100); ok(await ev(() => PU.tool === 'build') && await vis('ppanel'), 'B opens the build tool and menu');
-  const bad = await scr(bd.x + 0.5, bd.y + 0.5); await p.mouse.move(bad[0], bad[1]); await p.waitForTimeout(100); ok(await ev(() => PU.ok && !PU.ok.ok) && await ev(() => document.getElementById('pghost').className === 'bad'), 'over a building the ghost is red and says why');
+  await ev(b => { R.cam.x = (b.x + 0.5) * CFG.T; R.cam.y = (b.y + 0.5) * CFG.T }, bd); const bad = await scr(bd.x + 0.5, bd.y + 0.5); await p.mouse.move(bad[0], bad[1]); await p.waitForTimeout(100); ok(await ev(() => PU.ok && !PU.ok.ok) && await ev(() => document.getElementById('pghost').className === 'bad'), 'over a building the ghost is red and says why'); await ev(() => { R.cam.x = world.cx * CFG.T; R.cam.y = world.cy * CFG.T });
   const spot = await ev(() => { for (let r = 3; r < 30; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = world.cx + dx, y = world.cy + dy; if (playCanPlace(world, 'house', x, y, false).ok) return [x, y] } return null });
   const sp = await scr(spot[0] + 1, spot[1] + 1); await p.mouse.move(sp[0], sp[1]); await p.waitForTimeout(100);
   ok(await ev(() => PU.ok && PU.ok.ok) && await ev(() => document.getElementById('pghost').className === 'ok'), 'over open grass the ghost is green');
@@ -93,6 +93,21 @@ const { chromium } = require('playwright');
   await p.click('#pcrowd'); await p.waitForTimeout(100); ok(await vis('ppanel'), 'the crowd panel opens');
   await p.click('[data-auto=jobs]'); await p.click('[data-auto=build]'); await p.click('[data-auto=research]'); ok(await ev(() => !world.play.auto.jobs && world.play.auto.build && !world.play.auto.research), 'the switches flip: jobs and research off, buildings (off since entering Play) back on');
   await p.click('[data-auto=jobs]'); await p.click('[data-auto=build]'); await p.click('[data-auto=research]'); ok(await ev(() => world.play.auto.jobs && !world.play.auto.build && world.play.auto.research), 'and flip back');
+
+  // touch building: a tap sets a ghost down, a finger on it drags it, the tick builds, Undo takes it back
+  { await ev(() => { puTool('build'); PU.type = 'house' }); await p.waitForTimeout(80);
+    const sp2 = await ev(() => { const out = []; for (let r = 4; r < 40 && out.length < 2; r++) for (let dy = -r; dy <= r && out.length < 2; dy++) for (let dx = -r; dx <= r && out.length < 2; dx++) { const x = world.cx + dx, y = world.cy + dy; if (playCanPlace(world, 'house', x, y, false).ok && (!out.length || Math.abs(out[0][0] - x) + Math.abs(out[0][1] - y) >= 5)) out.push([x, y]) } return out });
+    const tp = (type, [x, y], id) => ev(([type, x, y, id]) => cv.dispatchEvent(new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, pointerId: id, pointerType: 'touch', isPrimary: true, button: 0, buttons: type === 'pointerup' ? 0 : 1 })), [type, x, y, id]);
+    const nb = await ev(() => world.bps.filter(b => b.player).length), a1 = await scr(sp2[0][0] + 1, sp2[0][1] + 1), a2 = await scr(sp2[1][0] + 1, sp2[1][1] + 1);
+    await tp('pointerdown', a1, 21); await tp('pointerup', a1, 21); await p.waitForTimeout(120);
+    ok(await ev(() => PU.pend === true) && await vis('pconf'), 'on touch a tap sets a ghost down with a confirm bar'); ok(await ev(n => world.bps.filter(b => b.player).length === n, nb), 'a tap alone builds nothing');
+    await tp('pointerdown', a1, 22); await tp('pointermove', [(a1[0] + a2[0]) / 2, (a1[1] + a2[1]) / 2], 22); await tp('pointermove', a2, 22); await tp('pointerup', a2, 22); await p.waitForTimeout(120);
+    ok(await ev(s => PU.gx === s[0] && PU.gy === s[1] && PU.pend, sp2[1]), 'dragging the ghost moves it and keeps it pending'); ok(await ev(n => world.bps.filter(b => b.player).length === n, nb), 'dragging builds nothing either');
+    await p.click('#pcok'); await p.waitForTimeout(150);
+    ok(await ev(n => world.bps.filter(b => b.player).length === n + 1, nb) && !(await vis('pconf')), 'the tick places it and the bar goes'); ok(await vis('pundo'), 'a short Undo is offered');
+    await p.click('#pundob'); await p.waitForTimeout(120); ok(await ev(n => world.bps.filter(b => b.player).length === n, nb) && !(await vis('pundo')), 'Undo takes the site back');
+    await tp('pointerdown', a1, 23); await tp('pointerup', a1, 23); await p.waitForTimeout(100); await p.click('#pcno'); await p.waitForTimeout(100); ok(!(await vis('pconf')) && await ev(() => !PU.pend), 'the cross drops the ghost');
+    await ev(() => puTool('select')); }
 
   // saving keeps Play; Watch hides the tools again and drawing carries on with no errors
   await ev(() => { __sim.setSpeed(10) }); await p.waitForTimeout(1200);

@@ -3,8 +3,8 @@ const fs=require('fs'),vm=require('vm');
 const code=require('./lib').SRC.map(f=>fs.readFileSync(__dirname+'/../src/'+f+'.js','utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,ST,STAT_EVENTS,STAT_SERIES,statCount,statsDay,statsSummary,statsCSV,statsRecords,evRate,evTotal,seriesPoints,serializeWorld,deserializeWorld,STAT_CAP});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c)pass++;else{fail++;console.log('FAIL',m)}};
-const days=+process.argv[3]||260;const w=new ctx.World(+process.argv[2]||555,{map:process.argv[4]||'island'});
-for(let t=0;t<1200*days;t++)w.step();
+// v0.36: starts from a day-200 checkpoint (node tools/checkpoint.js make isl555_d200 555 island 200) and plays 60 more days instead of 260 from scratch
+const w=require('./lib').loadCheckpoint(ctx,'isl555_d200');for(let t=0;t<1200*60;t++)w.step();
 const S=ctx.ST(w);
 ok(S.days.length===Math.floor((w.day-1)/4)||Math.abs(S.days.length-Math.floor(w.day/4))<=1,'series sampled every 4 days: '+S.days.length);
 ok(ctx.STAT_SERIES.every(s=>S.s[s.id].length===S.days.length),'all series have equal length');

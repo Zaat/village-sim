@@ -19,14 +19,14 @@ function initChar(w, v, parents) {
     const pk = P.reduce((s, p) => s + p.trait.kind, 0) / P.length, pr = avg('ruth');
     v.life = { harsh: clampC(0.45 * pr + 0.25 * (1 - pk) + 0.2 * auth + 0.1 * 0.3, 0, 1), warm: clampC(0.55 * pk + 0.3 * (1 - pr) + 0.15 * 0.5, 0, 1), orphan: 0, lean: 0, fest: 0, born: w.day, tags: [] };
   } else {                                                    // the founding generation: temperament comes with the person
-    v.char = { ruth: clampC(0.5 + (g() - 0.5) * 1.3 - 0.3 * (t.kind - 0.5)), piety: clampC(0.5 + (g() - 0.5) * 1.3 - 0.15 * (t.cur - 0.5)), amb: clampC(0.45 + (g() - 0.5) * 1.1 + 0.25 * (t.brave - 0.5) + 0.2 * (t.ind - 0.5)) };
+    v.char = { ruth: clampC(0.5 + (g() - 0.5) * 1.3 - 0.3 * (t.kind - 0.5)), piety: clampC(0.5 + (g() - 0.5) * 1.3 - 0.06 * (t.cur - 0.5)), amb: clampC(0.45 + (g() - 0.5) * 1.1 + 0.25 * (t.brave - 0.5) + 0.2 * (t.ind - 0.5)) };
     v.life = { harsh: 0.5, warm: 0.5, orphan: 0, lean: 0, fest: 0, born: w.day, tags: [], founder: true };
   }
 }
 /* repair older saves: derive a character from traits */
 function ensureChar(w, v) {
   if (v.char && v.life) return v; const t = v.trait;
-  v.char = { ruth: clampC(0.5 - 0.5 * (t.kind - 0.5) + (Math.random() - 0.5) * 0.2), piety: clampC(0.5 - 0.15 * (t.cur - 0.5) + (Math.random() - 0.5) * 0.3), amb: clampC(0.45 + 0.25 * (t.brave - 0.5) + 0.2 * (t.ind - 0.5)) };
+  v.char = { ruth: clampC(0.5 - 0.5 * (t.kind - 0.5) + (Math.random() - 0.5) * 0.2), piety: clampC(0.5 - 0.06 * (t.cur - 0.5) + (Math.random() - 0.5) * 0.3), amb: clampC(0.45 + 0.25 * (t.brave - 0.5) + 0.2 * (t.ind - 0.5)) };
   v.life = { harsh: 0.5, warm: 0.5, orphan: 0, lean: 0, fest: 0, born: w.day, tags: [], founder: true, formed: v.isAdult() }; return v;
 }
 const livingParent = (w, v) => v.parentIds.some(id => id != null && w.vills.some(x => x.id === id));
@@ -47,7 +47,7 @@ function formAdult(w, v) {
   ensureChar(w, v); const L = v.life, C = v.char, t = v.trait; if (L.formed) return; L.formed = true;
   if (!L.founder) {
     C.ruth = clampC(0.40 * C.ruth + 0.30 * L.harsh + 0.15 * (1 - L.warm) + 0.15 * (1 - t.kind));
-    C.piety = clampC(0.55 * C.piety + 0.20 * L.harsh + 0.10 * (L.orphan ? 1 : 0) + 0.15 * (1 - t.cur));
+    C.piety = clampC(0.62 * C.piety + 0.20 * L.harsh + 0.10 * (L.orphan ? 1 : 0) + 0.08 * (1 - t.cur));      // v0.36: faith and curiosity can sit together; only a soft pull between them
     C.amb = clampC(0.45 * C.amb + 0.25 * t.brave + 0.15 * t.ind + 0.15 * L.harsh);
   }
   L.tags = [];

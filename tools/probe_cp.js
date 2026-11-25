@@ -1,0 +1,7 @@
+#!/usr/bin/env node
+/* quick growth probe from a checkpoint: node tools/probe_cp.js CHECKPOINT YEARS [KEY=VALUE ...]   (CFG overrides, e.g. BIRTH_DAMP=0)  prints pop, births, deaths, hunger deaths per year */
+const { loadSim, loadCheckpoint } = require('../tests/lib'); const [, , cp, yrs, ...kv] = process.argv;
+const S = loadSim('World,CFG,statCount'); const CFG = S.CFG; for (const a of kv) { const [k, v] = a.split('='); S.CFG[k] = +v }
+const w = loadCheckpoint(S, cp); if (process.env.HARD != null) w.settings.hardship = +process.env.HARD; const y0 = w.year, t0 = Date.now(); const g = (k, y) => (w.stats.ev[k] && w.stats.ev[k].y[y]) || 0;
+for (let y = 0; y < (+yrs || 10); y++) { for (let t = 0; t < 1200 * 32; t++) w.step(); const yy = w.year - 2, L = k => g(k, yy), fert = w.vills.filter(v => v.sex === 'f' && v.isAdult() && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)).length, cpl = w.vills.filter(v => v.sex === 'f' && v.partner != null).length; console.log('year', w.year, 'pop', w.pop, 'beds', w.beds(), 'food', Math.round(w.stock.food), 'born', g('born', yy), 'died', g('died', yy), 'hunger', g('died_hunger', yy), 'faults', w.dbg.total, '| fertF', fert, 'couples', cpl, 'lim try/ok/cool/age/dep/beds/food/dice', [L('lim_try'), L('lim_ok'), L('lim_cool'), L('lim_age'), L('lim_dep'), L('lim_beds'), L('lim_food'), L('lim_dice')].join('/')) }
+console.log('ms/tick', ((Date.now() - t0) / (1200 * 32 * (+yrs || 10))).toFixed(2), kv.join(' '));

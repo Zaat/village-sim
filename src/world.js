@@ -5,6 +5,12 @@
 const SEARCH_BUDGET = 150000;                       // path-search nodes allowed per tick (a full flood of the biggest map is about 80000)
 const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 const TPD_ = CFG.TPD, DPS_ = CFG.DPS;                  // cached for the hot day and season getters
+/* v0.36: births slow as the village nears what it can hold (beds and food), not at a fixed head-count, so a well-run village keeps growing */
+function birthDamp(w) {
+  if (CFG.BIRTH_DAMP) return clamp(1.15 - w.pop / CFG.BIRTH_DAMP, 0.35, 1);                       // old fixed ceiling (kept for probes)
+  const beds = Math.max(1, w.beds()), room = (beds - w.pop) / beds, feed = w.stock.food / Math.max(1, w.pop * 6);
+  return clamp(Math.min(0.3 + room * 5, 0.3 + feed * 0.7), 0.3, 1);
+}
 class World {
   constructor(seed, settings = {}, dims) {
     const [mw, mh] = dims || CFG.MAP_NEW; CFG.W = mw; CFG.H = mh; this.arch = (settings && settings.map && mw >= 200) ? settings.map : 'island'; this.full = FULL_MAPS.has(this.arch);
@@ -259,11 +265,38 @@ class World {
   }
   tryConceive(f, m) {
     if (!f.isAdult() || !m.isAdult() || f.partner !== m.id) return;
-    if (f.preg > 0 || this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN || f.age > CFG.FERTILE_MAX * (this.lifeScale || 1)) return;
-    if (CFG.DEP_CAP && f.kids.reduce((n, id) => { const k = this.vills.find(x => x.id === id); return n + (k && !k.isAdult() ? 1 : 0) }, 0) >= CFG.DEP_CAP) return;   // families space their children: a limit on children still growing up
-    if (this.pop + 1 > this.beds()) return;
-    const gp = this.gov.policy.growth; if (this.stock.food < this.pop * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) return;
-    if (this.r() < CFG.BIRTH_CHANCE * CFG.BIRTH_MULT * (CFG.BIRTH_DAMP ? clamp(1.15 - this.pop / CFG.BIRTH_DAMP, 0.35, 1) : 1) * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this)) { f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.') }
+    statCount(this, 'lim_try');                                  // the limits ledger (v0.36): which gate stopped each attempt; counters only, no dice
+    if (f.preg > 0) { statCount(this, 'lim_preg'); return }
+    if (this.tick - f.lastBirth < CFG.BIRTH_COOLDOWN) { statCount(this, 'lim_cool'); return }
+    if (f.age > CFG.FERTILE_MAX * (this.lifeScale || 1)) { statCount(this, 'lim_age'); return }
+    if (CFG.DEP_CAP && f.kids.reduce((n, id) => { const k = this.vills.find(x => x.id === id); return n + (k && !k.isAdult() ? 1 : 0) }, 0) >= CFG.DEP_CAP) { statCount(this, 'lim_dep'); return }   // families space their children: a limit on children still growing up
+    if (this.pop + 1 > this.beds()) { statCount(this, 'lim_beds'); return }
+    const gp = this.gov.policy.growth; if (this.stock.food < this.pop * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) { statCount(this, 'lim_food'); return }
+    if (!(this.r() < CFG.BIRTH_CHANCE * CFG.BIRTH_MULT * birthDamp(this) * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this))) { statCount(this, 'lim_dice'); return }
+    statCount(this, 'lim_ok'); f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.')
+  }
+  /* v0.36: a settled couple has a chance of a child each day (the old route needed the pair to chat, which happens less and less as a town grows, so births stalled at any size) */
+  coupleDay() {
+    const by = new Map(); for (const v of this.vills) by.set(v.id, v);
+    for (const f of this.vills) {
+      if (f.sex !== 'f' || f.partner == null || f.preg > 0 || !f.isAdult()) continue;
+      const m = by.get(f.partner); if (!m || m.sex !== 'm' || m.partner !== f.id) continue;
+      if (this.r() < CFG.COUPLE_TRY) this.tryConceive(f, m);
+    }
+    if (CFG.COURT_TRY) this.courtDay();
+  }
+  /* v0.36: young people find each other even in a big town (meeting by chance in the street needs friendship 50, which a town of hundreds rarely gives) */
+  courtDay() {
+    const lim = CFG.FERTILE_MAX * (this.lifeScale || 1), kin = (a, b) => a.parentIds.some(id => id != null && (b.parentIds.includes(id) || b.id === id)) || b.parentIds.includes(a.id);
+    const men = this.vills.filter(v => v.sex === 'm' && v.partner == null && v.isAdult() && v.age <= lim + 20), p = CFG.COURT_TRY * hardOf(this).fert * fertilityMult(this);
+    if (!men.length) return;
+    for (const f of this.vills) {
+      if (f.sex !== 'f' || f.partner != null || !f.isAdult() || f.age > lim || !men.length) continue;
+      if (!(this.r() < p)) continue;
+      let best = null, bs = -1e9;
+      for (const m of men) { if (m.partner != null || kin(f, m)) continue; const rel = this.getRel(f, m); if (rel < -20) continue; const sc = rel + this.r() * 25 - Math.abs(f.age - m.age) * 0.4; if (sc > bs) { bs = sc; best = m } }
+      if (best) { pairUp(this, f, best); statCount(this, 'courted') }
+    }
   }
   birth(f) {
     if (this.vills.length >= CROWD.focus) { const C = crowdState(this); C.kids++; C.n++; C.born++; this.births++; this.abirths = (this.abirths || 0) + 1; noteFlow(this, 'born'); statCount(this, 'born'); f.lastBirth = this.tick; f.story('Gave birth to a child who will grow up among the townsfolk.'); return }       // the focus is full: the child joins the crowd
@@ -296,6 +329,7 @@ class World {
   /* ----- calendar hooks ----- */
   onNewDay() {
     const s = this.season, pop = this.pop;
+    if (CFG.COUPLE_TRY) this.coupleDay();
     if (this.seasonDay === 1 && this.day > 1) {
       if (s === 0) { this.harsh = false; this.say('Spring arrives. The snow melts and the fields stir.') }
       if (s === 1) this.say('Summer begins. Long warm days.')

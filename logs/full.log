@@ -1,0 +1,83 @@
+FAILED golden                 1m18s  
+   |   was {"day":31,"pop":30,"births":10,"deaths":1,"houses":10,"blds":25,"tech":0,"stock":"food:230,stone:73,wood:155","ids":"84,85,86,87,88,89,90,91,115,116,145,146,147,156,173,175,176,177,180,181,182,183,187,188,189,192,193,198,199,200","pos":51839,"faults":0}
+   |   now {"day":31,"pop":23,"births":7,"deaths":1,"houses":8,"blds":20,"tech":0,"stock":"food:153,stone:58,wood:133","ids":"84,85,86,87,88,90,91,139,140,153,156,157,160,161,162,163,164,165,166,167,170,171,172","pos":39904,"faults":0}
+   | DIFF peninsula
+   |   was {"day":31,"pop":25,"births":8,"deaths":0,"houses":8,"blds":20,"tech":0,"stock":"food:185,stone:56,wood:126","ids":"45,46,47,48,49,50,51,52,90,91,100,120,140,141,161,162,163,164,165,166,167,171,172,173,174","pos":47623,"faults":0}
+   |   now {"day":31,"pop":26,"births":11,"deaths":0,"houses":9,"blds":23,"tech":0,"stock":"food:229,stone:65,wood:131","ids":"45,46,47,48,49,50,51,52,94,95,96,97,116,127,140,144,145,146,147,148,149,150,151,152,153,154","pos":48498,"faults":0}
+   | DIFF lakeland
+   |   was {"day":31,"pop":24,"births":10,"deaths":0,"houses":9,"blds":21,"tech":0,"stock":"food:170,stone:60,wood:136","ids":"64,65,66,67,68,69,70,71,84,96,107,108,155,161,162,163,164,165,166,167,168,169,170,171","pos":40842,"faults":0}
+   |   now {"day":31,"pop":21,"births":12,"deaths":0,"houses":8,"blds":19,"tech":0,"stock":"food:176,stone:54,wood:124","ids":"64,65,66,67,68,69,70,71,92,137,151,152,154,155,156,157,158,159,160,161,162","pos":35821,"faults":0}
+   | DIFF river
+   |   was {"day":31,"pop":25,"births":10,"deaths":1,"houses":9,"blds":22,"tech":0,"stock":"food:184,stone:63,wood:143","ids":"100,101,102,103,104,106,107,128,169,170,171,172,173,174,183,184,189,190,191,192,197,200,201,204,205","pos":43235,"faults":0}
+   |   now {"day":31,"pop":21,"births":11,"deaths":0,"houses":8,"blds":19,"tech":0,"stock":"food:199,stone:53,wood:109","ids":"100,101,102,103,104,105,106,107,156,169,170,171,176,177,178,183,184,185,186,189,190","pos":36438,"faults":0}
+   | golden: 0 passed, 6 failed (6 map types, 30 days)
+ok     save                   2m42s  ran 40 more days each: no errors
+ok     routes                 1m23s  14 passed, 0 failed
+ok     maps                     34s  84 passed, 0 failed
+ok     animals                   8s  animals passed: 54/57 roam freely
+ok     unreach                  10s  unreach passed
+ok     stats_events           2m20s  stats passed 16
+ok     outposts               3m38s  outposts passed 11
+ok     bld                    2m14s  ran 10 days, errors 0
+ok     discovery_events       5m41s  discovery_events: 46 passed, 0 failed
+ok     war_events             4m14s  war passed 51
+ok     concerns_events        1m09s  concerns_events: 20 passed, 0 failed
+FAILED perf                   3m04s  
+   | perf: checkpoint year 4 + 3 years (last 2 timed), pop 297, 1.773 ms/tick (limit 1.5) - 0 passed, 1 failed
+FAILED crowd_events           1m40s  
+   | FAIL villagers moved into the crowd quietly and the rest are alive: 0
+   | FAILED 1
+ok     research_limits        1m00s  research_limits: passed 25 failed 0
+ok     strife_events          1m00s  25 passed, 0 failed
+ok     play_events              45s  play_events passed 50
+ok     regime_events            44s  7 passed, 0 failed
+ok     lives_events             38s  lives passed 16
+ok     city_events              36s  city_events passed 25
+ok     voices_events            27s  voices_events: 33 passed, 0 failed
+ok     livelihoods_events       29s  livelihoods_events: 22 passed, 0 failed
+ok     growth_events            24s  growth passed 11
+ok     tech_events              30s  tech passed 24
+ok     living                   14s  10 passed, 0 failed
+ok     stats_legacy             22s  ok   no errors after 30 more days (0)
+ok     privacy_events           26s  ok   no errors running 20 days after loading (0)
+ok     bridges                  20s  bridges passed 7
+ok     culture_events           15s  culture passed 28
+ok     concerns_states          18s  concerns_states: 18 passed, 0 failed
+ok     housing_events            1s  housing_events passed 6
+ok     gameover_events           7s  gameover_events passed 11
+
+ suite                     time   result
+ discovery_events         5m41s   discovery_events: 46 passed, 0 failed
+ war_events               4m14s   war passed 51
+ outposts                 3m38s   outposts passed 11
+ perf                     3m04s   FAILED
+ save                     2m42s   ran 40 more days each: no errors
+ stats_events             2m20s   stats passed 16
+ bld                      2m14s   ran 10 days, errors 0
+ crowd_events             1m40s   FAILED
+ routes                   1m23s   14 passed, 0 failed
+ golden                   1m18s   FAILED
+ concerns_events          1m09s   concerns_events: 20 passed, 0 failed
+ strife_events            1m00s   25 passed, 0 failed
+ research_limits          1m00s   research_limits: passed 25 failed 0
+ play_events                45s   play_events passed 50
+ regime_events              44s   7 passed, 0 failed
+ lives_events               38s   lives passed 16
+ city_events                36s   city_events passed 25
+ maps                       34s   84 passed, 0 failed
+ tech_events                30s   tech passed 24
+ livelihoods_events         29s   livelihoods_events: 22 passed, 0 failed
+ voices_events              27s   voices_events: 33 passed, 0 failed
+ privacy_events             26s   ok   no errors running 20 days after loading (0)
+ growth_events              24s   growth passed 11
+ stats_legacy               22s   ok   no errors after 30 more days (0)
+ bridges                    20s   bridges passed 7
+ concerns_states            18s   concerns_states: 18 passed, 0 failed
+ culture_events             15s   culture passed 28
+ living                     14s   10 passed, 0 failed
+ unreach                    10s   unreach passed
+ animals                     8s   animals passed: 54/57 roam freely
+ gameover_events             7s   gameover_events passed 11
+ housing_events              1s   housing_events passed 6
+
+ 32 suites, 3 failed, 19m26s wall (38m52s of work on 2 workers)

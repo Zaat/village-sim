@@ -367,7 +367,7 @@ class Villager {
     }, 90);
     if (!path || !fb) return false;
     const b = fb, harvest = b.state === 2; b.claim = this.id; this.claimB = b; this.jobKind = 'farm';
-    const amt = Math.round(CFG.FARM_YIELD * (fb.fert ?? 1) * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1) * (1 + techFx(w, 'farm')));
+    const amt = Math.round(CFG.FARM_YIELD * (fb.fert ?? 1) * (0.8 + 0.5 * this.skill.farm) * (w.settings.survival ? 0.75 : 1) * (w.has('rotation') ? 1.25 : 1) * (w.has('plow') ? 1.25 : 1) * (1 + techFx(w, 'farm')) * hardOf(w).crop);
     this.steps = [go(null, path, 'To the field'), work(this.wt(harvest ? 55 : 40, 'farm'), harvest ? 'Harvesting' : 'Sowing seeds', () => {
       if (harvest && b.state === 2) { this.carry = { kind: 'food', amt }; b.state = 0; b.g = 0; b.fert = Math.max(0.5, (b.fert ?? 1) - 0.035 * (w.has('rotation') ? 0.5 : 1)); recordOutput(w, b, amt); onHarvest(w, b, this, amt); this.gain('farm') } else if (!harvest && b.state === 0) { b.state = 1; b.g = 0; this.gain('farm') }
     })];
