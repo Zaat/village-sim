@@ -36,16 +36,19 @@
     <div id="zoomCtl"><button id="zin" title="Zoom in (+)">＋</button><button id="zout" title="Zoom out (−)">－</button></div>
     <div id="drawer"><div class="drawerhead"><b>Settings &amp; tools</b><button id="drawerClose" title="Close (Esc)">✕</button></div>
     <div class="card"><h3>Settings</h3>
+      <div class="hint" style="margin-bottom:4px">Language <span class="hint">the game text; your browser language is used the first time</span></div>
+      <select id="set_lang" style="width:100%;margin-bottom:8px"></select>
       <div class="hint" style="margin-bottom:4px">Hardship <span class="hint">how forgiving the world is: births, newcomers, wolves, fevers, winters</span></div>
       <select id="set_hardship" style="width:100%;margin-bottom:8px"><option value="0">Gentle</option><option value="1">Normal</option><option value="2">Harsh</option></select>
       <div class="hint" style="margin-bottom:4px">Philosophy <span class="hint">what the village tends to study first</span></div>
       <select id="set_philosophy" style="width:100%;margin-bottom:8px"></select>
       <div class="hint" style="margin-bottom:4px">Open knowledge <span class="hint">sandbox: lifts the limits on research (the world is marked as a sandbox)</span></div>
       <select id="set_open" style="width:100%;margin-bottom:8px"><option value="0">Off</option><option value="1">Relaxed</option><option value="2">Unlimited</option></select>
-      <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="hint">harsher food, cold, wolves, fever</span></span></label>
-      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
-      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids and war <span class="hint">hostile clans may attack the dock and outposts, and the council may march against them; off by default</span></span></label>
-      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="hint">theft, brawls, trials</span></span></label>
+      <label class="tog"><input type="checkbox" id="set_survival"><span class="sw"></span><span>Survival mode <span class="risk hard">much harder</span> <span class="hint">harsher food, cold, wolves, fever; a small village can die out</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_disasters"><span class="sw"></span><span>Disasters <span class="risk mid">harder</span> <span class="hint">fire, storms, drought, fever, harsh winter</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_raids"><span class="sw"></span><span>Raids and war <span class="risk mid">harder later</span> <span class="hint">hostile clans may attack the dock and outposts, and the council may march against them; off by default</span></span></label>
+      <label class="tog" style="margin-top:6px"><input type="checkbox" id="set_crime"><span class="sw"></span><span>Crime and conflict <span class="risk low">a little harder</span> <span class="hint">theft, brawls, trials</span></span></label>
+      <div id="riskNote" class="riskNote" style="display:none"></div>
     </div>
     <div class="card"><h3>Concern alerts</h3>
       <div class="hint" style="margin-bottom:6px">What should happen when something becomes critical (falling population, famine, a faction about to leave)?</div>
@@ -89,7 +92,7 @@
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
     <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
-    <div id="menu" style="display:none"><button data-mn="resume">Resume</button><button data-mn="new">New world…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><button data-mn="scen">Scenarios…</button><button data-mn="settings">Settings</button><button data-mn="tips">Show tips again</button><button data-mn="help">How to play</button><button data-mn="about">About</button></div>
+    <div id="menu" style="display:none"><button data-mn="resume">Resume</button><button data-mn="new">New world…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><button data-mn="scen">Scenarios…</button><button data-mn="settings">Settings</button><button data-mn="fullscreen" id="mn_fs">Full screen (X)</button><button data-mn="tips">Show tips again</button><button data-mn="help">How to play</button><button data-mn="about">About</button></div>
     <div id="modal" style="display:none"><div class="nwbox"><div class="drawerhead"><h3 id="modal_t"></h3><button id="modal_x" title="Close (Esc)">✕</button></div><div id="modal_b" class="mbody"></div></div></div>
     <div id="over" style="display:none"><div class="nwbox">
       <h3 id="over_title"></h3><div id="over_text" style="margin-bottom:10px"></div>
@@ -165,6 +168,7 @@
     </section>
   </aside>
 </div>
+<script src="src/i18n.js"></script>
 <script src="src/config.js"></script>
 <script src="src/animals.js"></script>
 <script src="src/villager.js"></script>

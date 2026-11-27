@@ -6,7 +6,7 @@
    ========================================================================== */
 function makeBp(w, type, x, y, extra) {
   const tb = type === 'upgrade' ? w.buildings.get(extra.target) : null, [bw, bh] = type === 'road' ? [1, 1] : tb ? [tb.w, tb.h] : CFG.SIZE[type];
-  const cost = type === 'upgrade' ? ([null, { wood: 6, stone: 0 }, { wood: 4, stone: 8 }, { wood: 3, stone: 10 }, { wood: 4, stone: 12 }, { wood: 4, stone: 16 }][extra.toStyle] || { wood: 6, stone: 0 }) : CFG.COST[type];
+  const cost = type === 'upgrade' ? ([null, { wood: 6, stone: 0 }, { wood: 4, stone: 8 }, { wood: 3, stone: 10 }, { wood: 4, stone: 12 }, { wood: 4, stone: 16 }, { wood: 4, stone: 18 }, { wood: 4, stone: 24 }, { wood: 6, stone: 32 }][extra.toStyle] || { wood: 6, stone: 0 }) : CFG.COST[type];
   const bp = { id: w.bpnext++, type, x, y, w: bw, h: bh, idx: y * CFG.W + x, cost, ...(extra || {}), have: { wood: 0, stone: 0 }, inc: { wood: 0, stone: 0 }, prog: 0, time: CFG.BUILD_TIME[type], workers: 0, alive: true, ready() { return this.have.wood >= this.cost.wood && this.have.stone >= this.cost.stone } };
   w.bps.push(bp); for (let dy = 0; dy < bh; dy++) for (let dx = 0; dx < bw; dx++) w.bpAt.set((y + dy) * CFG.W + x + dx, bp);
   return bp;
@@ -262,24 +262,24 @@ function storm(w) {
 }
 function townNewDay(w) {
   prosperityDay(w);
-  const pop = w.pop, s = w.season, d = w.day, sv = w.settings.survival ? 2 : 1, dis = w.settings.disasters, hd = hardOf(w);
+  const pop = w.pop, s = w.season, d = w.day, sv = w.settings.survival ? CFG.SURV_RISK : 1, dis = w.settings.disasters, hd = hardOf(w);
   if (w.seasonDay === 1 && dis) {
-    if (s === 3 && w.r() < 0.3 * sv * hd.cold) { w.harsh = true; w.emit('event', 'A bitter winter sets in. The cold will be harsh this year.', { kind: 'harsh' }) }
-    if (s === 1 && w.r() < 0.25 * sv) { w.drought = true; w.emit('event', 'The summer is dry. The crops grow slowly.', { kind: 'drought' }) }
+    if (s === 3 && w.r() < CFG.HARSH_P * sv * hd.cold) { w.harsh = true; w.emit('event', 'A bitter winter sets in. The cold will be harsh this year.', { kind: 'harsh' }) }
+    if (s === 1 && w.r() < CFG.DROUGHT_P * sv) { w.drought = true; w.emit('event', 'The summer is dry. The crops grow slowly.', { kind: 'drought' }) }
   }
   if (d < 4) return;
-  if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1) * (1 - 0.5 * lesson(w, 'fire'))) fire(w); if (w.r() < 0.02 * sv * (1 - 0.4 * lesson(w, 'storm'))) storm(w) }
+  if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (0.35 + 0.65 * Math.min(1, w.houses().length / 8)) * (w.drought ? 2 : 1) * (1 - 0.5 * lesson(w, 'fire'))) fire(w); if (w.r() < 0.02 * sv * (1 - 0.4 * lesson(w, 'storm'))) storm(w) }
   const cap = w.beds(), gp = w.gov.policy.growth;
-  if (cap > pop + 1 && gp > -0.75 && w.r() < CFG.IMM_CHANCE * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1) * hardOf(w).imm * clamp(((w.prosp == null ? 1 : w.prosp) - 0.5) * 1.3, 0, 1.4) * (pop < 70 ? 1 : 120 / (120 + pop - 70))) {            // travelers seek a home
+  if (cap > pop + 1 && gp > -0.75 && w.r() < CFG.IMM_CHANCE * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1) * hardOf(w).imm * clamp(((w.prosp == null ? 1 : w.prosp) - 0.5) * 1.3, 0, 1.4) * (pop < 70 ? 1 : 120 / (120 + pop - 70)) * (pop < 8 && d >= 24 ? 2.5 : 1)) {            // travelers seek a home (a failing village with room and food is where survivors turn up: the way out of a collapse)
     const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * CFG.IMM_MAX) | 0);
     if (sp) {
       const names = []; for (let k = 0; k < n; k++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', CFG.ADULT_DAYS + w.r() * 18, sp.x, sp.y); v.hunger = 85; v.story('Arrived at the village as a traveler seeking shelter.'); w.vills.push(v); names.push(v.name) }
       noteFlow(w, 'arrived', n); w.emit('event', `${names.join(', ')} arrive${n === 1 ? 's' : ''} seeking shelter, and ${n === 1 ? 'is' : 'are'} welcomed.`, { kind: 'newcomers', names });
     }
   }
-  if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * hd.sick * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most
+  if (dis && pop >= 14 && s >= 2 && w.r() < 0.045 * sv * hd.sick * clamp(pop / 40, 0.4, 1) * (1 - 0.3 * lesson(w, 'fever'))) {               // a fever sweeps through; the weak and hungry suffer most
     let sick = 0;
-    for (const v of w.vills) if (w.r() < 0.28) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')) * (1 - Math.min(0.75, techFx(w, 'health'))); v.cause = 'fever'; sick++ }
+    for (const v of w.vills) if (w.r() < 0.28 * clamp(pop / 30, 0.55, 1)) { const frail = v.isChild() || v.isElder() ? 1.25 : 1; v.health -= (35 + w.r() * 50) * frail * (1.15 - 0.4 * v.hunger / 100) * (w.has('medicine') ? 0.6 : 1) * (1 - 0.3 * lesson(w, 'fever')) * (1 - Math.min(0.75, techFx(w, 'health'))); v.cause = 'fever'; sick++ }
     w.emit('event', `A fever sweeps through the village; ${sick} fall ill.`, { kind: 'fever', sick });
   }
   const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * hd.wolf * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4) * (1 - (w.liv ? w.liv.fx.guard : 0));       // packs return to where there is game

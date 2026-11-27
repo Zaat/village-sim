@@ -7,7 +7,7 @@
    knowledge is gathered the village makes a discovery and everything it affects
    (yields, speed, housing, architecture, boats) changes from then on.
    ========================================================================== */
-const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house', 'Brick house', 'Townhouse', 'Apartment block', 'Tower block'];
+const HOUSE_STYLES = ['Log cabin', 'Timber-frame house', 'Stone house', 'Brick house', 'Townhouse', 'Apartment block', 'Tower block', 'High-rise', 'Arcology'];
 
 function initTech(w) { w.tech = { known: {}, points: 0, focus: null, wait: 0, contrib: {}, log: [], feverSeen: 0 }; w.boats = [] }
 const hasTech = (w, id) => !!w.tech.known[id];
@@ -27,8 +27,8 @@ function techFx(w, key) {
   return c.v[key] || 0;
 }
 const ladderLevel = (w, name) => (LADDERS[name] || []).filter(id => w.tech.known[id]).length;       // how far up a ladder (terra, explore, war) the village has climbed
-const styleNow = w => hasTech(w, 'skyscrapers') ? 6 : hasTech(w, 'concrete') ? 5 : hasTech(w, 'architecture') ? 4 : hasTech(w, 'brickwork') ? 3 : hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
-const bedsOf = b => b.cabin ? 2 : b.style === 6 ? CFG.HOUSE_CAP + 12 : CFG.HOUSE_CAP + (b.style || 0);       // a tower block sleeps 16
+const styleNow = w => hasTech(w, 'arcology') ? 8 : hasTech(w, 'highrise') ? 7 : hasTech(w, 'skyscrapers') ? 6 : hasTech(w, 'concrete') ? 5 : hasTech(w, 'architecture') ? 4 : hasTech(w, 'brickwork') ? 3 : hasTech(w, 'masonry') ? 2 : hasTech(w, 'carpentry') ? 1 : 0;
+const bedsOf = b => b.cabin ? 2 : b.style === 8 ? CFG.HOUSE_CAP + 60 : b.style === 7 ? CFG.HOUSE_CAP + 28 : b.style === 6 ? CFG.HOUSE_CAP + 12 : CFG.HOUSE_CAP + (b.style || 0);       // a tower block sleeps 16, a high-rise 32, an arcology 64
 /* v0.27 research limits. Open knowledge (a sandbox setting): 0 off, 1 relaxed (no material gates, twice the scholar capacity, half the cost growth), 2 unlimited (everything is open at once, cheap, no cap) */
 const openLevel = w => (w.settings && w.settings.openKnowledge) || 0;
 const techAvailableRaw = w => { const age = villageAge(w); return Object.keys(TECHS).filter(id => !w.tech.known[id] && TECHS[id].age <= age && TECHS[id].req.every(r => w.tech.known[r])) };

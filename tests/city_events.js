@@ -20,9 +20,11 @@ C.hamlets.length = 0;
 // desire paths: a well-walked grass tile next to a road is paved; busy roads get the better surface
 w.stock.stone = 50; w._heat = w._heat || new Uint16Array(W * c.CFG.H); let rt = -1; for (let i = 0; i < w.road.length && rt < 0; i++) if (w.road[i] === 1) rt = i;
 let gt = -1; if (rt >= 0) for (const d of [1, -1, W, -W]) { const j = rt + d; if (w.terr[j] === c.TERR.GRASS && !w.feat[j] && !w.bmap[j] && !w.road[j] && !w.bpAt.has(j) && w.claim[j] < 0) { gt = j; break } }
+const realV = w.vills; if (w.pop < 25) w.vills = realV.concat(realV.slice(0, 25 - realV.length));   // pathDay needs a town of 25; the world is a little smaller since v0.39
 w.bps = w.bps.filter(b => b.type !== 'road'); for (const [k] of [...w.bpAt]) if (w.bpAt.get(k).type === 'road') w.bpAt.delete(k);
 if (gt >= 0) { w._heat[gt] = 200; const before = w.bps.length; c.pathDay(w); ok(w.bps.length > before && w.bpAt.has(gt), 'a much-walked tile beside the road is laid as a road') }
 w.techFlag = null; if (rt >= 0) { w.tech.known.masonry = 1; w._heat[rt] = 200; w.stock.stone = 50; c.pathDay(w); ok(w.road[rt] >= 2, 'a busy road is improved with the new surface: ' + w.road[rt]) }
+w.vills = realV;
 // redevelopment: bare farmland on dear ground is given up (not in summer)
 while (w.season === 1) w.tick += 1200;
 const farm = w.of('farm')[0]; if (farm && c.lvAt(w, farm.x, farm.y) > 5) {

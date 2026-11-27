@@ -31,3 +31,7 @@
 {"t":"2026-11-27T06:27:18.731Z","mode":"pages","kind":"pages","n":18,"failed":0,"wall":207,"work":207,"jobs":1,"bad":[]}
 {"t":"2026-11-27T11:19:04.291Z","mode":"full","kind":"node","n":39,"failed":0,"wall":768,"work":1536,"jobs":2,"bad":[]}
 {"t":"2026-11-27T11:23:30.844Z","mode":"pages","kind":"pages","n":18,"failed":0,"wall":252,"work":252,"jobs":1,"bad":[]}
+{"t":"2026-11-27T13:39:06.902Z","mode":"full","kind":"node","n":40,"failed":5,"wall":702,"work":1404,"jobs":2,"bad":["golden","concerns_events","city_events","tech_events","concerns_states"]}
+{"t":"2026-11-27T13:58:06.372Z","mode":"full","kind":"node","n":40,"failed":0,"wall":750,"work":1500,"jobs":2,"bad":[]}
+{"t":"2026-11-27T14:03:37.615Z","mode":"pages","kind":"pages","n":19,"failed":1,"wall":252,"work":252,"jobs":1,"bad":["ui_districts"]}
+{"t":"2026-11-27T14:36:27.794Z","mode":"pages","kind":"pages","n":19,"failed":0,"wall":229,"work":229,"jobs":1,"bad":[]}

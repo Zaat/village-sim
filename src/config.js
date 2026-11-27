@@ -8,7 +8,7 @@ const CFG = {
   W: 160, H: 112, MAP_NEW: [260, 180], T: 16,            // map size (tiles), tile size (world px)
   TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
   DPS: 8,                           // days per season (year = 4 seasons)
-  INFANT_DAYS: 5, CHILD_DAYS: 17, ADULT_DAYS: 29, ELDER_DAYS: 80, FERTILE_MAX: 70, OLD_DAYS: 120, CHILD_MORT: 0.0035, IMM_CHANCE: 0.03, IMM_MAX: 2, CROWD_DRAW: 0.005, ORDER_BASE: 350, ORDER_BITE: 0.4,   // life stages (in days)
+  INFANT_DAYS: 5, CHILD_DAYS: 17, ADULT_DAYS: 29, ELDER_DAYS: 80, FERTILE_MAX: 70, OLD_DAYS: 120, CHILD_MORT: 0.0035, IMM_CHANCE: 0.03, IMM_MAX: 2, CROWD_DRAW: 0.005, ORDER_BASE: 350, ORDER_BITE: 0.4, SURV_RISK: 1.5, SURV_FOOD: 1.15, HARSH_P: 0.2, DROUGHT_P: 0.17,   // life stages (in days)
   BIRTH_DAMP: 0, COUPLE_TRY: 0.1, COURT_TRY: 0.03, FARM_SLOPE: 5, BIRTH_MULT: 1, DEP_CAP: 2, LIFE_BASE: 2.8,                      // ageing slows by this factor (v0.35: all stage thresholds above stay in 'life days'); real days of life = life days x LIFE_BASE
   START_VILLAGERS: 8,
   START_STOCK: { wood: 24, stone: 6, food: 40 },

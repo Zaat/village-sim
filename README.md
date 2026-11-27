@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.38.2 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.39 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
 <h2 align="center"><a href="https://zaat.github.io/village-sim/">▶&nbsp; Play it now in your browser</a></h2>
 <p align="center"><b>One click. No install, no account.</b> Works on a computer, a tablet or a phone.<br><sub>Start a world, then watch it live, or switch to Play and take the lead. <a href="https://zaat.github.io/village-sim/">zaat.github.io/village-sim</a></sub></p>
@@ -16,7 +16,7 @@
 ## What you get
 - **A town that decides for itself.** People with personalities, opinions, hobbies and families choose jobs, marry, quarrel, vote on a council and found hamlets and outposts. Their law, rulers and customs differ from seed to seed.
 - **A world with weather and seasons.** Four seasons, wildlife, floods, fever, drought, harsh winters. Rivers, lakes, islands and neighbours across the water.
-- **Ages of knowledge.** 109 technologies across nine ages change what gets built, how people work and how long they live. Knowledge can be lost.
+- **Ages of knowledge.** 148 technologies across eleven ages (now with an Atomic and an Information Age) change what gets built, how people work and how long they live. Knowledge can be lost.
 - **An economy.** About 35 trades, markets, coins, taxes, caravans, harbours and trade routes.
 - **A city with a shape.** Land value, density, suburbs and desire paths; thousands of people through a crowd model (up to about 2,800 at roughly 1 ms per tick).
 - **Tools to understand it.** A Concerns panel that warns you, a Stats tab with charts and export, a chronicle, an inspector for every villager, animal and building.
@@ -114,7 +114,7 @@ Open the **Diagnostics** panel and use **Copy report**. It holds timings, state 
 </details>
 
 ## Roadmap
-v0.38 **Pace**: towns now grow at a believable pace (a thousand people takes about 35 years on Normal), and a big town has to keep the peace. Next: farming that matches real technology, then energy and the late ages. See the [changelog](CHANGELOG.md).
+v0.39 **Late ages and language**: an Atomic and an Information Age, Spanish with automatic browser-language detection, full screen, and fairer disasters. Next: energy and finite resources, food variety, the city design commission, a map-first layout. See the [changelog](CHANGELOG.md).
 
 ## License
 [MIT](LICENSE). © 2026 Zaat. No third-party code, fonts, images or audio are included: the art is drawn in code and the music is generated live.

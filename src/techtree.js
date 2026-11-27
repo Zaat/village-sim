@@ -1,8 +1,8 @@
 /* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
-   techtree.js — v0.24 the tree of knowledge: about 110 technologies in 8
-   branches and 9 ages. Ids of the first 18 technologies are unchanged, so old
+   techtree.js — v0.24 the tree of knowledge: about 150 technologies in 8
+   branches and 11 ages (v0.39 adds the Atomic and Information ages). Ids of the first 18 technologies are unchanged, so old
    saves keep working. Each row:
      [id, name, branch, age, cost, requires, description, effects, ladder]
    effects (sums over all known techs; see techFx): farm, work, build, learn,
@@ -11,7 +11,7 @@
    An age is complete when 65% of its technologies are known; technologies of
    an age become available when the age before is complete.
    ========================================================================== */
-const AGES = ['Stone Age', 'Bronze Age', 'Iron Age', 'Classical Age', 'Medieval Age', 'Renaissance', 'Gunpowder Age', 'Industrial Age', 'Modern Age'];
+const AGES = ['Stone Age', 'Bronze Age', 'Iron Age', 'Classical Age', 'Medieval Age', 'Renaissance', 'Gunpowder Age', 'Industrial Age', 'Modern Age', 'Atomic Age', 'Information Age'];
 const BRANCHES = { food: { name: 'Land & food', col: '#8fd18b' }, build: { name: 'Building', col: '#d9a35a' }, craft: { name: 'Craft & metal', col: '#b9bfc6' }, sea: { name: 'Sea & trade', col: '#7fb4e8' }, mind: { name: 'Learning & faith', col: '#b08fe8' }, law: { name: 'Society & law', col: '#e0b070' }, war: { name: 'War & defence', col: '#e07a5a' }, health: { name: 'Medicine', col: '#e08fa8' } };
 const TECH_ROWS = [
   // ---- Stone Age
@@ -131,10 +131,51 @@ const TECH_ROWS = [
   ['earthworks', 'Heavy earthmoving', 'build', 8, 2000, ['engines', 'dredging'], 'Mountains moved, harbours dug, rivers redirected: terrain bends to the city.', {}, 'terra'],
   ['shipping', 'Container shipping', 'sea', 8, 1900, ['steamship', 'engines'], 'Standard boxes, giant ships: trade on a vast scale.', { sea: 0.3, trade: 0.15 }],
   ['sonar', 'Sonar', 'sea', 8, 2000, ['radio', 'divingbell'], 'Sound maps the seabed: wrecks and reefs are found.', {}, 'explore'],
-  ['aviation', 'Aviation', 'war', 8, 2100, ['engines', 'electricity'], 'Flight: the world shrinks and the sky becomes contested.', { defence: 0.1, trade: 0.05 }, 'war']
+  ['aviation', 'Aviation', 'war', 8, 2100, ['engines', 'electricity'], 'Flight: the world shrinks and the sky becomes contested.', { defence: 0.1, trade: 0.05 }, 'war'],
+  // ---- Atomic Age (v0.39)
+  ['nucphysics', 'Nuclear physics', 'mind', 9, 2400, ['computers'], 'The atom is understood: a new kind of power and a new kind of fear.', { learn: 0.15 }],
+  ['transistors', 'Transistors', 'craft', 9, 2400, ['computers', 'radio'], 'Tiny switches replace glass tubes: machines shrink and spread.', { work: 0.1, learn: 0.1 }],
+  ['fission', 'Nuclear power', 'craft', 9, 2700, ['nucphysics', 'massprod'], 'Reactors boil water without coal: cheap power for cities, and a waste problem.', { work: 0.15 }],
+  ['plastics', 'Plastics and polymers', 'craft', 9, 2300, ['massprod'], 'Light, cheap, mouldable: from pipes to packaging.', { work: 0.08, store: 0.05 }],
+  ['jetliners', 'Jet aircraft', 'sea', 9, 2500, ['aviation', 'engines'], 'Continents in hours: trade and travel across the whole map.', { trade: 0.2, sea: 0.1 }],
+  ['rocketry', 'Rocketry', 'war', 9, 2600, ['aviation', 'nucphysics'], 'Rockets carry weapons and, one day, people beyond the sky.', { defence: 0.2 }, 'war'],
+  ['civildefence', 'Civil defence', 'war', 9, 2300, ['aviation', 'welfare'], 'Shelters, sirens and plans: the village is ready for the worst.', { defence: 0.15, mood: 0.02 }],
+  ['greenrev', 'Green revolution', 'food', 9, 2400, ['hybrids'], 'High-yield grain, fertiliser and irrigation together: harvests multiply.', { farm: 0.55 }],
+  ['cropcare', 'Crop protection', 'food', 9, 2200, ['hybrids'], 'Blight and pests are held back: fewer harvests are lost.', { farm: 0.3 }],
+  ['pivot', 'Pivot irrigation', 'food', 9, 2300, ['mechfarm'], 'Great sprinkler arms water dry ground: farms thrive in drought.', { farm: 0.3 }],
+  ['coldchain', 'The cold chain', 'food', 9, 2200, ['massprod', 'electricity'], 'Refrigerated stores and trucks: food keeps and travels.', { store: 0.25 }],
+  ['prefab', 'Prefabricated building', 'build', 9, 2300, ['concrete', 'massprod'], 'Parts made in factories: homes rise in weeks.', { build: 0.15 }],
+  ['highrise', 'High-rise housing', 'build', 9, 2500, ['skyscrapers'], 'Whole districts stacked into towers: the first super habitations.', { build: 0.15 }],
+  ['highways', 'Highways', 'build', 9, 2400, ['engines', 'concrete'], 'Wide roads for engines: goods and people move fast.', { trade: 0.1, work: 0.08 }],
+  ['television', 'Television', 'mind', 9, 2300, ['radio'], 'Pictures in every home: news, learning and a shared culture.', { learn: 0.1, mood: 0.03 }],
+  ['immunisation', 'Mass immunisation', 'health', 9, 2400, ['antibiotics'], 'Whole populations protected: old killers become rare.', { health: 0.25 }],
+  ['modernmed', 'Modern hospitals', 'health', 9, 2500, ['antibiotics', 'welfare'], 'Surgeons, wards and intensive care: more lives saved.', { health: 0.2 }],
+  ['deepsea', 'Deep-sea science', 'sea', 9, 2500, ['sonar'], 'Submersibles and trawlers reach the deep: new fisheries and finds.', { sea: 0.2 }, 'explore'],
+  ['rights', 'Human rights', 'law', 9, 2300, ['welfare', 'pubschools'], 'Everyone counts before the law: a fairer, calmer society.', { mood: 0.06 }],
+  ['ecology', 'Ecology and conservation', 'mind', 9, 2300, ['sanitation', 'television'], 'Forests, fish and soil are seen as capital to keep: nature recovers faster.', { mood: 0.03, health: 0.05 }],
+  // ---- Information Age (v0.39)
+  ['internet', 'The internet', 'mind', 10, 3000, ['transistors', 'television'], 'Every machine linked: knowledge, trade and gossip at the speed of light.', { learn: 0.3, trade: 0.1 }],
+  ['pcs', 'Personal computers', 'craft', 10, 2900, ['transistors'], 'A computer on every desk: work and learning speed up.', { work: 0.15, learn: 0.1 }],
+  ['mobile', 'Mobile phones', 'mind', 10, 2800, ['transistors', 'radio'], 'A phone in every pocket: nobody is out of reach.', { trade: 0.1, mood: 0.02 }],
+  ['satellites', 'Satellites', 'sea', 10, 3100, ['rocketry', 'transistors'], 'Eyes and relays in orbit: weather, maps and signals from the sky.', { sea: 0.1, learn: 0.1 }, 'explore'],
+  ['satnav', 'Satellite navigation', 'sea', 10, 3000, ['satellites'], 'Every ship, truck and plane knows exactly where it is.', { sea: 0.15, trade: 0.05 }],
+  ['robotics', 'Robotics', 'craft', 10, 3200, ['pcs', 'massprod'], 'Tireless arms and machines do the dull and dangerous work.', { work: 0.25 }],
+  ['renewables', 'Solar and wind power', 'craft', 10, 3000, ['pcs', 'fission'], 'Power from sun and wind: clean, endless and cheap.', { work: 0.1, mood: 0.02 }],
+  ['fusion', 'Fusion power', 'craft', 10, 3900, ['fission', 'robotics', 'renewables'], 'A small sun in a bottle: almost limitless power.', { work: 0.25 }],
+  ['automation', 'Automated farming', 'food', 10, 3100, ['robotics', 'greenrev'], 'Driverless tractors and drones tend every field: a few farmers feed a city.', { farm: 0.6 }],
+  ['geneeng', 'Genetic engineering', 'food', 10, 3200, ['greenrev', 'pcs'], 'Crops designed to yield and endure: harvests beyond any earlier age.', { farm: 0.6 }],
+  ['vertical', 'Vertical farms', 'food', 10, 3500, ['automation', 'geneeng', 'renewables'], 'Towers of crops under lamps: food grown in the city itself.', { farm: 0.8 }],
+  ['biotech', 'Biotechnology', 'health', 10, 3300, ['geneeng', 'modernmed'], 'Designed medicines and gene therapy: many diseases end.', { health: 0.3 }],
+  ['telemed', 'Telemedicine', 'health', 10, 2900, ['internet', 'modernmed'], 'A doctor on every screen: care reaches everyone.', { health: 0.15 }],
+  ['smartcity', 'Smart city systems', 'build', 10, 3200, ['internet', 'highrise'], 'Sensors steer traffic, power and water: cities run themselves.', { build: 0.15, mood: 0.03 }],
+  ['arcology', 'Arcologies', 'build', 10, 3600, ['highrise', 'robotics', 'renewables'], 'Cities in a single structure: homes, farms, work and parks stacked into one.', { build: 0.25 }],
+  ['ecommerce', 'Online commerce', 'sea', 10, 2900, ['internet'], 'Shops without walls: trade across the world from a screen.', { trade: 0.3 }],
+  ['drones', 'Drones and cyber defence', 'war', 10, 3200, ['robotics', 'satellites'], 'Unmanned craft and guarded networks: defence without crowds of soldiers.', { defence: 0.25 }, 'war'],
+  ['spaceflight', 'Spaceflight', 'war', 10, 3700, ['rocketry', 'satellites', 'robotics'], 'Crews and cargo reach orbit: the start of the space race.', { defence: 0.05 }, 'explore'],
+  ['digigov', 'Digital governance', 'law', 10, 2900, ['internet', 'welfare'], 'Services and votes online: government closer to its people.', { learn: 0.1, mood: 0.03 }]
 ];
 const TECHS = {}, AGE_COUNT = new Array(AGES.length).fill(0), TECH_BY_BRANCH = {}, LADDERS = {};
-const COST_SCALE = [1, 1, 1.1, 1.4, 2, 2.8, 3.6, 4.6, 5.8], ORIGINAL = new Set(['nets', 'tools', 'granary', 'carpentry', 'forestry', 'mining', 'lodges', 'trade', 'coinage', 'seatrade', 'boats', 'rotation', 'masonry', 'medicine', 'watchtowers', 'ironwork', 'plow', 'navigation']);       // later ages cost more, tuned by tools/pace.js so ages last about a decade each
+const COST_SCALE = [1, 1, 1.1, 1.4, 2, 2.8, 3.6, 4.6, 5.8, 7.0, 8.2], ORIGINAL = new Set(['nets', 'tools', 'granary', 'carpentry', 'forestry', 'mining', 'lodges', 'trade', 'coinage', 'seatrade', 'boats', 'rotation', 'masonry', 'medicine', 'watchtowers', 'ironwork', 'plow', 'navigation']);       // later ages cost more, tuned by tools/pace.js so ages last about a decade each
 for (const [id, name, branch, age, cost0, req, desc, fx, ladder] of TECH_ROWS) {
   const cost = ORIGINAL.has(id) ? cost0 : Math.round(cost0 * COST_SCALE[age] / 5) * 5;
   TECHS[id] = { name, branch, age, tier: age === 0 ? 1 : age === 1 ? 2 : 3, cost, req, desc, fx: fx || {}, ladder: ladder || null };

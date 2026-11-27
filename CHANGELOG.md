@@ -2,6 +2,21 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.39 — Late ages and language
+Two new ages, a Spanish version, a full screen option and a fairer start for small villages.
+
+**Late ages.** The tech tree continues past the Modern Age with the Atomic Age (nuclear power, jets, rockets, the green revolution, high-rise housing) and the Information Age (the internet, robotics, renewables, fusion, vertical farms, arcologies, spaceflight): 39 new technologies, 148 in all across eleven ages. Farms keep gaining yield far beyond the old ceiling, and two taller kinds of home appear: the high-rise (32 beds) and the arcology (64 beds).
+
+**Spanish.** The game starts in Spanish when the browser is set to it, and Settings has a language switch (English or Español) that is remembered. The main screens, menus and Settings are translated and the rest follows in later releases. English text is the key, so anything not yet translated simply stays in English.
+
+**Full screen.** Menu > Full screen, or the X key (not available on iPhone Safari).
+
+**Settings study.** A matrix of worlds with each switch alone and all together showed that survival is the main brake on growth (about three times fewer people after 22 years), disasters and crime cost less than they seemed to, and raids barely matter early. Variance between single runs is large, so the changes are modest: harsh winters and droughts are less frequent, fevers and fires depend on how big the village is (little to burn or catch when it is small), survival's hazard multiplier is 1.5 and its food limit on births 1.15. Settings now tag how much harder each switch makes the game, with a note while the hard ones are on. A village that falls below eight people gets its own concern and more travellers when it has room and food, so a collapse can be avoided.
+
+**Tests.** Two concerns tests and the city test moved to worlds the changed sim still gives enough people; the districts UI test no longer clicks through a speech bubble; golden baselines were re-recorded for the sim changes; new i18n and language UI tests.
+
+![v0.39 Spanish Settings](docs/screenshots/v0.39-feature.png)
+
 ### v0.38.2 — Diagnostics you can copy, and the pace lab
 **Diagnostics.** The text in the World card no longer rewrites itself under your selection (it only changes when its content does, and never while part of it is selected), and a Copy diagnostics button sits below it.
 

@@ -379,7 +379,7 @@ function renderNeigh() {
 }
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
 /* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
-const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a'];
+const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a', '#3f6f9a', '#4a9a6a'];
 function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
 function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } renderDiagText() } catch (e) { } }
 /* the Diagnostics text in the World card: filled the moment the section opens and every second while it is open; a failure is shown there instead of leaving it blank (v0.38.1) */
@@ -749,7 +749,7 @@ addEventListener('keydown', e => {
   if (e.key === '[') stepSpeed(-1); if (e.key === ']') stepSpeed(1); if (e.key === '.') advance(e.shiftKey); if (e.key === '>') advance(true);
   const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 100, '6': 999 }[e.key]; if (m) setSpeed(m);       // 6 is Max: as fast as the machine can go
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
-  if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer();
+  if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer(); if (e.key.toLowerCase() === 'x' && !e.ctrlKey && !e.metaKey) toggleFullscreen();
   if (e.key === 'Escape') { if ($('nw').style.display !== 'none') nwClose(); else if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
@@ -888,3 +888,73 @@ if (typeof sndInit === 'function') sndInit(); initStatsUI(); concernsInit(); voi
 }
 
 $('diagTextCopy') && ($('diagTextCopy').onclick = async () => { let ok = false; try { await navigator.clipboard.writeText(diagCopyText()); ok = true } catch (e) { } const b = $('diagTextCopy'), old = b.textContent; b.textContent = ok ? 'Copied' : 'Select the text and copy it'; setTimeout(() => { b.textContent = old }, 1400) });
+
+/* v0.39: Full screen from the menu or the X key. Desktop, Android and iPad allow it; iPhone Safari does not allow it for a page (then a short note says so). */
+function toggleFullscreen() {
+  const d = document, el = d.documentElement;
+  try {
+    if (d.fullscreenElement || d.webkitFullscreenElement) { (d.exitFullscreen || d.webkitExitFullscreen).call(d); return }
+    const f = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!f) { if (typeof puNote === 'function') puNote('This browser does not allow full screen for a page.'); return }
+    const r = f.call(el); if (r && r.catch) r.catch(() => { if (typeof puNote === 'function') puNote('Full screen was refused by the browser.') })
+  } catch (e) { if (typeof puNote === 'function') puNote('Full screen is not available here.') }
+}
+document.addEventListener('fullscreenchange', () => { try { resizeRender(); clampCam() } catch (e) { } });
+
+/* ---------- v0.39 language layer, browser side ----------
+   The language is the saved choice, else the browser's language list (src/i18n.js langDetect). Text that appears on the page is looked up by its exact English line;
+   lines without a Spanish entry stay English. A MutationObserver translates text the game writes later (only while a non-English language is on). */
+const I18NDOM = { text: new WeakMap(), attr: new WeakMap(), obs: null };
+const I18N_ATTRS = ['title', 'placeholder', 'aria-label'];
+function i18nNode(n) {
+  if (n.nodeType === 3) {
+    const p = n.parentNode; if (!p || /^(SCRIPT|STYLE|TEXTAREA)$/.test(p.nodeName) || p.id === 'diagText' || (p.closest && p.closest('[data-i18n="off"]'))) return;
+    const cur = n.nodeValue, o = I18NDOM.text.get(n);
+    if (I18N.lang === 'en') { if (o && o.es === cur) { n.nodeValue = o.en } I18NDOM.text.delete(n); return }
+    const en = o && o.es === cur ? o.en : cur, es = i18nText(en);
+    if (es !== en) { I18NDOM.text.set(n, { en, es }); if (cur !== es) n.nodeValue = es } else I18NDOM.text.delete(n);
+  } else if (n.nodeType === 1) {
+    if (n.closest && n.closest('[data-i18n="off"]')) return;
+    for (const a of I18N_ATTRS) if (n.hasAttribute(a)) i18nAttr(n, a);
+    for (const c of n.childNodes) i18nNode(c);
+  }
+}
+function i18nAttr(el, a) {
+  let m = I18NDOM.attr.get(el); if (!m) I18NDOM.attr.set(el, m = {});
+  const cur = el.getAttribute(a), o = m[a];
+  if (I18N.lang === 'en') { if (o && o.es === cur) el.setAttribute(a, o.en); delete m[a]; return }
+  const en = o && o.es === cur ? o.en : cur, es = i18nText(en);
+  if (es !== en) { m[a] = { en, es }; if (cur !== es) el.setAttribute(a, es) } else delete m[a];
+}
+function langApply(l, save) {
+  langSet(l); document.documentElement.lang = I18N.lang;
+  if (save) { try { localStorage.setItem(I18N.key, I18N.lang) } catch (e) { } }
+  i18nNode(document.body); const sel = $('set_lang'); if (sel) sel.value = I18N.lang;
+  if (I18N.lang !== 'en' && !I18NDOM.obs && typeof MutationObserver !== 'undefined') {
+    I18NDOM.obs = new MutationObserver(ms => {
+      for (const m of ms) {
+        if (m.type === 'childList') m.addedNodes.forEach(i18nNode);
+        else if (m.type === 'characterData') i18nNode(m.target);
+        else if (m.type === 'attributes') i18nAttr(m.target, m.attributeName);
+      }
+    });
+    I18NDOM.obs.observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: I18N_ATTRS });
+  }
+}
+function langInit() {
+  const sel = $('set_lang'); if (sel) { sel.innerHTML = Object.keys(I18N.langs).map(k => `<option value="${k}">${I18N.langs[k]}</option>`).join(''); sel.onchange = () => langApply(sel.value, true) }
+  let saved = null; try { saved = localStorage.getItem(I18N.key) } catch (e) { }
+  langApply(langDetect(saved, navigator.languages && navigator.languages.length ? navigator.languages : [navigator.language]), false);
+}
+langInit();
+
+/* v0.39: while the harder switches are on, a note says what to expect (the tags beside each switch say how much each one costs) */
+function riskNoteUpdate() {
+  const el = $('riskNote'); if (!el) return;
+  const on = k => { const c = $('set_' + k); return !!(c && c.checked) };
+  const hard = on('survival'), mid = on('disasters') + on('raids') + on('crime');
+  const t = hard ? i18n('Survival mode is on: growth is much slower and a small village can die out. Keep food, homes and defence ahead of the seasons; the Concerns tab warns before it gets critical.')
+    : mid >= 3 ? i18n('Several harder switches are on: expect slow early growth and setbacks.') : '';
+  if (el.textContent !== t) el.textContent = t; el.style.display = t ? 'block' : 'none'; el.classList.toggle('mid', !hard);
+}
+setInterval(riskNoteUpdate, 1000); riskNoteUpdate();

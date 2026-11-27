@@ -24,7 +24,8 @@ const GATES = {
   copper: { name: 'copper (from a lode, a mine or a neighbour)', ok: w => matOk(w, 'copper') },
   oil: { name: 'oil (from a seep, a mine or a neighbour)', ok: w => matOk(w, 'oil') },
   folk30: { name: '30 people', ok: w => popOf(w) >= 30 }, folk60: { name: '60 people', ok: w => popOf(w) >= 60 },
-  folk100: { name: '100 people', ok: w => popOf(w) >= 100 }, folk150: { name: '150 people', ok: w => popOf(w) >= 150 }
+  folk100: { name: '100 people', ok: w => popOf(w) >= 100 }, folk150: { name: '150 people', ok: w => popOf(w) >= 150 },
+  folk300: { name: '300 people', ok: w => popOf(w) >= 300 }, folk600: { name: '600 people', ok: w => popOf(w) >= 600 }
 };
 /* id: [needs, gives...] */
 const UNLOCK_ROWS = {
@@ -70,7 +71,16 @@ const UNLOCK_ROWS = {
   engines: [['ore', 'oil', 'folk150'], 'Combustion engines'], radio: [['folk100'], 'Voices across the air'], antibiotics: [['folk150'], 'Infections cured'],
   skyscrapers: [['rock', 'folk150'], 'Towers'], hybrids: [['fields'], 'Hybrid crops'], massprod: [['ore', 'folk150'], 'Assembly lines'], welfare: [['folk150'], 'A safety net'],
   computers: [['folk150'], 'Machines that calculate'], earthworks: [['ore', 'folk150'], 'Earthworks: hills and shallows become open ground'], shipping: [['harbour', 'folk150'], 'Container shipping'],
-  sonar: [['harbour'], 'Seabed mapping'], aviation: [['ore', 'oil', 'folk150'], 'Flight']
+  sonar: [['harbour'], 'Seabed mapping'], aviation: [['ore', 'oil', 'folk150'], 'Flight'],
+  nucphysics: [['folk300'], 'The atom understood'], transistors: [['copper', 'folk300'], 'Tiny switches'], fission: [['ore', 'folk300'], 'Nuclear power stations'], plastics: [['oil', 'folk300'], 'Plastics'],
+  jetliners: [['oil', 'folk300'], 'Air travel'], rocketry: [['ore', 'oil', 'folk300'], 'Rockets'], civildefence: [['folk300'], 'Shelters and plans'],
+  greenrev: [['fields', 'folk300'], 'Harvests multiply'], cropcare: [['fields'], 'Fewer lost harvests'], pivot: [['fields'], 'Irrigated fields'], coldchain: [['folk300'], 'Food keeps and travels'],
+  prefab: [['rock', 'folk300'], 'Homes in weeks'], highrise: [['rock', 'folk300'], 'High-rise districts: super habitations'], highways: [['rock', 'oil', 'folk300'], 'Highways'], television: [['folk300'], 'Pictures in every home'],
+  immunisation: [['folk300'], 'Old killers become rare'], modernmed: [['folk300'], 'Modern hospitals'], deepsea: [['harbour', 'folk300'], 'Deep-sea fisheries and finds'], rights: [['folk300'], 'A fairer society'], ecology: [['folk300'], 'Nature recovers faster'],
+  internet: [['folk600'], 'Everything linked'], pcs: [['folk600'], 'A computer on every desk'], mobile: [['folk600'], 'A phone in every pocket'], satellites: [['ore', 'folk600'], 'Eyes and relays in orbit'], satnav: [['folk600'], 'Exact positions everywhere'],
+  robotics: [['ore', 'folk600'], 'Machines do the dull work'], renewables: [['folk600'], 'Power from sun and wind'], fusion: [['folk600'], 'Almost limitless power'], automation: [['fields', 'folk600'], 'A few farmers feed a city'],
+  geneeng: [['fields', 'folk600'], 'Designed crops'], vertical: [['folk600'], 'Farms in towers'], biotech: [['folk600'], 'Designed medicines'], telemed: [['folk600'], 'Care on every screen'], smartcity: [['folk600'], 'Cities that run themselves'],
+  arcology: [['rock', 'folk600'], 'Arcologies: cities in one structure'], ecommerce: [['folk600'], 'Shops without walls'], drones: [['folk600'], 'Defence without crowds'], spaceflight: [['ore', 'folk600'], 'Crews in orbit'], digigov: [['folk600'], 'Government online']
 };
 /* what a technology gives: the hand-written line(s) plus every great project it opens */
 function unlocksOf(id) {

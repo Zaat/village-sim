@@ -284,7 +284,7 @@ class World {
     if (f.age > CFG.FERTILE_MAX * (this.lifeScale || 1)) { statCount(this, 'lim_age'); return }
     if (CFG.DEP_CAP && f.kids.reduce((n, id) => { const k = this.vills.find(x => x.id === id); return n + (k && !k.isAdult() ? 1 : 0) }, 0) >= CFG.DEP_CAP) { statCount(this, 'lim_dep'); return }   // families space their children: a limit on children still growing up
     if (this.pop + 1 > this.beds()) { statCount(this, 'lim_beds'); return }
-    const gp = this.gov.policy.growth; if (this.stock.food < this.pop * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? 1.3 : 1)) { statCount(this, 'lim_food'); return }
+    const gp = this.gov.policy.growth; if (this.stock.food < this.pop * 3.5 * (1 - 0.25 * gp) * (this.settings.survival ? CFG.SURV_FOOD : 1)) { statCount(this, 'lim_food'); return }
     if (!(this.r() < CFG.BIRTH_CHANCE * CFG.BIRTH_MULT * birthDamp(this) * (1 + 0.3 * gp) * (this.rx ? this.rx.birth : 1) * hardOf(this).fert * fertilityMult(this))) { statCount(this, 'lim_dice'); return }
     statCount(this, 'lim_ok'); f.preg = CFG.PREGNANCY; f.father = m.id; this.say(`${f.name} is expecting a child.`); f.story('Learned a child was on the way.')
   }

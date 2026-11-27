@@ -17,6 +17,7 @@
 const CONCERN_KINDS = {
   pop_fall: 'Population falling fast',
   pop_slide: 'A long decline',
+  pop_tiny: 'The village is dying out',
   food: 'Food is running low',
   fuel: 'Not enough firewood for winter',
   housing: 'Not enough homes',
@@ -80,7 +81,13 @@ function popWhy(w, C, days) {
 
 /* ----- the rules ----- */
 function popRules(w, C, found) {
-  const pop = w.pop; if (pop < 12 || C.pop.length < 8) return;
+  const pop = w.pop;
+  if (pop < 8 && pop > 0 && w.day >= 24) {            // v0.39: a tiny village gets a warning long before the end (it ends below 5 people for a month); homes and food are the way out
+    const homes = w.beds() - pop;
+    found.push({ key: 'pop_tiny', sev: pop <= OVER.low + 1 ? 2 : 1, text: `Only ${pop} ${pop === 1 ? 'person is' : 'people are'} left. Below ${OVER.low} for a month and the village ends.`,
+      why: homes < 2 ? 'There are no spare beds, so travellers have nowhere to stay: build homes first.' : w.stock.food < pop * 3.5 ? 'The stores are thin: food first, then travellers can be fed.' : 'Travellers are more likely to join a village with room and food; keep both.', m: { v: pop, ok: 12, bad: OVER.low }, fix: ['feast', 'nudge_family', 'nudge_work'] });
+  }
+  if (pop < 12 || C.pop.length < 8) return;
   const win = C.pop.slice(-32), hi = Math.max(...win), drop = hi - pop, rel = hi ? drop / hi : 0;
   let sudden = false;
   if (hi >= 24 && drop >= 6 && rel >= 0.15) {

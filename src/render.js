@@ -154,10 +154,11 @@ function houseArtLate(g, w, b, night, now, st) {          // brick house, townho
     rc(g, '#5a3a22', X + 13, Y + 21, 6, 9); rc(g, '#cfc7ae', X + 12, Y + 19, 8, 2); rc(g, '#d8b56a', X + 17, Y + 25, 1, 1);
     for (const wx of [6, 21]) for (const wy of [13, 22]) { if (wy === 22 && wx === 13) continue; rc(g, '#8a7f66', X + wx - 1, Y + wy - 1, 7, 7); rc(g, win, X + wx, Y + wy, 5, 5); rc(g, '#8a7f66', X + wx + 2, Y + wy, 1, 5) }
     rc(g, '#6a6e72', X + 24, Y, 4, 5);
-  } else if (st === 6) {                         // tower block: a tall slab of steel and glass rising above the tile
-    const H = 40, top = Y + 30 - H; rc(g, 'rgba(0,0,0,.28)', X + 2, Y + 29, 30, 3);
-    rc(g, '#6f7a85', X + 5, top, 22, H); rc(g, '#8b97a3', X + 5, top, 22, 2); rc(g, '#59636d', X + 25, top, 2, H); rc(g, '#59636d', X + 5, Y + 29, 22, 1);
-    for (let r = 0; r < 7; r++) for (let c = 0; c < 4; c++) rc(g, lit && night && ((c * 3 + r + b.id) % 4 !== 0) ? '#ffd76a' : '#a9d0e6', X + 7 + c * 5, top + 4 + r * 5, 3, 3);
+  } else if (st >= 6) {                          // tower block (6), high-rise (7), arcology (8): a tall slab of steel and glass rising above the tile
+    const H = st === 8 ? 58 : st === 7 ? 50 : 40, top = Y + 30 - H; rc(g, 'rgba(0,0,0,.28)', X + 2, Y + 29, 30, 3);
+    rc(g, st === 8 ? '#5f8a74' : st === 7 ? '#5f7a96' : '#6f7a85', X + 5, top, 22, H); rc(g, '#8b97a3', X + 5, top, 22, 2); rc(g, '#59636d', X + 25, top, 2, H); rc(g, '#59636d', X + 5, Y + 29, 22, 1);
+    for (let r = 0; r < ((H - 6) / 5 | 0); r++) for (let c = 0; c < 4; c++) rc(g, lit && night && ((c * 3 + r + b.id) % 4 !== 0) ? '#ffd76a' : '#a9d0e6', X + 7 + c * 5, top + 4 + r * 5, 3, 3);
+    if (st === 8) for (let r = 2; r < ((H - 6) / 5 | 0); r += 3) rc(g, '#4f9a5a', X + 5, top + 2 + r * 5, 22, 2);                    // the arcology's garden terraces
     rc(g, '#3d454d', X + 12, Y + 23, 8, 7); rc(g, '#d8b56a', X + 18, Y + 26, 1, 1); rc(g, '#4a525a', X + 14, top - 5, 2, 5); rc(g, '#cc5544', X + 14, top - 5, 2, 1);
     if (s === 3) rc(g, '#fff', X + 5, top - 1, 22, 2);
   } else {                                       // apartment block: concrete, ribbon windows, flat roof with a stack
