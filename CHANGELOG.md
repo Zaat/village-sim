@@ -2,6 +2,23 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.38.1 — Fixes and polish
+Fixes and polish after v0.38, with no change to the simulation.
+
+**Diagnostics.** The Diagnostics text in the World card (Settings) now fills the moment you open it and refreshes every second; before, it waited up to ten seconds and any problem left it blank. If the snapshot cannot be built it says why.
+
+**Stats graph.** The first two years are marked in days, and the value range of the first two lines is shown at the left and right edges in their colours.
+
+**Land value.** The overlay is stronger, and the City card explains the colours. Early on only the ground around the camp has any value.
+
+**World tab.** The Neighbours card now sizes to its content (it used to reserve a tall empty box) and moves to the bottom until you meet someone.
+
+**Resource notices.** One steady two-line notice under the food, wood and stone bars (the worst store first, held for a few seconds) replaces the notes that appeared and disappeared and shifted the panel. A quiet line fills the space when all is well.
+
+**Copyright.** © 2026 Zaat, MIT license, in About, the README and every source file.
+
+![v0.38.1 Stats graph and resource notice](docs/screenshots/v0.38.1-feature.png)
+
 ### v0.38 — Pace
 Pace. Towns now grow at a believable pace. In v0.37 a lucky village could pass a thousand people in under fifteen years; now a thousand people takes about thirty years on Gentle, thirty-five on Normal and forty-five or more on Harsh, and a big town has to keep the peace to keep growing.
 

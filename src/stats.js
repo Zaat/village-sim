@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    stats.js — v0.23 statistics and insight.

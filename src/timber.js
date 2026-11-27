@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    timber.js (v0.37): wood from far shores.

@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    techtree.js — v0.24 the tree of knowledge: about 110 technologies in 8

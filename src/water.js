@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    water.js — docks and boats. A boat is driven by the villager who crews it

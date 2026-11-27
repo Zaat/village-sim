@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    concernsui.js (v0.24.1, states in 0.24.2a): the Concerns badge, panel and toasts.

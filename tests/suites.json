@@ -64,6 +64,7 @@
   "ui_play",
   "ui_over",
   "ui_help",
+  "ui_patch",
   "ui_sound",
   "ui_mobile",
   "ui_districts"
@@ -236,6 +237,7 @@
   "ui_play": 35,
   "ui_over": 15,
   "ui_help": 15,
+  "ui_patch": 12,
   "ui_mobile": 10,
   "ui_sound": 25,
   "timber_events": 40,

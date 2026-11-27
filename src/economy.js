@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 /* ===== economy.js: what the crowd's work yields (v0.37) =====
    The crowd is the same kind of people as the villagers in play, counted instead of followed, so what a crowd worker
    produces comes from the same things that decide what a villager produces, not from a free number:

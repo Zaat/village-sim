@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 /* ==========================================================================
    concerns.js (v0.24.1, states in 0.24.2a): the village watches itself.
 

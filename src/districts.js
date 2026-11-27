@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 /* ===== districts.js: the town as districts (v0.37 Metropolis) =====
    A district is a 16x16 tile block with homes in it. Nothing here is stored: every few days the town is read off the buildings
    (homes, beds, styles, farms, shops) and the crowd is shared out by free beds, so the counts always add up to w.pop.

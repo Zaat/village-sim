@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 /* Village Sim sound (v0.36). Everything is made in code with Web Audio: no files, no downloads. Off until the player turns it on.
    A track is only a seed: the same seed always gives the same key, tune and name, so a rating means something and can be shared.
    The bed is pastoral (plucked strings, a flute-like voice, a soft pad); big moments in the village add a cinematic swell on top. */

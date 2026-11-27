@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 :root{--bg:#10151a;--panel:#1a2026;--panel2:#232b32;--ink:#e7eaed;--mut:#8b96a1;--line:#2d3740;--acc:#8fd18b}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:13.5px/1.4 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;overflow:hidden}
@@ -86,7 +87,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 @container (max-width:420px){#drawer{width:calc(100% - 24px)}}
 #chronCard{height:470px;overflow-y:auto}
 #ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
-#harbourCard{min-height:60px;max-height:420px;overflow-y:auto}#neighCard{min-height:380px;max-height:560px;overflow-y:auto}
+#harbourCard{min-height:60px;max-height:420px;overflow-y:auto}#neighCard{max-height:560px;overflow-y:auto}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:8px}.stats div{display:flex;flex-direction:column}.stats b{font-weight:600;font-size:12.5px}
 
 /* tabbed side panel */
@@ -205,4 +206,4 @@ body.playing #mini{bottom:62px}
 
 /* mobile (#187): a dialog is never taller than the stage that holds it, and its close button stays in view while it scrolls */
 .nwbox .drawerhead{position:sticky;top:-16px;z-index:2;background:rgba(18,24,30,.98);margin:-16px -18px 8px;padding:12px 18px 8px;border-bottom:1px solid var(--line)}
-.res .bar{position:relative}.res .bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#dfe6ec;opacity:.75;text-decoration:none}.resnote{margin:-2px 0 4px 0;line-height:1.3;color:#e0a458}
+.res .bar{position:relative}.res .bar u{position:absolute;top:-2px;bottom:-2px;width:2px;background:#dfe6ec;opacity:.75;text-decoration:none}.resnote{margin:3px 0 2px;font-size:11.5px;line-height:1.3;height:2.6em;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;color:#e0a458}.resnote.calm{color:var(--mut)}

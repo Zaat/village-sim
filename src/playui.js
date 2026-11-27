@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    playui.js — the Play screen (v0.35). Watch mode is untouched; Play adds a toolbar, orders, building, roads and zones.

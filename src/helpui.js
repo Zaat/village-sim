@@ -1,10 +1,11 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* helpui.js — the game menu, the manual, the About card and the first-visit welcome (v0.35).
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.38', name: 'Pace',
-  news: ['Towns now grow at a believable pace: a long childhood, children who sometimes die, wider gaps between births and fewer travellers. A thousand people takes about 30 years on Gentle, 35 on Normal and 45 or more on Harsh.', 'A big town has to keep the peace: past what its guards, laws and rulers can hold, crime and distrust slow births and newcomers (see Order in the Stats tab).', 'Older saves carry over: everyone keeps their stage of life.', 'Hardship settings are wider apart: Gentle grows clearly faster, Harsh clearly slower.']
+  version: '0.38.1', name: 'Pace',
+  news: ['Fixes and polish after v0.38: Diagnostics (World card and Settings) fills the moment you open it and shows any problem instead of staying blank.', 'The Stats graph has day marks in the first two years and the value range of the first two lines at its edges.', 'The land value overlay is stronger and explains its colours; the World tab sizes the Neighbours card to its content and moves it to the bottom until you meet someone.', 'One steady notice line under the food, wood and stone bars replaces the notes that appeared and disappeared and shifted the panel.', 'Copyright notice in About, the README and every source file.']
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>
@@ -37,7 +38,7 @@ function modalClose() { const m = $('modal'), f = m._extra; m._extra = null; m.s
 function helpOpen() { modal('How to play', HELP) }
 function aboutOpen() {
   const a = ABOUT, ver = typeof APP_VERSION !== 'undefined' ? APP_VERSION : a.version;
-  modal('About Village Sim', `<p class="big">Village Sim <span class="hint">v${escapeHtml(ver)} “${escapeHtml(a.name)}”</span></p><p>A deterministic village simulation that runs in your browser. Free and open source (MIT).</p><div class="hint">What is new</div><ul>${a.news.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>
+  modal('About Village Sim', `<p class="big">Village Sim <span class="hint">v${escapeHtml(ver)} “${escapeHtml(a.name)}”</span></p><p>A deterministic village simulation that runs in your browser. Free and open source (MIT).</p><p class="hint">© 2026 Zaat. Released under the MIT license. No third-party code, fonts, pictures or audio files: the art and the music are drawn and generated in code.</p><div class="hint">What is new</div><ul>${a.news.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul>
     <div class="btnrow" style="flex-wrap:wrap"><a class="btn" href="${a.home}" target="_blank" rel="noopener">Homepage</a><a class="btn" href="${a.changelog}" target="_blank" rel="noopener">Changelog</a><button id="ab_help">Manual</button><a class="btn" href="${a.license}" target="_blank" rel="noopener">License</a></div>
     <div class="hint" style="margin-top:10px">Something wrong? This copies a report (the world line and diagnostics, no personal details) and opens the issue page.</div><div class="btnrow"><button id="ab_report" class="on">Report a problem</button></div><div class="hint" id="ab_note"></div>`);
   $('ab_help').onclick = helpOpen;

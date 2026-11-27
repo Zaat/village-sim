@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 /* ============================================================================
    strife.js — when a village divides (v0.15)
 

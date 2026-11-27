@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    animals.js — wildlife: deer and rabbits (prey, huntable), wolves (predators).

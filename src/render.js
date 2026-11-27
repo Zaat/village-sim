@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    render.js — camera, seasonal terrain cache, pixel art drawn in code,
@@ -743,7 +744,7 @@ function lvOverlay(g, w, x0, x1, y0, y1) {
   const { T } = CFG, C = CITY_CELL, { gw, gh } = lvGrid(w), vm = w.city ? w.city.vmax : 40;
   for (let gy = Math.max(0, Math.floor(y0 / C)); gy <= Math.min(gh - 1, Math.floor(y1 / C)); gy++) for (let gx = Math.max(0, Math.floor(x0 / C)); gx <= Math.min(gw - 1, Math.floor(x1 / C)); gx++) {
     const v = w._lv[gy * gw + gx]; if (v < 3) continue; const k = clamp(v / vm, 0, 1);
-    g.fillStyle = `rgba(${Math.round(60 + 190 * k)},${Math.round(190 - 130 * k)},70,${(0.12 + 0.3 * k).toFixed(2)})`; g.fillRect(gx * C * T, gy * C * T, C * T, C * T);
+    g.fillStyle = `rgba(${Math.round(60 + 190 * k)},${Math.round(190 - 130 * k)},70,${(0.2 + 0.32 * k).toFixed(2)})`; g.fillRect(gx * C * T, gy * C * T, C * T, C * T);
   }
 }
 

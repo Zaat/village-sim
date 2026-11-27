@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* overui.js — the end screen (v0.35): what the village was, how it ended, and a choice to carry on or begin again */
 let overUp = false;

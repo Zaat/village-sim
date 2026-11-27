@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 /* ===== crowd.js: the town beyond the villagers in play (v0.34) =====
    Up to CROWD.focus villagers are full agents (they walk, work, talk and have stories). Everybody else is the crowd: a few
    counts (children, adults, elders) that are born, grow up, work, eat and die once a day. w.pop is the sum, and every rule

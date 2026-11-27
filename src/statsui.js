@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    statsui.js — the Stats tab: a civilization in numbers, a chart you choose
@@ -26,16 +27,22 @@ function drawStatChart() {
   const w = world, cv = $('statChart'); if (!cv || !w || !w.stats) return; const dpr = window.devicePixelRatio || 1, cw = cv.clientWidth || 300, ch = 210;
   if (cv.width !== Math.round(cw * dpr) || cv.height !== Math.round(ch * dpr)) { cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr) }
   const g = cv.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, cw, ch);
-  const { S, from, last, series } = chartData(w), L = 8, Rr = 8, T = 8, B = 28, pw = cw - L - Rr, ph = ch - T - B, x0 = from || (S.days[0] || 0), x1 = Math.max(last, x0 + 1), X = d => L + (d - x0) / (x1 - x0) * pw;
+  const { S, from, last, series } = chartData(w), L = series.length ? 40 : 8, Rr = series.length > 1 ? 40 : 8, T = 8, B = 28, pw = cw - L - Rr, ph = ch - T - B, x0 = from || (S.days[0] || 0), x1 = Math.max(last, x0 + 1), X = d => L + (d - x0) / (x1 - x0) * pw;
   g.fillStyle = 'rgba(255,255,255,.03)'; g.fillRect(L, T, pw, ph);
   // years grid
   const y0 = yearOf(x0), y1 = yearOf(x1), step = Math.max(1, Math.ceil((y1 - y0 + 1) / 8)); g.font = '10px system-ui, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#7d8790'; g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1;
-  for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) { const d = (y - 1) * CFG.DPS * 4 + 1; if (d < x0 || d > x1) continue; g.beginPath(); g.moveTo(X(d), T); g.lineTo(X(d), T + ph); g.stroke(); g.fillText('Y' + y, X(d), ch - 14) }
+  const span = x1 - x0;
+  if (span <= CFG.DPS * 4 * 2) { // up to two years shown: ticks in days, so the first year is not bare (v0.38.1)
+    const ds = [1, 2, 4, 8, 16, 32].find(k => span / k <= 8) || 32; for (let d = Math.ceil(x0 / ds) * ds; d <= x1; d += ds) { g.beginPath(); g.moveTo(X(d), T); g.lineTo(X(d), T + ph); g.stroke(); g.fillText('Y' + yearOf(d) + ' d' + (((d - 1) % (CFG.DPS * 4)) + 1), X(d), ch - 14) }
+  } else for (let y = Math.ceil(y0 / step) * step; y <= y1; y += step) { const d = (y - 1) * CFG.DPS * 4 + 1; if (d < x0 || d > x1) continue; g.beginPath(); g.moveTo(X(d), T); g.lineTo(X(d), T + ph); g.stroke(); g.fillText('Y' + y, X(d), ch - 14) }
   // lines, each scaled to its own range
   for (const s of series) {
     if (s.pts.length < 2) continue; let lo = Infinity, hi = -Infinity; for (const [, v] of s.pts) { if (v < lo) lo = v; if (v > hi) hi = v } if (hi - lo < 1e-9) { hi = lo + 1 }
     s.lo = lo; s.hi = hi; g.strokeStyle = s.color; g.lineWidth = 1.6; g.beginPath(); s.pts.forEach(([d, v], i) => { const x = X(d), y = T + ph - (v - lo) / (hi - lo) * ph * 0.92 - ph * 0.04; i ? g.lineTo(x, y) : g.moveTo(x, y) }); g.stroke();
   }
+  // value scales: the first line's range on the left, the second line's on the right, in their own colours (every line is scaled to its own range)
+  series.slice(0, 2).forEach((s, i) => { if (s.lo === undefined) return; g.fillStyle = s.color; g.textAlign = i ? 'left' : 'right'; const tx = i ? L + pw + 3 : L - 3; g.fillText(fmtStat(s.id, s.hi), tx, T + 9); g.fillText(fmtStat(s.id, s.lo), tx, T + ph - 2); g.fillText(fmtStat(s.id, (s.lo + s.hi) / 2), tx, T + ph / 2 + 3) });
+  g.textAlign = 'center';
   // age markers and notable events along the bottom
   const marks = S.marks.filter(m => m.day >= x0 && m.day <= x1); g.textAlign = 'center';
   for (const e of S.eras) if (e.day >= x0 && e.day <= x1) { g.strokeStyle = 'rgba(224,176,112,.45)'; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(X(e.day), T); g.lineTo(X(e.day), T + ph); g.stroke(); g.setLineDash([]) }

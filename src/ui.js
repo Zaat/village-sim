@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    ui.js — input, panels, settings, the optional Claude counsel, main loop.
@@ -225,7 +226,15 @@ function bar(label, val, col) { return `<div class="hint">${label} ${Math.round(
 /* a resource bar with a mark where the store should be, a trend arrow and, when short, why (v0.37) */
 function resRow2(w, id, cap) {
   const I = resourceInfo(w, id), pct = v => clamp(v / cap * 100, 0, 100), arrow = I.trend > 0.5 ? '▲' : I.trend < -0.5 ? '▼' : '▬', tc = I.state === 'short' ? '#e07a5f' : I.state === 'watch' ? '#e0a458' : '#8fd18b';
-  return `<div class="res" title="${escapeHtml(I.name + ': ' + I.use + '. Instead of it or to get more: ' + I.subs + '.' + (I.note ? ' ' + I.note + '.' : ''))}"><span class="hint">${I.name}</span><div class="bar"><i style="width:${pct(I.have)}%;background:${I.col}"></i><u style="left:${pct(I.want)}%"></u></div><b>${Math.floor(I.have)} / ${cap} <span style="color:${tc}">${arrow}</span></b></div>${I.state !== 'ok' && I.note ? `<div class="hint resnote">${escapeHtml(I.note)}</div>` : ''}`;
+  return `<div class="res" title="${escapeHtml(I.name + ': ' + I.use + '. Instead of it or to get more: ' + I.subs + '.' + (I.note ? ' ' + I.note + '.' : ''))}"><span class="hint">${I.name}</span><div class="bar"><i style="width:${pct(I.have)}%;background:${I.col}"></i><u style="left:${pct(I.want)}%"></u></div><b>${Math.floor(I.have)} / ${cap} <span style="color:${tc}">${arrow}</span></b></div>`;
+}
+/* one fixed-height notice under the three bars (v0.38.1): the worst short or low store explains itself, held for a few seconds so it does not flicker, and a quiet line fills the slot when all is well, so the card below never moves */
+function resNotice(w) {
+  const now = performance.now(); let best = null;
+  for (const id of ['food', 'wood', 'stone']) { const I = resourceInfo(w, id); if (I.state !== 'ok' && I.note && (!best || (I.state === 'short' && best.state !== 'short'))) best = { id, state: I.state, text: I.name + ': ' + I.note } }
+  const k = R.resNote; if (best) { if (!k || k.text !== best.text) R.resNote = { text: best.text, state: best.state, until: now + 12000 } } else if (k && now > k.until) R.resNote = null;
+  const n = R.resNote, t = n ? n.text : 'Stores are healthy. Hover a bar to see what it is for.';
+  return `<div class="resnote${n ? '' : ' calm'}" title="${escapeHtml(t)}"${n && n.state === 'short' ? ' style="color:#e07a5f"' : ''}>${escapeHtml(t)}</div>`;
 }
 function resRow(name, val, cap, col) { return `<div class="res"><span class="hint">${name}</span><div class="bar"><i style="background:var(--acc);width:${clamp(val / cap * 100, 0, 100)}%;background:${col}"></i></div><b>${Math.floor(val)} / ${cap}</b></div>` }
 function opBar(label, v) { const a = Math.abs(v) * 50; return `<div class="opr"><span>${label}</span><div class="opb"><i style="left:${v < 0 ? 50 - a : 50}%;width:${a}%;background:${v < 0 ? '#6a8fd0' : '#e0a458'}"></i></div></div>` }
@@ -244,7 +253,7 @@ function updateUI() {
   $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.pop}${w.crowd && w.crowd.n ? `<span class="hint" style="font-weight:400;font-size:12px"> (${w.vills.length} in play)</span>` : ''}</div><div class="hint">mood ${moodWord(mood)}</div></div>
     ${flowLine(w)}
     <div class="hint" style="margin-bottom:4px">${stg.infant || 0} infants · ${stg.child || 0} children · ${stg.youth || 0} youths · ${stg.adult || 0} adults · ${stg.elder || 0} elders</div>
-    ${resRow2(w, 'food', w.capOf('food'))}${resRow2(w, 'wood', w.capOf('wood'))}${resRow2(w, 'stone', w.capOf('stone'))}
+    ${resRow2(w, 'food', w.capOf('food'))}${resRow2(w, 'wood', w.capOf('wood'))}${resRow2(w, 'stone', w.capOf('stone'))}${resNotice(w)}
     <div class="grid" style="margin-top:6px"><div><span>Homes</span> ${w.houses().length} (${w.beds()} beds)</div><div><span>Fields</span> ${w.of('farm').length}</div><div><span>Storehouses</span> ${w.of('store').length}</div><div><span>Roads</span> ${w.road.reduce((a, b) => a + b, 0)}</div>
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
@@ -350,7 +359,7 @@ function outpostPanel(w, o) {
     ${sec('Details', kvs(rows))}${o.founders && o.founders.length ? sec('Founders', `<div class="hint">${o.founders.map(escapeHtml).join(', ')}${o.fl > o.founders.length ? ' and others' : ''}</div>`) : ''}`;
 }
 function renderNeigh() {
-  const w = world, el = $('neighCard'), box = el.parentElement; box.style.display = w.neigh ? '' : 'none'; if (!w.neigh) return;
+  const w = world, el = $('neighCard'), box = el.parentElement; box.style.display = w.neigh ? '' : 'none'; if (!w.neigh) return; box.style.order = w.neigh.some(n => n.found) ? '' : '9'; /* v0.38.1: sized to its content; with nobody met yet it drops to the bottom of the tab */
   const anyLand = w.neigh.some(n => n.reach === 'land');
   if (!w.has('boats') && !anyLand) { el.innerHTML = '<div class="hint">Beyond the horizon the sea may hide other lands. With boats, the village could one day find out.</div>'; return }
   if (!w.has('boats') && !w.neigh.some(n => n.found)) { el.innerHTML = '<div class="hint">Other peoples live beyond the hills. Hunters and curious villagers will go looking for them.</div>'; return }
@@ -372,7 +381,10 @@ const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman
 /* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
 const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a'];
 function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
-function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } const d = $('diagText'); if (d && d.parentElement.open) d.textContent = diagText(w) + '\n' + diagExtras() } catch (e) { } }
+function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } renderDiagText() } catch (e) { } }
+/* the Diagnostics text in the World card: filled the moment the section opens and every second while it is open; a failure is shown there instead of leaving it blank (v0.38.1) */
+function renderDiagText() { const d = $('diagText'); if (!d || !d.parentElement.open) return; let t = ''; try { t = diagText(world) } catch (e) { t = 'world line: ' + worldLineShort(world) + '\n(the full snapshot could not be built: ' + (e && e.message || e) + ')' } try { t += '\n' + diagExtras() } catch (e) { t += '\n(browser details unavailable: ' + (e && e.message || e) + ')' } d.textContent = t }
+{ const dd = $('diagText'); if (dd) dd.parentElement.addEventListener('toggle', renderDiagText) }
 /* the district list and the chosen district's card, with group orders while playing (v0.37) */
 function districtCard(w) {
   const D = districtsView(w), sel = D.list.find(d => d.key === R.distSel), playing = !!(w.play && w.play.on), orders = (w.play && w.play.dorders) || {};
@@ -398,6 +410,7 @@ function renderCity() {
   const hd = w.hdiag; if (hd && hd.why.length && w.beds() < w.pop + 2) html += `<div class="hint" style="margin-top:4px;color:#e0b86a">Housing is held up: ${escapeHtml(hd.why.join('; '))}.</div>`;
   html += `<div style="margin-top:6px"><button id="lvBtn" class="btn">${R.lvShow ? 'Hide' : 'Show'} land value on the map</button> <button id="distBtn" class="btn">${R.distShow ? 'Hide' : 'Show'} districts on the map</button></div>`;
   if (R.distShow) html += districtCard(w);
+  if (R.lvShow) html += `<div class="hint" style="margin-top:4px">Green is cheap ground, red is dear. Value comes from the centre, services, roads and the shore, so early on only the ground around the camp is tinted.</div>`;
   el.innerHTML = html; const bt = $('lvBtn'); if (bt) bt.onclick = () => { R.lvShow = !R.lvShow; renderCity() };
   const db = $('distBtn'); if (db) db.onclick = () => { R.distShow = !R.distShow; if (!R.distShow) R.distSel = null; renderCity() };
   el.querySelectorAll('[data-dsel]').forEach(b => b.onclick = () => { R.distSel = +b.dataset.dsel; renderCity() });
@@ -833,7 +846,7 @@ let wd = { tick: 0, changedAt: performance.now(), stage: 0 };
 setInterval(() => {
   const nowT = performance.now(), dt = (nowT - lastDiag.t) / 1000; if (dt <= 0) return;
   DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick };
-  if (++diagTimer % 10 === 0) { world.profReset(); renderWorldLine() }
+  if (++diagTimer % 10 === 0) { world.profReset(); renderWorldLine() } else renderDiagText()
   try { updateDiag() } catch (e) { }
   const drawn = frames - (wd.fr || 0); wd.fr = frames;
   { const eff = DBG.tps / CFG.TPS; const dps = DBG.tps / CFG.TPD; $('rate').textContent = speed >= 100 ? (dps >= 10 ? Math.round(dps) : dps.toFixed(1)) + ' days a second' : speed > 0 && eff < speed * 0.8 ? 'running at ' + (eff < 1 ? eff.toFixed(1) : Math.round(eff)) + '×' : pendingTicks > 0 ? 'stepping…' : '' }

@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    voicesui.js — the browser side of voices: the live talk feed and daily summaries in the

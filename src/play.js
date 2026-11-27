@@ -1,3 +1,4 @@
+/* Village Sim © 2026 Zaat · MIT license (see LICENSE) */
 'use strict';
 /* ==========================================================================
    play.js — the player's hands (v0.35). Everything the player does is plain data on w.play,
