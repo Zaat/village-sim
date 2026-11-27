@@ -9,6 +9,12 @@ const { chromium } = require('playwright');
   const dt = await p.evaluate(() => document.getElementById('diagText').textContent);
   ok(/seed \d+/.test(dt) && /people \d+/.test(dt) && /browser:/.test(dt), 'Diagnostics shows the world line, a snapshot and browser details at once: ' + dt.slice(0, 80));
   await p.waitForTimeout(1500); ok(await p.evaluate(() => document.getElementById('diagText').textContent.length > 100), 'and keeps filling while open');
+  // v0.38.2: the text can be selected and keeps its selection while the game refreshes it
+  await p.evaluate(() => { const d = document.getElementById('diagText'), r = document.createRange(); r.selectNodeContents(d); const g = getSelection(); g.removeAllRanges(); g.addRange(r) });
+  const before = await p.evaluate(() => getSelection().toString().length); await p.waitForTimeout(2500);
+  ok(before > 100 && await p.evaluate(() => getSelection().toString().length) === before, 'a selection in Diagnostics survives the refresh (' + before + ')');
+  ok(await p.evaluate(() => !!document.getElementById('diagTextCopy') && getComputedStyle(document.getElementById('diagText')).userSelect !== 'none'), 'a Copy diagnostics button exists and the text is selectable');
+  await p.evaluate(() => { getSelection().removeAllRanges() });
   // About carries the notice
   await p.evaluate(() => { aboutOpen() }); ok(await p.evaluate(() => /© 2026 Zaat/.test(document.getElementById('modal_b').innerText) && /MIT/.test(document.getElementById('modal_b').innerText)), 'About shows the copyright line'); await p.keyboard.press('Escape');
   // resource notice slot: one fixed-height element, same height with and without a notice

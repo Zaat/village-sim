@@ -383,7 +383,10 @@ const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a
 function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
 function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } renderDiagText() } catch (e) { } }
 /* the Diagnostics text in the World card: filled the moment the section opens and every second while it is open; a failure is shown there instead of leaving it blank (v0.38.1) */
-function renderDiagText() { const d = $('diagText'); if (!d || !d.parentElement.open) return; let t = ''; try { t = diagText(world) } catch (e) { t = 'world line: ' + worldLineShort(world) + '\n(the full snapshot could not be built: ' + (e && e.message || e) + ')' } try { t += '\n' + diagExtras() } catch (e) { t += '\n(browser details unavailable: ' + (e && e.message || e) + ')' } d.textContent = t }
+function renderDiagText() { const d = $('diagText'); if (!d || !d.parentElement.open) return; let t = ''; try { t = diagText(world) } catch (e) { t = 'world line: ' + worldLineShort(world) + '\n(the full snapshot could not be built: ' + (e && e.message || e) + ')' } try { t += '\n' + diagExtras() } catch (e) { t += '\n(browser details unavailable: ' + (e && e.message || e) + ')' }
+  /* v0.38.2: rewrite only when the text changed and never while part of it is selected, so it can be selected and copied (the paused game rebuilt it every second and cleared the selection) */
+  if (d.textContent === t) return; try { const sel = getSelection(); if (sel && !sel.isCollapsed && d.contains(sel.anchorNode)) return } catch (e) { } d._text = t; d.textContent = t }
+function diagCopyText() { const d = $('diagText'); let t = ''; try { t = diagText(world) + '\n' + diagExtras() } catch (e) { t = d ? d.textContent : '' } return t }
 { const dd = $('diagText'); if (dd) dd.parentElement.addEventListener('toggle', renderDiagText) }
 /* the district list and the chosen district's card, with group orders while playing (v0.37) */
 function districtCard(w) {
@@ -883,3 +886,5 @@ if (typeof sndInit === 'function') sndInit(); initStatsUI(); concernsInit(); voi
     if (!resumed) { autosaveOn = false; setSpeed(0); $('resumeInfo').textContent = metaText(m) + (m.savedAt ? ' · saved ' + new Date(m.savedAt).toLocaleString() : ''); $('resume').style.display = 'flex'; saveInfo('A saved village is waiting: ' + metaText(m) + '.') }
   } else if (!navigator.webdriver && !lsGet(WELCOME_KEY, '')) { setSpeed(0); welcomeOpen() }
 }
+
+$('diagTextCopy') && ($('diagTextCopy').onclick = async () => { let ok = false; try { await navigator.clipboard.writeText(diagCopyText()); ok = true } catch (e) { } const b = $('diagTextCopy'), old = b.textContent; b.textContent = ok ? 'Copied' : 'Select the text and copy it'; setTimeout(() => { b.textContent = old }, 1400) });

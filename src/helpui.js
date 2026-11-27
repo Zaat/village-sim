@@ -4,8 +4,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.38.1', name: 'Pace',
-  news: ['Fixes and polish after v0.38: Diagnostics (World card and Settings) fills the moment you open it and shows any problem instead of staying blank.', 'The Stats graph has day marks in the first two years and the value range of the first two lines at its edges.', 'The land value overlay is stronger and explains its colours; the World tab sizes the Neighbours card to its content and moves it to the bottom until you meet someone.', 'One steady notice line under the food, wood and stone bars replaces the notes that appeared and disappeared and shifted the panel.', 'Copyright notice in About, the README and every source file.']
+  version: '0.38.2', name: 'Pace',
+  news: ['Diagnostics (World card) can now be selected and copied: it no longer rewrites itself under your selection, and there is a Copy diagnostics button.', 'New developer tool, the pace lab, compares how a village grows under two birth models across many worlds. It found that the crowd begins with a one-day spike in its birth rate; the candidate fix did not smooth growth enough to ship, so the game is unchanged.']
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>

@@ -2,6 +2,11 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.38.2 — Diagnostics you can copy, and the pace lab
+**Diagnostics.** The text in the World card no longer rewrites itself under your selection (it only changes when its content does, and never while part of it is selected), and a Copy diagnostics button sits below it.
+
+**Pace lab (developer tool).** `tools/pace_lab.js` runs the same worlds under the current birth model and a candidate and draws population curves, yearly growth rates and a table (`docs/pace-lab.html`, run data in `docs/pace-lab/`). It found that the crowd's birth rate began with a one-day spike when the crowd formed; the candidate fix did not smooth growth enough to adopt, so the game itself is unchanged. It also showed that with survival, disasters, crime and raids all on, growth stalls (island 12: 92 people at year 30), which is the next thing to study.
+
 ### v0.38.1 — Fixes and polish
 Fixes and polish after v0.38, with no change to the simulation.
 
