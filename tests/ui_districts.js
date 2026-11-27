@@ -1,10 +1,10 @@
 // v0.37 UI: the districts overlay and card on the City card, picking a district on the map, group orders only while playing
-const { chromium } = require('playwright');
+const { chromium } = require('playwright'); const { OLD_PACE } = require('./lib');
 (async () => {
   const b = await chromium.launch(); let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('FAIL', m) } };
   const p = await b.newPage({ viewport: { width: 1500, height: 950 } }); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
   await p.goto('file:///home/claude/village-sim/index.html'); await p.evaluate(() => { localStorage.clear() }); await p.reload(); await p.waitForTimeout(800);
-  await p.evaluate(() => { newWorld(777, { type: 'island', size: 'standard' }); __sim.setSpeed(0) });
+  await p.evaluate(o => { Object.assign(CFG, o); newWorld(777, { type: 'island', size: 'standard' }); __sim.setSpeed(0) }, OLD_PACE);
   await p.evaluate(() => { for (let i = 0; i < 1200 * 32 * 3; i++) world.step(); showTab('world'); renderCity() });
   await p.click('#distBtn'); await p.waitForTimeout(300);
   let r = await p.evaluate(() => ({ on: R.distShow, text: document.getElementById('cityCard').textContent, n: districtsView(world).list.length, total: districtsView(world).total, pop: world.pop }));

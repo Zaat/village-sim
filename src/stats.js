@@ -34,6 +34,7 @@ const STAT_SERIES = [
   { id: 'focus', label: 'Villagers in play', group: 'People', get: w => w.vills.length },
   { id: 'fpairs', label: 'Fertile couples', group: 'Growth limits', get: w => w.vills.filter(v => v.sex === 'f' && v.isAdult() && v.partner != null && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)).length },
   { id: 'fsingle', label: 'Fertile women without a partner', group: 'Growth limits', get: w => w.vills.filter(v => v.sex === 'f' && v.isAdult() && v.partner == null && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)).length },
+  { id: 'order', label: 'Order (1 = the town keeps the peace; lower slows growth)', group: 'People', get: w => w.order == null ? 1 : w.order },
   { id: 'prosp', label: 'Prosperity index (fertility and newcomers)', group: 'People', get: w => w.prosp == null ? 1 : w.prosp },
   { id: 'beds', label: 'Beds', group: 'People', get: w => w.beds() },
   { id: 'outside', label: 'Sleeping outside', group: 'People', get: w => w.priv ? w.priv.out : 0 },

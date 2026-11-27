@@ -1,10 +1,10 @@
 // v0.35 UI: the Play screen. Switch on, select without ordering, order by right-click / button / long-press, build with a ghost, lay roads, paint zones, pick research, leave tools, switch off
-const { chromium } = require('playwright');
+const { chromium } = require('playwright'); const { OLD_PACE } = require('./lib');
 (async () => {
   const b = await chromium.launch(); let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('FAIL', m) } };
   const p = await b.newPage({ viewport: { width: 1400, height: 900 } }); const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
   await p.goto('file:///' + __dirname.replace(/\\/g, '/') + '/../index.html'); await p.evaluate(() => { localStorage.clear() }); await p.reload(); await p.waitForTimeout(700);
-  await p.evaluate(() => { newWorld(777, { type: 'lakeland', size: 'standard' }); __sim.setSpeed(0); for (let i = 0; i < 1200 * 40; i++) world.step(); R.cam.x = world.cx * CFG.T; R.cam.y = world.cy * CFG.T; R.cam.z = 2.4; updateUI() }); await p.waitForTimeout(300);
+  await p.evaluate(o => { Object.assign(CFG, o); newWorld(777, { type: 'lakeland', size: 'standard' }); __sim.setSpeed(0); for (let i = 0; i < 1200 * 40; i++) world.step(); R.cam.x = world.cx * CFG.T; R.cam.y = world.cy * CFG.T; R.cam.z = 2.4; updateUI() }, OLD_PACE); await p.waitForTimeout(300);
   const scr = (tx, ty) => p.evaluate(([tx, ty]) => { const r = cv.getBoundingClientRect(), T = CFG.T; return [r.left + (tx * T + T / 2 - R.cam.x) * R.cam.z + R.vw / 2, r.top + (ty * T + T / 2 - R.cam.y) * R.cam.z + R.vh / 2] }, [tx, ty]);
   const vis = id => p.evaluate(id => { const e = document.getElementById(id); return !!e && e.offsetParent !== null && getComputedStyle(e).display !== 'none' }, id);
   const ev = (f, a) => p.evaluate(f, a);
@@ -116,7 +116,7 @@ const { chromium } = require('playwright');
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 2).join(' | '));
   // a phone: the toolbar fits and the page still works
   const q = await b.newPage({ viewport: { width: 390, height: 800 }, hasTouch: true, isMobile: true }); await q.goto('file:///' + __dirname.replace(/\\/g, '/') + '/../index.html'); await q.waitForTimeout(700);
-  await q.evaluate(() => { newWorld(777, { type: 'lakeland', size: 'standard' }); __sim.setSpeed(0); for (let i = 0; i < 1200 * 30; i++) world.step(); puMode(true); puTool('build'); updateUI() }); await q.waitForTimeout(300);
+  await q.evaluate(o => { Object.assign(CFG, o); newWorld(777, { type: 'lakeland', size: 'standard' }); __sim.setSpeed(0); for (let i = 0; i < 1200 * 30; i++) world.step(); puMode(true); puTool('build'); updateUI() }, OLD_PACE); await q.waitForTimeout(300);
   const fit = await q.evaluate(() => { const r = document.getElementById('ptool').getBoundingClientRect(), s = document.getElementById('stage').getBoundingClientRect(); return r.left >= s.left - 1 && r.right <= s.right + 1 }); ok(fit, 'the toolbar fits a phone screen');
   await q.screenshot({ path: 'tests/ui_play_phone.png' });
   await b.close(); console.log(fail ? 'FAILED ' + fail : 'ui_play passed'); process.exit(fail ? 1 : 0);

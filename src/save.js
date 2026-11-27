@@ -31,7 +31,7 @@ const pickKeys = (o, keys) => { const r = {}; for (const k of keys) if (o[k] !==
 
 function serializeWorld(w) {
   return {
-    v: SAVE_VERSION, savedAt: Date.now(), dims: [CFG.W, CFG.H], seed: w.seed, settings: { ...w.settings }, rngState: w.rng.s, tick: w.tick,
+    v: SAVE_VERSION, lifeV: 2, savedAt: Date.now(), dims: [CFG.W, CFG.H], seed: w.seed, settings: { ...w.settings }, rngState: w.rng.s, tick: w.tick,
     arrays: { feat: packArr(w.feat), res: packArr(w.res), road: packArr(w.road), fish: packArr(w.fish) },
     stock: { ...w.stock }, counters: { nextId: w.nextId, nameUse: w.nameUse, bnext: w.bnext, bpnext: w.bpnext, groupNext: w.groupNext, births: w.births, abirths: w.abirths || 0, deaths: w.deaths, trees: w.trees, trees0: w.trees0 },
     flags: { harsh: w.harsh, drought: w.drought, cold: w.cold, festival: w.festival, holiday: w.holiday, holidayDone: w.holidayDone, meetingDay: w.meetingDay, meetingDone: w.meetingDone, forceFeast: w.forceFeast },
@@ -74,6 +74,7 @@ function deserializeWorld(d) {
   w.bpnext = d.counters.bpnext;
   for (const s of d.vills) {
     const v = Object.create(Villager.prototype); Object.assign(v, s);
+    if (!d.lifeV && typeof v.age === 'number') v.age = v.age < 14 ? v.age * CFG.ADULT_DAYS / 14 : CFG.ADULT_DAYS + (v.age - 14) * (CFG.OLD_DAYS - CFG.ADULT_DAYS) / (CFG.OLD_DAYS - 14);       // saves from before v0.38 counted adulthood from day 14; stretch the early years so everyone keeps their stage
     v.w = w; v.alive = true; v.steps = []; v.cur = null; v.path = []; v.claim = -1; v.claimB = null; v.inb = null; v.haul = null; v.bpWork = null; v.jobKind = null; v.failUntil = {};
     if (v.op.tax === undefined) v.op.tax = 0; v.coins = v.coins || 0; v.output = v.output || 0; v.earned = v.earned || 0;
     v.fighting = false; v.emote = null; v.sleeping = false; v.label = 'Idle'; v.wait = 0; v.stuck = 0; w.vills.push(v);

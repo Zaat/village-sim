@@ -58,7 +58,7 @@ function crowdPeople(w, C) {
   const old = Math.min(C.adults, flow(C, 'old', C.adults / ((CFG.ELDER_DAYS - CFG.ADULT_DAYS) * ls)));
   C.kids -= up; C.adults += up - old; C.elders += old;
   // deaths: old age, ordinary sickness and accidents, and hunger when the stores are bare
-  const hungry = w.stock.food <= 0 ? 1 : 0, dE = Math.min(C.elders, flow(C, 'de', C.elders / (45 * ls))), dA = Math.min(C.adults, flow(C, 'da', C.adults * 0.0012 + hungry * C.adults * 0.03)), dK = Math.min(C.kids, flow(C, 'dk', C.kids * 0.0015 + hungry * C.kids * 0.04));
+  const hungry = w.stock.food <= 0 ? 1 : 0, dE = Math.min(C.elders, flow(C, 'de', C.elders / (45 * ls))), dA = Math.min(C.adults, flow(C, 'da', C.adults * 0.0012 + hungry * C.adults * 0.03)), dK = Math.min(C.kids, flow(C, 'dk', C.kids * (0.0015 + CFG.CHILD_MORT * Math.max(0.15, 1 - Math.min(0.7, techFx(w, 'health')) - (w.has('medicine') ? 0.2 : 0))) + hungry * C.kids * 0.04));
   C.elders -= dE; C.adults -= dA; C.kids -= dK;
   const dead = dE + dA + dK; C.died += dead; w.deaths += dead; if (dead) { noteFlow(w, 'died', dead); statCount(w, 'died', dead); if (dE) statCount(w, 'died_age', dE); if (dA + dK) statCount(w, hungry ? 'died_hunger' : 'died_fever', dA + dK) }
   const Y = (w.dyr[w.year] = w.dyr[w.year] || {});
@@ -67,12 +67,12 @@ function crowdPeople(w, C) {
   // births: the same gates as the village (bread on the table, a bed to put the cradle in), at the rate the village itself shows
   let born = 0;
   if (pop + 1 <= w.beds() && w.stock.food >= pop * 3.5 * (1 - 0.25 * gp) * (w.settings.survival ? 1.3 : 1)) {
-    born = Math.min(flow(C, 'born', (C.adults + 0.1 * C.elders) * (C.rate || 0.011)), Math.max(0, w.beds() - pop));
+    born = Math.min(flow(C, 'born', (C.adults + 0.1 * C.elders) * (C.rate || 0.011) * (w.order || 1)), Math.max(0, w.beds() - pop));
   }
   // newcomers: a town with empty homes, full larders and good prospects draws people from the countryside, as real cities always grew (births alone only replace the dead)
   const spare = Math.max(0, w.beds() - pop), prosp = w.prosp == null ? 1 : w.prosp;
   const pull = clamp((prosp - 0.7) * 1.4, 0, 1.2) * (w.stock.food > pop * 4 ? 1 : w.stock.food > pop * 2 ? 0.4 : 0) * hardOf(w).imm * (gp > -0.75 ? 1 + 0.8 * gp : 0) * (w.settings.survival ? 0.5 : 1) * (projBuilt(w, 'monument') ? 1.35 : 1);
-  const arrive = Math.min(spare, flow(C, 'arr', spare * CROWD.draw * pull)), arrAd = Math.round(arrive * 0.8);
+  const arrive = Math.min(spare, flow(C, 'arr', spare * CFG.CROWD_DRAW * pull)), arrAd = Math.round(arrive * 0.8);
   if (arrive) { C.adults += arrAd; C.kids += arrive - arrAd; C.arrived = (C.arrived || 0) + arrive; noteFlow(w, 'arrived', arrive); statCount(w, 'arrivals', arrive) }
   C.kids += born; C.born += born; w.births += born; if (born) { noteFlow(w, 'born', born); statCount(w, 'born', born) }
   C.n = C.kids + C.adults + C.elders;

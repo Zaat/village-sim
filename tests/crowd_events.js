@@ -1,6 +1,6 @@
 // v0.34: beyond a focus group, the townsfolk are kept as numbers: counts stay honest, nobody vanishes, saves carry the crowd, and the town is not slower to run
 const { loadSim } = require('./lib'); const c = loadSim('World,CFG,CROWD,serializeWorld,deserializeWorld,crowdDay'); let fail = 0, pass = 0; const ok = (x, m) => { if (x) pass++; else { fail++; console.log('FAIL', m) } };
-c.CROWD.focus = 40;
+require('./lib').oldPace(c.CFG); c.CROWD.focus = 40;
 const w = new c.World(321, { map: 'lakeland' }); const faults = []; const f0 = w.fault.bind(w); w.fault = (k, e, en) => { faults.push(k + ': ' + String(e && e.stack || e).split('\n').slice(0, 2).join(' | ')); return f0(k, e, en) };
 const years = 4; let lastPop = 0, drift = 0;
 for (let d = 1; d <= years * 32; d++) {

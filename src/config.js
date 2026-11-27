@@ -7,8 +7,8 @@ const CFG = {
   W: 160, H: 112, MAP_NEW: [260, 180], T: 16,            // map size (tiles), tile size (world px)
   TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
   DPS: 8,                           // days per season (year = 4 seasons)
-  INFANT_DAYS: 3, CHILD_DAYS: 8, ADULT_DAYS: 14, ELDER_DAYS: 80, FERTILE_MAX: 85, OLD_DAYS: 120,   // life stages (in days)
-  BIRTH_DAMP: 0, COUPLE_TRY: 0.1, COURT_TRY: 0.03, FARM_SLOPE: 5, BIRTH_MULT: 1, DEP_CAP: 3, LIFE_BASE: 2.8,                      // ageing slows by this factor (v0.35: all stage thresholds above stay in 'life days'); real days of life = life days x LIFE_BASE
+  INFANT_DAYS: 5, CHILD_DAYS: 17, ADULT_DAYS: 29, ELDER_DAYS: 80, FERTILE_MAX: 70, OLD_DAYS: 120, CHILD_MORT: 0.0035, IMM_CHANCE: 0.03, IMM_MAX: 2, CROWD_DRAW: 0.005, ORDER_BASE: 350, ORDER_BITE: 0.4,   // life stages (in days)
+  BIRTH_DAMP: 0, COUPLE_TRY: 0.1, COURT_TRY: 0.03, FARM_SLOPE: 5, BIRTH_MULT: 1, DEP_CAP: 2, LIFE_BASE: 2.8,                      // ageing slows by this factor (v0.35: all stage thresholds above stay in 'life days'); real days of life = life days x LIFE_BASE
   START_VILLAGERS: 8,
   START_STOCK: { wood: 24, stone: 6, food: 40 },
   COST: { house: { wood: 8, stone: 3 }, farm: { wood: 3, stone: 0 }, store: { wood: 10, stone: 4 }, road: { wood: 0, stone: 1 }, dock: { wood: 12, stone: 0 }, logcamp: { wood: 14, stone: 0 }, minecamp: { wood: 12, stone: 4 }, lodge: { wood: 16, stone: 2 }, market: { wood: 16, stone: 4 }, bridge: { wood: 3, stone: 0 } },
@@ -16,7 +16,7 @@ const CFG = {
   SIZE: { house: [2, 2], farm: [3, 2], store: [2, 2], campfire: [1, 1], dock: [1, 1], logcamp: [2, 2], minecamp: [2, 2], lodge: [2, 2], market: [3, 2], bridge: [1, 1] },
   SOLID: { house: true, store: true, campfire: true, farm: false, dock: false, logcamp: true, minecamp: true, lodge: true, market: false },
   HOUSE_CAP: 4, FARM_YIELD: 6, FARM_GROW: 2400, FISH_MAX: 5, FISH_DEEP: 9, CARRY: 4, EAT_RESTORE: 55,
-  BIRTH_CHANCE: 0.35, PREGNANCY: 960, BIRTH_COOLDOWN: 2400,
+  BIRTH_CHANCE: 0.35, PREGNANCY: 3000, BIRTH_COOLDOWN: 9000,
   LATTICE: 3,                        // buildings snap to a 3-tile grid so lanes stay open
 };
 const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5, FORD: 6, BRIDGE: 7 };      // FORD: shallow river crossing, BRIDGE: built span; both walkable

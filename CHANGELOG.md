@@ -2,6 +2,35 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.38 — Pace
+Pace. Towns now grow at a believable pace. In v0.37 a lucky village could pass a thousand people in under fifteen years; now a thousand people takes about thirty years on Gentle, thirty-five on Normal and forty-five or more on Harsh, and a big town has to keep the peace to keep growing.
+
+**A real childhood.** People now take much longer to grow up (about two and a half game years instead of one), have a narrower span of fertile years, and some children die of fevers and accidents before they grow up. Medicine and good health technology lower that risk.
+
+**Slower families.** A couple spaces their children out: pregnancy takes longer, the gap between births is wider, and a family supports two small children at a time instead of three.
+
+**Fewer travellers.** Newcomers arrive less often and in smaller groups, and they come as grown adults. A town is no longer fed mostly by strangers.
+
+**Order.** Past a certain size a town can no longer keep the peace on its own. Crime and distrust slow births and newcomers until laws, guards, defence technology and firmer rule catch up. The new Order series in the Stats tab shows it (1 means the town keeps the peace; lower means growth is slowing).
+
+**Difficulty.** Hardship is wider apart. Gentle grows clearly faster (more births and newcomers) and Harsh clearly slower.
+
+| Average population | Gentle | Normal | Harsh |
+|---|---|---|---|
+| Year 10 | 96 | 71 | 39 |
+| Year 20 | 553 | 267 | 84 |
+| Year 30 | 1,180 | 782 | 268 |
+
+Six worlds, two maps, seed 12. Single runs vary; the island runs faster than the continent.
+
+**Old saves.** Saves from earlier versions carry over: everybody keeps their stage of life.
+
+**Tests.** A new pace suite checks the childhood, child deaths, the order brake, the slow start and old saves. The golden baseline and the difficulty scorecard were rebuilt for the new pace. A few suites that only need a big town quickly use the earlier fast settings.
+
+**What is next.** Late farming that matches real modern farming, then energy and the atomic and information ages.
+
+<img src="docs/screenshots/v0.38-feature.png" width="640" alt="Village Sim v0.38">
+
 ### v0.37 — Metropolis
 Metropolis. Villages now grow into towns of two to three thousand people instead of stalling at a few hundred, and the game has the tools to run, show and measure a big town.
 

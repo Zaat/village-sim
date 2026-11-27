@@ -132,7 +132,7 @@ class World {
     while (k < CFG.START_VILLAGERS && guard++ < 200) {
       const x = this.cx - 5 + ((this.r() * 11) | 0), y = this.cy + 2 + ((this.r() * 5) | 0);
       if (!this.walkable(y * CFG.W + x)) continue;
-      this.vills.push(new Villager(this, k % 2 ? 'f' : 'm', 14 + this.r() * 26, x, y)); k++;
+      this.vills.push(new Villager(this, k % 2 ? 'f' : 'm', CFG.ADULT_DAYS + this.r() * 26, x, y)); k++;
     }
   }
 

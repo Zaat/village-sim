@@ -31,14 +31,14 @@ if (cmd === 'run') {
   const out = [`# Coverage report (${runs.length} runs: ${runs.map(r => `${r.map}/${r.seed}/${HN[r.hard]}/${r.years}y`).join(', ')})`, ''];
   out.push('## Population by year (mean over runs, per Hardship level)', '', '| Year | ' + Object.keys(by).map(h => HN[h]).join(' | ') + ' |', '|---|' + Object.keys(by).map(() => '---|').join(''));
   const maxY = Math.max(...runs.map(r => r.yearly.length)); for (let y = 1; y <= maxY; y += y < 10 ? 1 : 2) out.push(`| ${y} | ` + Object.keys(by).map(h => { const v = by[h].filter(r => r.yearly[y - 1]).map(r => r.yearly[y - 1].pop); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) + ' (' + v.length + ')' : '' }).join(' | ') + ' |');
-  /* difficulty scorecard (v0.37): Gentle should reach more than 1000 people, Harsh should be survivable but failable (some runs end, the rest stay small) */
+  /* difficulty scorecard (v0.38 pace): towns grow slowly. Gentle should be well ahead of Normal at year 30, Harsh well behind it, and Harsh survivable but failable (some runs end, the rest stay small) */
   const med = a => { const v = a.filter(x => x != null).sort((m, n) => m - n); return v.length ? v[(v.length - 1) >> 1] : null }, popAt = (r, y) => r.yearly[y - 1] ? r.yearly[y - 1].pop : null;
-  out.push('## Difficulty scorecard', '', '| Hardship | runs | game over | median pop y10 | median pop y20 | best peak | target | met |', '|---|---|---|---|---|---|---|---|');
+  out.push('## Difficulty scorecard', '', '| Hardship | runs | game over | median pop y10 | median pop y20 | median pop y30 | best peak | target | met |', '|---|---|---|---|---|---|---|---|---|');
   for (const h of Object.keys(by).sort()) {
-    const rs = by[h], over = rs.filter(r => r.over).length, p10 = med(rs.map(r => popAt(r, 10))), p20 = med(rs.map(r => popAt(r, 20))), peak = Math.max(...rs.map(r => Math.max(...r.yearly.map(y => y.pop))));
+    const rs = by[h], over = rs.filter(r => r.over).length, p10 = med(rs.map(r => popAt(r, 10))), p20 = med(rs.map(r => popAt(r, 20))), p30 = med(rs.map(r => popAt(r, 30))), n30 = by[1] ? med(by[1].map(r => popAt(r, 30))) : null, peak = Math.max(...rs.map(r => Math.max(...r.yearly.map(y => y.pop))));
     const nrm = by[1] ? med(by[1].map(r => popAt(r, 10))) : null, weak = Math.min(...rs.map(r => Math.max(...r.yearly.map(y => y.pop))));
-    const tg = h == 0 ? 'median pop at year 20 above 1000' : h == 2 ? 'hard but survivable: year-10 pop at most 60% of Normal, most runs live, weakest map still grows' : 'between Gentle and Harsh', met = h == 0 ? (p20 != null && p20 > 1000) : h == 2 ? (nrm != null && p10 != null && p10 <= nrm * 0.6 && over <= rs.length / 3 && weak > 100) : (p20 != null);
-    out.push(`| ${HN[h]} | ${rs.length} | ${over} | ${p10 == null ? '-' : p10} | ${p20 == null ? '-' : p20} | ${peak} | ${tg} | ${met ? 'yes' : 'NO'} |`);
+    const tg = h == 0 ? 'year-30 pop at least 1.25 times Normal (or year 20 above Normal if runs are short)' : h == 2 ? 'hard but survivable: year-30 pop at most 60% of Normal (year 10 if runs are short), most runs live, weakest map still grows' : 'between Gentle and Harsh', met = h == 0 ? (p30 != null && n30 != null ? p30 >= n30 * 1.25 : p20 != null && by[1] && p20 > med(by[1].map(r => popAt(r, 20)))) : h == 2 ? (over <= rs.length / 3 && weak > 60 && (p30 != null && n30 != null ? p30 <= n30 * 0.6 : nrm != null && p10 != null && p10 <= nrm * 0.6)) : (p20 != null);
+    out.push(`| ${HN[h]} | ${rs.length} | ${over} | ${p10 == null ? '-' : p10} | ${p20 == null ? '-' : p20} | ${p30 == null ? '-' : p30} | ${peak} | ${tg} | ${met ? 'yes' : 'NO'} |`);
   }
   out.push('');
   out.push('## Game over and faults', '', ...runs.map(r => `- ${r.map}/${r.seed}/${HN[r.hard]}: ${r.over ? 'game over day ' + r.over.day + ' (' + r.over.why + ')' : 'survived ' + r.years + ' years'}; faults ${r.faults}; ${r.msPerTick} ms/tick`));

@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.37 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.38 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
 <h2 align="center"><a href="https://zaat.github.io/village-sim/">▶&nbsp; Play it now in your browser</a></h2>
 <p align="center"><b>One click. No install, no account.</b> Works on a computer, a tablet or a phone.<br><sub>Start a world, then watch it live, or switch to Play and take the lead. <a href="https://zaat.github.io/village-sim/">zaat.github.io/village-sim</a></sub></p>
@@ -114,7 +114,7 @@ Open the **Diagnostics** panel and use **Copy report**. It holds timings, state 
 </details>
 
 ## Roadmap
-v0.37 **Metropolis**: towns of three thousand people, districts, real storage, fishing and wood by sea, and a measured Hardship. Next: a slower, more realistic growth pace, then energy and the late ages. See the [changelog](CHANGELOG.md).
+v0.38 **Pace**: towns now grow at a believable pace (a thousand people takes about 35 years on Normal), and a big town has to keep the peace. Next: farming that matches real technology, then energy and the late ages. See the [changelog](CHANGELOG.md).
 
 ## License
 [MIT](LICENSE).

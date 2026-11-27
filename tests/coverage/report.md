@@ -1,164 +1,156 @@
-# Coverage report (12 runs: archipelago/5/Gentle/20y, archipelago/5/Harsh/20y, continent/5/Gentle/20y, continent/5/Normal/20y, continent/5/Harsh/20y, island/12/Gentle/20y, island/12/Normal/20y, island/12/Harsh/20y, lakeland/351323045/Normal/20y, lakeland/351323045/Harsh/20y, peninsula/21/Harsh/20y, river/33/Harsh/20y)
+# Coverage report (6 runs: continent/12/Gentle/30y, continent/12/Normal/30y, continent/12/Harsh/30y, island/12/Gentle/30y, island/12/Normal/30y, island/12/Harsh/30y)
 
 ## Population by year (mean over runs, per Hardship level)
 
 | Year | Gentle | Normal | Harsh |
 |---|---|---|---|
-| 1 | 31 (3) | 23 (3) | 23 (6) |
-| 2 | 63 (3) | 49 (3) | 40 (6) |
-| 3 | 113 (3) | 77 (3) | 62 (6) |
-| 4 | 201 (3) | 121 (3) | 99 (6) |
-| 5 | 383 (3) | 197 (3) | 135 (6) |
-| 6 | 670 (3) | 353 (3) | 202 (6) |
-| 7 | 1001 (3) | 576 (3) | 297 (6) |
-| 8 | 1369 (3) | 829 (3) | 409 (6) |
-| 9 | 1497 (3) | 1139 (3) | 551 (6) |
-| 10 | 1682 (3) | 1394 (3) | 708 (6) |
-| 12 | 1644 (3) | 1749 (3) | 869 (6) |
-| 14 | 1857 (3) | 1926 (3) | 986 (6) |
-| 16 | 2113 (3) | 2049 (3) | 1072 (6) |
-| 18 | 2176 (3) | 2110 (3) | 1167 (6) |
-| 20 | 2215 (3) | 2271 (3) | 1271 (6) |
+| 1 | 17 (2) | 17 (2) | 13 (2) |
+| 2 | 22 (2) | 19 (2) | 17 (2) |
+| 3 | 27 (2) | 23 (2) | 18 (2) |
+| 4 | 36 (2) | 29 (2) | 20 (2) |
+| 5 | 43 (2) | 36 (2) | 23 (2) |
+| 6 | 54 (2) | 39 (2) | 30 (2) |
+| 7 | 60 (2) | 49 (2) | 37 (2) |
+| 8 | 71 (2) | 58 (2) | 40 (2) |
+| 9 | 82 (2) | 60 (2) | 44 (2) |
+| 10 | 96 (2) | 71 (2) | 39 (2) |
+| 12 | 124 (2) | 90 (2) | 44 (2) |
+| 14 | 149 (2) | 110 (2) | 48 (2) |
+| 16 | 243 (2) | 138 (2) | 57 (2) |
+| 18 | 367 (2) | 191 (2) | 78 (2) |
+| 20 | 553 (2) | 267 (2) | 84 (2) |
+| 22 | 667 (2) | 388 (2) | 103 (2) |
+| 24 | 776 (2) | 520 (2) | 121 (2) |
+| 26 | 883 (2) | 617 (2) | 124 (2) |
+| 28 | 1037 (2) | 690 (2) | 187 (2) |
+| 30 | 1180 (2) | 782 (2) | 268 (2) |
 ## Difficulty scorecard
 
-| Hardship | runs | game over | median pop y10 | median pop y20 | best peak | target | met |
-|---|---|---|---|---|---|---|---|
-| Gentle | 3 | 0 | 1758 | 2276 | 2840 | median pop at year 20 above 1000 | yes |
-| Normal | 3 | 0 | 1428 | 2310 | 2623 | between Gentle and Harsh | yes |
-| Harsh | 6 | 0 | 674 | 1158 | 2195 | hard but survivable: year-10 pop at most 60% of Normal, most runs live, weakest map still grows | yes |
+| Hardship | runs | game over | median pop y10 | median pop y20 | median pop y30 | best peak | target | met |
+|---|---|---|---|---|---|---|---|---|
+| Gentle | 2 | 0 | 91 | 515 | 1138 | 1222 | year-30 pop at least 1.25 times Normal (or year 20 above Normal if runs are short) | yes |
+| Normal | 2 | 0 | 58 | 214 | 663 | 900 | between Gentle and Harsh | yes |
+| Harsh | 2 | 0 | 30 | 72 | 184 | 352 | hard but survivable: year-30 pop at most 60% of Normal (year 10 if runs are short), most runs live, weakest map still grows | yes |
 
 ## Game over and faults
 
-- archipelago/5/Gentle: survived 20 years; faults 0; 1.564 ms/tick
-- archipelago/5/Harsh: survived 20 years; faults 0; 1.316 ms/tick
-- continent/5/Gentle: survived 20 years; faults 0; 1.641 ms/tick
-- continent/5/Normal: survived 20 years; faults 0; 1.6 ms/tick
-- continent/5/Harsh: survived 20 years; faults 0; 1.295 ms/tick
-- island/12/Gentle: survived 20 years; faults 0; 1.705 ms/tick
-- island/12/Normal: survived 20 years; faults 0; 1.678 ms/tick
-- island/12/Harsh: survived 20 years; faults 0; 1.597 ms/tick
-- lakeland/351323045/Normal: survived 20 years; faults 0; 1.515 ms/tick
-- lakeland/351323045/Harsh: survived 20 years; faults 0; 1.399 ms/tick
-- peninsula/21/Harsh: survived 20 years; faults 0; 1.326 ms/tick
-- river/33/Harsh: survived 20 years; faults 0; 1.449 ms/tick
+- continent/12/Gentle: survived 30 years; faults 0; 1.048 ms/tick
+- continent/12/Normal: survived 30 years; faults 0; 1.007 ms/tick
+- continent/12/Harsh: survived 30 years; faults 0; 0.457 ms/tick
+- island/12/Gentle: survived 30 years; faults 0; 0.972 ms/tick
+- island/12/Normal: survived 30 years; faults 0; 0.84 ms/tick
+- island/12/Harsh: survived 30 years; faults 0; 0.587 ms/tick
 
 ## Concern load (share of days active; flagged above 40%)
 
-| Concern | a5G | a5H | c5G | c5N | c5H | i12G | i12N | i12H | l351323045N | l351323045H | p21H | r33H | max |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| unity ⚠ | 2% | 0% | 0% | 0% | 34% | 24% | 0% | 19% | 9% | 19% | 51% | 22% | 51% |
-| food | 1% | 0% | 31% | 30% | 13% | 21% | 11% | 7% | 28% | 16% | 3% | 12% | 31% |
-| fuel | 0% | 1% | 0% | 0% | 2% | 9% | 8% | 15% | 0% | 1% | 25% | 1% | 25% |
-| outpost:1 | 11% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 10% | 0% | 11% |
-| plague | 1% | 0% | 1% | 1% | 1% | 0% | 0% | 0% | 0% | 0% | 7% | 8% | 8% |
-| faction | 1% | 0% | 1% | 2% | 4% | 5% | 0% | 2% | 2% | 4% | 7% | 4% | 7% |
-| housing | 3% | 3% | 4% | 3% | 5% | 4% | 3% | 1% | 5% | 4% | 6% | 4% | 6% |
-| outpost:2 | 0% | 0% | 0% | 0% | 5% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 5% |
-| pop_fall | 0% | 0% | 0% | 0% | 1% | 0% | 1% | 0% | 0% | 0% | 0% | 0% | 1% |
-| outpost:5 | 0% | 0% | 0% | 1% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 0% | 1% |
+| Concern | c12G | c12N | c12H | i12G | i12N | i12H | max |
+|---|---|---|---|---|---|---|---|
+| unity ⚠ | 17% | 0% | 50% | 50% | 20% | 0% | 50% |
+| food | 2% | 2% | 12% | 0% | 0% | 0% | 12% |
+| pop_fall | 0% | 0% | 9% | 1% | 2% | 2% | 9% |
+| housing | 3% | 3% | 7% | 1% | 0% | 1% | 7% |
+| pop_slide | 0% | 0% | 5% | 0% | 0% | 0% | 5% |
+| plague | 4% | 4% | 3% | 4% | 3% | 3% | 4% |
+| faction | 1% | 0% | 3% | 2% | 3% | 0% | 3% |
+| outpost:2 | 0% | 0% | 0% | 0% | 2% | 0% | 2% |
+| fuel | 0% | 0% | 0% | 0% | 0% | 0% | 0% |
 
 ## Growth limits (share of birth attempts stopped by each gate, by year bracket, all runs)
 
 | Years | attempts | conceived | expecting | too soon | past fertile age | young children | no bed | low food | chance | fertile couples | fertile singles |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| 1-5 | 8253 | 24% | 5% | 15% | 0% | 35% | 0% | 0% | 22% | 19.0 | 7.1 |
-| 6-10 | 17131 | 24% | 2% | 7% | 14% | 2% | 7% | 5% | 38% | 53.7 | 8.7 |
-| 11-15 | 16565 | 8% | 0% | 2% | 52% | 0% | 6% | 10% | 21% | 28.8 | 9.4 |
-| 16-20 | 14912 | 11% | 1% | 3% | 29% | 1% | 7% | 15% | 33% | 44.0 | 11.9 |
+| 1-5 | 3338 | 4% | 6% | 22% | 26% | 40% | 0% | 0% | 2% | 3.7 | 1.6 |
+| 6-10 | 5210 | 5% | 4% | 14% | 45% | 28% | 0% | 0% | 4% | 7.9 | 3.1 |
+| 11-15 | 6323 | 7% | 4% | 12% | 47% | 24% | 0% | 0% | 6% | 13.6 | 5.3 |
+| 16-20 | 7172 | 11% | 3% | 16% | 49% | 13% | 0% | 0% | 9% | 20.0 | 5.8 |
+| 21-30 | 14034 | 9% | 1% | 11% | 60% | 8% | 0% | 0% | 10% | 20.9 | 6.4 |
 
 ## Deaths and arrivals by year bracket (per run per year)
 
 | Years | births | deaths | old age | hunger | cold | arrivals |
 |---|---|---|---|---|---|---|
-| 1-5 | 35.1 | 2.1 | 0.0 | 0.2 | 0.0 | 5.4 |
-| 6-10 | 192.4 | 34.5 | 15.6 | 0.1 | 0.1 | 23.2 |
-| 11-15 | 167.2 | 118.8 | 82.8 | 0.1 | 0.0 | 25.6 |
-| 16-20 | 176.4 | 159.5 | 117.9 | 0.0 | 0.0 | 31.3 |
+| 1-5 | 4.4 | 1.2 | 0.0 | 0.0 | 0.0 | 1.1 |
+| 6-10 | 8.8 | 5.1 | 2.1 | 0.1 | 0.0 | 1.5 |
+| 11-15 | 13.7 | 7.8 | 3.4 | 0.3 | 0.0 | 1.7 |
+| 16-20 | 42.1 | 17.4 | 8.7 | 0.0 | 0.0 | 9.2 |
+| 21-30 | 75.2 | 50.5 | 29.6 | 0.0 | 0.0 | 15.2 |
 
-## Events seen (79 of 95 kinds), by group; runs = in how many runs it happened, per-run-year = mean count
+## Events seen (71 of 95 kinds), by group; runs = in how many runs it happened, per-run-year = mean count
 
 | Group | Event | Total | Runs | Per run-year | First (year) |
 |---|---|---|---|---|---|
-| Economy & expansion | Fish landed by the townsfolk | 670872 | 12/12 | 2795.30 | 3.3 |
-| Economy & expansion | Wood fetched by boat | 1660 | 3/12 | 6.92 | 4.0 |
-| Economy & expansion | Market deals | 559 | 12/12 | 2.33 | 3.3 |
-| Economy & expansion | Fields made by clearing woodland | 537 | 11/12 | 2.24 | 0.2 |
-| Economy & expansion | Sites heard of | 325 | 12/12 | 1.35 | 0.4 |
-| Economy & expansion | Expeditions returned | 291 | 12/12 | 1.21 | 1.4 |
-| Economy & expansion | Home plots made by clearing woodland | 209 | 10/12 | 0.87 | 2.5 |
-| Economy & expansion | Terraform works done | 157 | 9/12 | 0.65 | 7.7 |
-| Economy & expansion | Jobs invented | 152 | 12/12 | 0.63 | 0.6 |
-| Economy & expansion | Timber runs by boat | 94 | 3/12 | 0.39 | 4.0 |
-| Economy & expansion | Inventions that failed | 58 | 12/12 | 0.24 | 1.6 |
-| Economy & expansion | Peoples discovered | 50 | 12/12 | 0.21 | 0.1 |
-| Economy & expansion | Outposts founded | 28 | 12/12 | 0.12 | 2.2 |
-| Economy & expansion | Trading trips | 24 | 7/12 | 0.10 | 10.5 |
-| Economy & expansion | Harbour upgrades | 21 | 4/12 | 0.09 | 14.6 |
-| Economy & expansion | Timber runs lost at sea | 16 | 4/12 | 0.07 | 8.4 |
-| Economy & expansion | Boats added for timber | 14 | 7/12 | 0.06 | 5.1 |
-| Economy & expansion | Ships built | 11 | 5/12 | 0.05 | 15.6 |
-| Economy & expansion | Lessons sold abroad | 7 | 3/12 | 0.03 | 16.1 |
-| Economy & expansion | Expeditions lost | 5 | 3/12 | 0.02 | 6.3 |
-| Economy & expansion | Outposts broke away | 1 | 1/12 | 0.00 | 8.0 |
-| Growth limits | Birth attempts by couples | 56947 | 12/12 | 237.28 | 0.1 |
-| Growth limits | Stopped: chance (damping, policy, hardship) | 16830 | 12/12 | 70.13 | 0.1 |
-| Growth limits | Stopped: past fertile age | 15542 | 12/12 | 64.76 | 4.1 |
-| Growth limits | Conceptions | 9070 | 12/12 | 37.79 | 0.1 |
-| Growth limits | Stopped: food stores too low | 4743 | 10/12 | 19.76 | 5.1 |
-| Growth limits | Stopped: no free bed | 3331 | 2/12 | 13.88 | 6.2 |
-| Growth limits | Stopped: too soon after a birth | 3316 | 12/12 | 13.82 | 0.1 |
-| Growth limits | Stopped: too many young children at home | 3293 | 12/12 | 13.72 | 0.4 |
-| Growth limits | Stopped: already expecting | 822 | 12/12 | 3.42 | 0.1 |
-| Hardship | Wolf attacks | 664 | 12/12 | 2.77 | 0.2 |
-| Hardship | Fever outbreaks | 190 | 12/12 | 0.79 | 0.5 |
-| Hardship | Harsh winters | 71 | 12/12 | 0.30 | 0.8 |
-| Hardship | Droughts | 62 | 12/12 | 0.26 | 0.3 |
-| Hardship | Storms | 60 | 12/12 | 0.25 | 0.3 |
-| Hardship | Fires | 40 | 11/12 | 0.17 | 0.7 |
-| Hardship | Floods | 16 | 9/12 | 0.07 | 3.0 |
-| Hardship | Famines | 13 | 7/12 | 0.05 | 2.8 |
-| Hardship | Plagues | 7 | 6/12 | 0.03 | 2.0 |
-| Hardship | Buildings collapsed | 2 | 2/12 | 0.01 | 15.9 |
-| Hardship | Cargoes lost | 2 | 2/12 | 0.01 | 16.3 |
-| Knowledge | Discoveries | 406 | 12/12 | 1.69 | 0.7 |
-| Knowledge | Lessons learned | 129 | 12/12 | 0.54 | 1.6 |
-| Knowledge | New ages | 32 | 12/12 | 0.13 | 3.0 |
-| Knowledge | Great works finished | 21 | 11/12 | 0.09 | 2.3 |
-| Knowledge | Lessons bought from neighbours | 4 | 3/12 | 0.02 | 18.3 |
-| People | Births | 34321 | 12/12 | 143.00 | 0.1 |
-| People | Deaths (all) | 18945 | 12/12 | 78.94 | 0.5 |
-| People | Died of old age | 13019 | 12/12 | 54.25 | 4.8 |
-| People | Died of fever | 5645 | 12/12 | 23.52 | 1.0 |
-| People | Newcomers arrive | 5137 | 12/12 | 21.40 | 0.2 |
-| People | Couples formed | 2365 | 12/12 | 9.85 | 0.1 |
-| People | Dreams achieved | 1317 | 12/12 | 5.49 | 0.6 |
-| People | Killed by wolves | 251 | 12/12 | 1.05 | 0.5 |
-| People | Starved | 20 | 7/12 | 0.08 | 2.8 |
-| People | Cabins built | 17 | 9/12 | 0.07 | 2.2 |
-| People | Froze | 4 | 2/12 | 0.02 | 7.0 |
-| Society | Funerals | 4717 | 12/12 | 19.65 | 0.6 |
-| Society | Council decisions | 3149 | 12/12 | 13.12 | 0.1 |
-| Society | Weddings | 1973 | 12/12 | 8.22 | 0.1 |
-| Society | Estates passed on | 1628 | 12/12 | 6.78 | 0.6 |
-| Society | Holidays | 1506 | 12/12 | 6.28 | 0.1 |
-| Society | Trials | 1125 | 12/12 | 4.69 | 0.2 |
-| Society | Thefts | 1089 | 12/12 | 4.54 | 0.1 |
-| Society | Elections | 302 | 12/12 | 1.26 | 0.2 |
-| Society | Concerns raised | 266 | 12/12 | 1.11 | 0.4 |
-| Society | Feuds begun | 166 | 12/12 | 0.69 | 2.8 |
-| Society | Feuds mended | 160 | 12/12 | 0.67 | 3.9 |
-| Society | Critical concerns | 114 | 11/12 | 0.47 | 2.8 |
-| Society | Overtime calls | 71 | 11/12 | 0.30 | 0.6 |
-| Society | Assaults | 39 | 4/12 | 0.16 | 5.0 |
-| Society | Rival councils | 28 | 9/12 | 0.12 | 3.6 |
-| Society | Banishments | 26 | 9/12 | 0.11 | 7.4 |
-| Society | Strikes | 25 | 9/12 | 0.10 | 2.7 |
-| Society | Sects founded | 15 | 12/12 | 0.06 | 3.1 |
-| Society | Coups | 12 | 10/12 | 0.05 | 1.9 |
-| Society | Civil strife | 8 | 5/12 | 0.03 | 4.7 |
-| Society | Purges | 6 | 4/12 | 0.03 | 4.3 |
-| Society | Guilds founded | 2 | 1/12 | 0.01 | 16.3 |
+| Economy & expansion | Fish landed by the townsfolk | 62555 | 6/6 | 347.53 | 14.3 |
+| Economy & expansion | Market deals | 292 | 6/6 | 1.62 | 2.5 |
+| Economy & expansion | Fields made by clearing woodland | 277 | 6/6 | 1.54 | 0.2 |
+| Economy & expansion | Expeditions returned | 177 | 6/6 | 0.98 | 3.1 |
+| Economy & expansion | Sites heard of | 165 | 6/6 | 0.92 | 0.4 |
+| Economy & expansion | Terraform works done | 117 | 6/6 | 0.65 | 11.1 |
+| Economy & expansion | Jobs invented | 117 | 6/6 | 0.65 | 0.6 |
+| Economy & expansion | Home plots made by clearing woodland | 96 | 5/6 | 0.53 | 12.3 |
+| Economy & expansion | Trading trips | 56 | 4/6 | 0.31 | 21.3 |
+| Economy & expansion | Inventions that failed | 42 | 6/6 | 0.23 | 1.3 |
+| Economy & expansion | Harbour upgrades | 27 | 4/6 | 0.15 | 21.4 |
+| Economy & expansion | Peoples discovered | 27 | 6/6 | 0.15 | 0.1 |
+| Economy & expansion | Outposts founded | 25 | 6/6 | 0.14 | 6.6 |
+| Economy & expansion | Ships built | 15 | 5/6 | 0.08 | 10.3 |
+| Economy & expansion | Lessons sold abroad | 15 | 4/6 | 0.08 | 22.3 |
+| Economy & expansion | Crafts taken by our spies | 3 | 2/6 | 0.02 | 25.6 |
+| Economy & expansion | Expeditions lost | 1 | 1/6 | 0.01 | 19.2 |
+| Growth limits | Birth attempts by couples | 36107 | 6/6 | 200.59 | 0.1 |
+| Growth limits | Stopped: past fertile age | 18148 | 6/6 | 100.82 | 1.5 |
+| Growth limits | Stopped: too many young children at home | 6441 | 6/6 | 35.78 | 0.8 |
+| Growth limits | Stopped: too soon after a birth | 4878 | 6/6 | 27.10 | 0.2 |
+| Growth limits | Conceptions | 2903 | 6/6 | 16.13 | 0.1 |
+| Growth limits | Stopped: chance (damping, policy, hardship) | 2675 | 6/6 | 14.86 | 0.1 |
+| Growth limits | Stopped: already expecting | 1062 | 6/6 | 5.90 | 0.1 |
+| Hardship | Wolf attacks | 396 | 6/6 | 2.20 | 0.2 |
+| Hardship | Fever outbreaks | 121 | 6/6 | 0.67 | 0.6 |
+| Hardship | Storms | 58 | 6/6 | 0.32 | 0.3 |
+| Hardship | Droughts | 49 | 6/6 | 0.27 | 0.3 |
+| Hardship | Harsh winters | 44 | 6/6 | 0.24 | 0.8 |
+| Hardship | Fires | 26 | 6/6 | 0.14 | 2.4 |
+| Hardship | Plagues | 9 | 6/6 | 0.05 | 22.6 |
+| Hardship | Famines | 8 | 3/6 | 0.04 | 0.3 |
+| Hardship | Floods | 6 | 6/6 | 0.03 | 24.0 |
+| Hardship | Cargoes lost | 5 | 3/6 | 0.03 | 25.2 |
+| Hardship | Buildings collapsed | 1 | 1/6 | 0.01 | 15.8 |
+| Knowledge | Discoveries | 251 | 6/6 | 1.39 | 1.1 |
+| Knowledge | Lessons learned | 84 | 6/6 | 0.47 | 1.0 |
+| Knowledge | Great works finished | 34 | 6/6 | 0.19 | 4.3 |
+| Knowledge | New ages | 20 | 6/6 | 0.11 | 6.4 |
+| Knowledge | Lessons bought from neighbours | 18 | 3/6 | 0.10 | 22.9 |
+| People | Births | 6598 | 6/6 | 36.66 | 0.2 |
+| People | Deaths (all) | 3984 | 6/6 | 22.13 | 0.3 |
+| People | Died of old age | 2204 | 6/6 | 12.24 | 6.0 |
+| People | Died of fever | 1574 | 6/6 | 8.74 | 1.3 |
+| People | Newcomers arrive | 1319 | 6/6 | 7.33 | 0.4 |
+| People | Couples formed | 1272 | 6/6 | 7.07 | 0.1 |
+| People | Dreams achieved | 796 | 6/6 | 4.42 | 1.6 |
+| People | Killed by wolves | 191 | 6/6 | 1.06 | 0.6 |
+| People | Cabins built | 18 | 6/6 | 0.10 | 3.6 |
+| People | Starved | 14 | 3/6 | 0.08 | 0.3 |
+| Society | Council decisions | 2310 | 6/6 | 12.83 | 0.1 |
+| Society | Funerals | 2079 | 6/6 | 11.55 | 0.3 |
+| Society | Holidays | 1192 | 6/6 | 6.62 | 0.1 |
+| Society | Estates passed on | 1002 | 6/6 | 5.57 | 0.6 |
+| Society | Weddings | 1002 | 6/6 | 5.57 | 0.1 |
+| Society | Thefts | 409 | 6/6 | 2.27 | 0.9 |
+| Society | Trials | 409 | 6/6 | 2.27 | 1.0 |
+| Society | Elections | 237 | 6/6 | 1.32 | 0.2 |
+| Society | Concerns raised | 94 | 6/6 | 0.52 | 0.4 |
+| Society | Feuds begun | 58 | 6/6 | 0.32 | 4.4 |
+| Society | Feuds mended | 52 | 6/6 | 0.29 | 5.2 |
+| Society | Critical concerns | 25 | 6/6 | 0.14 | 0.4 |
+| Society | Guilds founded | 15 | 4/6 | 0.08 | 22.8 |
+| Society | Rival councils | 14 | 4/6 | 0.08 | 6.8 |
+| Society | Coups | 10 | 4/6 | 0.06 | 2.8 |
+| Society | Sects founded | 8 | 6/6 | 0.04 | 3.1 |
+| Society | Purges | 7 | 3/6 | 0.04 | 4.3 |
+| Society | Overtime calls | 7 | 3/6 | 0.04 | 0.4 |
+| Society | Strikes | 6 | 3/6 | 0.03 | 7.3 |
+| Society | Banishments | 6 | 3/6 | 0.03 | 6.6 |
+| Society | Civil strife | 1 | 1/6 | 0.01 | 12.6 |
 
-## Never seen in any run (16)
+## Never seen in any run (24)
 
-Lost at sea; Killed in raids or strife; Uprisings; Reforms; Secessions; Outposts failed; Bridges built; Crafts taken by our spies; Campaigns launched; Campaigns won; Campaigns lost; Campaigns drawn; Outposts attacked; Outpost attacks beaten off; Responses tried; Knowledge lost
+Froze; Lost at sea; Killed in raids or strife; Uprisings; Reforms; Secessions; Assaults; Outposts failed; Outposts broke away; Bridges built; Campaigns launched; Campaigns won; Campaigns lost; Campaigns drawn; Outposts attacked; Outpost attacks beaten off; Timber runs by boat; Timber runs lost at sea; Wood fetched by boat; Boats added for timber; Responses tried; Knowledge lost; Stopped: no free bed; Stopped: food stores too low

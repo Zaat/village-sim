@@ -3,8 +3,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.37', name: 'Metropolis',
-  news: ['Towns now grow big: a continent town passes 3,000 people. Most of a large town is a counted crowd, so the game stays fast.', 'The districts overlay (World tab) tints the map by district; click one for its people, mood, homes, jobs, food and wood, and in Play give it an order.', 'Storage is real: yards for wood and stone, storehouses and granaries for food. Fishers draw on the real fish stock, and boats fetch wood from far shores.', 'Hardship is measured: Gentle passes 1,000 people, Harsh is hard but survivable.', 'Phone fixes: the Menu and About cards scroll and close, pinch and pan no longer stick, and Diagnostics is filled in.'],
+  version: '0.38', name: 'Pace',
+  news: ['Towns now grow at a believable pace: a long childhood, children who sometimes die, wider gaps between births and fewer travellers. A thousand people takes about 30 years on Gentle, 35 on Normal and 45 or more on Harsh.', 'A big town has to keep the peace: past what its guards, laws and rulers can hold, crime and distrust slow births and newcomers (see Order in the Stats tab).', 'Older saves carry over: everyone keeps their stage of life.', 'Hardship settings are wider apart: Gentle grows clearly faster, Harsh clearly slower.']
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>

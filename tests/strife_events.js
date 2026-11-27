@@ -2,7 +2,7 @@
 const fs=require('fs'),vm=require('vm'),path=require('path');
 const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,vOf,regimeDay,strifeDay,shadowDay,respondShadow,startCivil,civilDay,secede,sectDay,strikeDay,respondStrike,secessionTalks,adultsOf,chiefOf,serializeWorld,deserializeWorld,projBuilt,projAvailable,rxFrom,rxBuildings,deliberate,ISSUES,PROJECTS,NEIGH_PROFILE});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
-const w=new ctx.World(777);for(let d=1;d<=90;d++){for(let t=0;t<1200;t++)w.step()}
+require('./lib').oldPace(ctx.CFG);const w=new ctx.World(777);for(let d=1;d<=90;d++){for(let t=0;t<1200;t++)w.step()}
 const log=[];w.listeners.push((t,txt)=>{if(t==='regime'||t==='diplomacy')log.push(`[${t}] ${txt}`)});
 const R=w.regime,S=w.strife,ad=()=>ctx.adultsOf(w),realDeliberate=ctx.deliberate;
 const choose=id=>{ctx.deliberate=(w_,req)=>req.apply(id,[],'','rules')};const restore=()=>{ctx.deliberate=realDeliberate};

@@ -136,9 +136,9 @@ function planRoads(w) {
 }
 /* ---------- growth: how forgiving the world is, and how well life is going ---------- */
 const HARDSHIP = [
-  { name: 'Gentle', fert: 1.25, imm: 1.4, wolf: 0.6, sick: 0.7, cold: 0.7, crop: 1.08, note: 'more births and newcomers, fewer wolves, fevers and hard winters' },
+  { name: 'Gentle', fert: 1.3, imm: 1.6, wolf: 0.6, sick: 0.7, cold: 0.7, crop: 1.08, note: 'more births and newcomers, fewer wolves, fevers and hard winters' },
   { name: 'Normal', fert: 1, imm: 1, wolf: 1, sick: 1, cold: 1, crop: 1, note: 'the usual balance' },
-  { name: 'Harsh', fert: 0.8, imm: 0.7, wolf: 1.4, sick: 1.3, cold: 1.3, get crop() { return CFG.HARSH_CROP || 0.8 }, note: 'fewer births and newcomers, more wolves, fevers and hard winters' },
+  { name: 'Harsh', fert: 0.75, imm: 0.55, wolf: 1.4, sick: 1.3, cold: 1.3, get crop() { return CFG.HARSH_CROP || 0.8 }, note: 'fewer births and newcomers, more wolves, fevers and hard winters' },
 ];
 const hardOf = w => HARDSHIP[w.settings.hardship == null ? 1 : w.settings.hardship] || HARDSHIP[1];
 /* prosperity 0.3..1.8, refreshed daily: food in store, spare beds, mood and health. It nudges births, newcomers and how far ahead builders plan. */
@@ -148,6 +148,9 @@ function prosperityDay(w) {
   const fa = w.vills.filter(v => v.isAdult() && v.age <= CFG.FERTILE_MAX * (w.lifeScale || 1)); w.pairNeed = fa.length >= 6 ? clamp(1 - (fa.filter(v => v.partner != null).length / fa.length) / 0.55, 0, 1) : 0;       // few couples among the fertile: people are readier to settle down
   w.lifeScale = 1 + 0.5 * Math.min(0.75, techFx(w, 'health'));       // medicine, nutrition and sanitation stretch a life by up to about 37%
   w.prosp = clamp(0.4 + 0.35 * food + 0.35 * room + 0.5 * (mood - 0.5) + 0.3 * (hp - 0.7), 0.3, 1.8);
+  // order: a town can keep the peace for only so many people; beyond that crime, feuds and distrust slow births and newcomers until laws, guards and wiser rule catch up
+  const keep = CFG.ORDER_BASE * (1 + Math.min(2, techFx(w, 'defence'))) * (0.7 + 0.6 * (w.regime ? w.regime.ax.auth : 0.35)), strain = clamp((w.pop - keep) / keep, 0, 3);
+  w.order = 1 / (1 + CFG.ORDER_BITE * strain); w.prosp = clamp(w.prosp * w.order, 0.3, 1.8);
 }
 const fertilityMult = w => clamp(w.prosp == null ? 1 : w.prosp, 0.5, 1.6);
 function crowdWant(w, pending, pop) {
@@ -266,10 +269,10 @@ function townNewDay(w) {
   if (d < 4) return;
   if (dis && s >= 1 && s <= 2) { if (w.houses().length && w.r() < 0.012 * sv * (w.drought ? 2 : 1) * (1 - 0.5 * lesson(w, 'fire'))) fire(w); if (w.r() < 0.02 * sv * (1 - 0.4 * lesson(w, 'storm'))) storm(w) }
   const cap = w.beds(), gp = w.gov.policy.growth;
-  if (cap > pop + 1 && gp > -0.75 && w.r() < 0.1 * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1) * hardOf(w).imm * clamp(((w.prosp == null ? 1 : w.prosp) - 0.5) * 1.3, 0, 1.4) * (pop < 70 ? 1 : 120 / (120 + pop - 70))) {            // travelers seek a home
-    const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * 3) | 0);
+  if (cap > pop + 1 && gp > -0.75 && w.r() < CFG.IMM_CHANCE * (projBuilt(w, 'monument') ? 1.35 : 1) * (1 + 0.8 * gp) / (w.settings.survival ? 2 : 1) * hardOf(w).imm * clamp(((w.prosp == null ? 1 : w.prosp) - 0.5) * 1.3, 0, 1.4) * (pop < 70 ? 1 : 120 / (120 + pop - 70))) {            // travelers seek a home
+    const sp = ringSpot(w, 24, 32), n = 1 + ((w.r() * CFG.IMM_MAX) | 0);
     if (sp) {
-      const names = []; for (let k = 0; k < n; k++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', 12 + w.r() * 20, sp.x, sp.y); v.hunger = 85; v.story('Arrived at the village as a traveler seeking shelter.'); w.vills.push(v); names.push(v.name) }
+      const names = []; for (let k = 0; k < n; k++) { const v = new Villager(w, w.r() < 0.5 ? 'f' : 'm', CFG.ADULT_DAYS + w.r() * 18, sp.x, sp.y); v.hunger = 85; v.story('Arrived at the village as a traveler seeking shelter.'); w.vills.push(v); names.push(v.name) }
       noteFlow(w, 'arrived', n); w.emit('event', `${names.join(', ')} arrive${n === 1 ? 's' : ''} seeking shelter, and ${n === 1 ? 'is' : 'are'} welcomed.`, { kind: 'newcomers', names });
     }
   }

@@ -5,7 +5,7 @@ const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx)
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++}else{fail++;console.log('FAIL',m)}};
 const day=(w,n=1)=>{for(let d=0;d<n;d++){for(let t=0;t<1200;t++)w.step()}};
 const nextDay=w=>ctx.concernsDay(w);      // run the daily check on exactly the state we set up (carried food would refill stores within a day)
-const w=new ctx.World(31,{map:'island'});day(w,60);
+require('./lib').oldPace(ctx.CFG);const w=new ctx.World(31,{map:'island'});day(w,60);
 const C=ctx.CN(w);
 ok(C.pop.length>=50,'population history kept');
 // 1. food concern: drain the stores

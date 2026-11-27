@@ -13,4 +13,7 @@ const loadSim = names => { const ctx = { console, Buffer, performance }; vm.crea
 /* checkpoint(S, name) -> a world loaded from tests/checkpoints/NAME.json.gz (made by tools/checkpoint.js); S needs deserializeWorld */
 const checkpoint = (S, name) => JSON.parse(require('zlib').gunzipSync(fs.readFileSync(path.join(ROOT, 'tests', 'checkpoints', name + '.json.gz'))));
 const loadCheckpoint = (S, name) => S.deserializeWorld(checkpoint(S, name));
-module.exports = { ROOT, SRC, BROWSER_ONLY, code, loadSim, checkpoint, loadCheckpoint };
+/* v0.38 slowed the growth of towns (a long childhood, child deaths, wide birth spacing, few newcomers, an order brake). Suites that only need a big town quickly, and say nothing about pace, switch back to the earlier fast settings with oldPace(CFG). */
+const OLD_PACE = { INFANT_DAYS: 3, CHILD_DAYS: 8, ADULT_DAYS: 14, FERTILE_MAX: 85, CHILD_MORT: 0, IMM_CHANCE: 0.1, IMM_MAX: 3, CROWD_DRAW: 0.012, ORDER_BITE: 0, DEP_CAP: 3, PREGNANCY: 960, BIRTH_COOLDOWN: 2400 };
+const oldPace = CFG => Object.assign(CFG, OLD_PACE);
+module.exports = { ROOT, SRC, BROWSER_ONLY, code, loadSim, checkpoint, loadCheckpoint, oldPace, OLD_PACE };

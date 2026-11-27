@@ -17,3 +17,13 @@
 {"t":"2026-11-25T13:48:06.163Z","mode":"pages","kind":"pages","n":17,"failed":0,"wall":313,"work":313,"jobs":1,"bad":[]}
 {"t":"2026-11-25T14:44:41.649Z","mode":"full","kind":"node","n":38,"failed":0,"wall":835,"work":1670,"jobs":2,"bad":[]}
 {"t":"2026-11-25T14:49:58.053Z","mode":"pages","kind":"pages","n":17,"failed":0,"wall":316,"work":316,"jobs":1,"bad":[]}
+{"t":"2026-11-26T13:36:05.966Z","mode":"full","kind":"node","n":38,"failed":6,"wall":654,"work":1307,"jobs":2,"bad":["golden","crowd_events","strife_events","play_events","concerns_events","concerns_states"]}
+{"t":"2026-11-26T13:46:10.089Z","mode":"list","kind":"node","n":5,"failed":0,"wall":106,"work":210,"jobs":2,"bad":[]}
+{"t":"2026-11-26T13:46:45.125Z","mode":"list","kind":"node","n":1,"failed":1,"wall":13,"work":13,"jobs":2,"bad":["pace_events"]}
+{"t":"2026-11-26T14:01:50.419Z","mode":"full","kind":"node","n":39,"failed":0,"wall":691,"work":1382,"jobs":2,"bad":[]}
+{"t":"2026-11-26T15:06:36.878Z","mode":"list","kind":"node","n":2,"failed":0,"wall":44,"work":87,"jobs":2,"bad":[]}
+{"t":"2026-11-27T05:15:22.626Z","mode":"full","kind":"node","n":39,"failed":0,"wall":700,"work":1392,"jobs":2,"bad":[]}
+{"t":"2026-11-27T05:19:31.455Z","mode":"pages","kind":"pages","n":17,"failed":4,"wall":249,"work":249,"jobs":1,"bad":["ui_crowd","ui_play","ui_districts","ui_help"]}
+{"t":"2026-11-27T05:22:54.102Z","mode":"list","kind":"node","n":4,"failed":0,"wall":54,"work":106,"jobs":2,"bad":[]}
+{"t":"2026-11-27T05:34:49.268Z","mode":"full","kind":"node","n":39,"failed":0,"wall":711,"work":1422,"jobs":2,"bad":[]}
+{"t":"2026-11-27T05:38:23.989Z","mode":"pages","kind":"pages","n":17,"failed":0,"wall":215,"work":215,"jobs":1,"bad":[]}

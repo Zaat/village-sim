@@ -21,7 +21,7 @@ const treeNear = w => { const { W } = S.CFG, T = []; for (let i = 0; i < w.feat.
 // roles hold, and the village stops giving jobs when that switch is off
 { const w = mk(), v = w.vills.find(x => x.isAdult() && !x.isElder() && !x.trade); S.playOrder(w, [v.id], { k: 'role', role: 'fisher' }); days(w, 6);
   ok(v.role === 'fisher', 'a role the player gives is kept by the village planner: ' + v.role); ok(w.play.locks.includes(v.id), 'the lock is saved data');
-  S.playSet(w, 'jobs', false); const before = JSON.stringify(w.vills.map(x => x.role)); days(w, 6); ok(JSON.stringify(w.vills.map(x => x.role)) === before || w.vills.length !== JSON.parse(before).length, 'with jobs switched off the village hands out no roles'); }
+  S.playSet(w, 'jobs', false); const roles0 = new Map(w.vills.map(x => [x.id, x.role])); days(w, 6); ok(w.vills.filter(x => roles0.has(x.id)).every(x => x.role === roles0.get(x.id)), 'with jobs switched off the village hands out no roles'); }
 // placing, refusing, cancelling
 { const w = mk(), [p1, p2] = free(w, 2); ok(!!p1 && !!p2, 'free ground exists near the camp');
   const r = S.playPlace(w, 'house', p1[0], p1[1]); ok(r.ok && r.bp.player && w.bps[0] === r.bp, 'a placed house is a player site at the front of the queue');

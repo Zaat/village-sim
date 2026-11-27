@@ -1,10 +1,10 @@
 // Concern states (v0.24.2a): gauge, responding, easing, failed, council nudges, resolved list
 const fs=require('fs'),vm=require('vm'),path=require('path');
-const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CN,concernsDay,respond,responseState,concernState,concernGauge,actLive,RESPONSES});';
+const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,CN,concernsDay,respond,responseState,concernState,concernGauge,actLive,RESPONSES});';
 const ctx={console:{log(){},error(){}},Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 let pass=0,fail=0;const ok=(c,m)=>{if(c){pass++}else{fail++;console.log('FAIL',m)}};
 const day=(w,n=1)=>{for(let d=0;d<n;d++){for(let t=0;t<1200;t++)w.step()}};
-const w=new ctx.World(31,{map:'island'});day(w,60);const C=ctx.CN(w);
+require('./lib').oldPace(ctx.CFG);const w=new ctx.World(31,{map:'island'});day(w,60);const C=ctx.CN(w);
 // attention: fresh critical food concern, no response yet
 w.stock.food=Math.floor(w.vills.length*0.8);ctx.concernsDay(w);
 let c=C.list.find(x=>x.key==='food');ok(c&&c.m&&c.m.v<c.m.ok,'food concern carries a metric');
