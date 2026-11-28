@@ -25,7 +25,7 @@ function placeBuilding(w, type, wide, at) {       // `at` (a hamlet) restricts t
     }
     if (!ok) continue;
     const d = Math.hypot(x - w.cx, y - w.cy); if (d < 2.5 || d > dmax) continue;
-    const score = at ? Math.hypot(x - at.x, y - at.y) + w.r() * 2 : type === 'house' ? houseScore(w, x, y, d, pop) : type === 'farm' ? farmScore(w, x, y, d, pop) : type === 'workshop' ? workshopScore(w, x, y, d) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
+    const score = at ? Math.hypot(x - at.x, y - at.y) + w.r() * 2 : type === 'house' ? houseScore(w, x, y, d, pop) : type === 'farm' ? farmScore(w, x, y, d, pop) : type === 'workshop' ? workshopScore(w, x, y, d) : type === 'power' ? powerScore(w, x, y, d) : type === 'store' ? Math.abs(d - 5) + w.r() * 2 : type === 'market' ? Math.abs(d - 5.5) + w.r() * 2 : type === 'plaza' ? Math.abs(d - 4.5) + w.r() * 1.5 : type === 'tavern' ? Math.abs(d - 7) + w.r() * 2 : Math.abs(d - 9) + w.r() * 3;
     cands.push({ x, y, score: score + trees * 1.2 });
   }
   if (w.play && w.play.nz && PLACE[type]) { const zs = [], uz = []; for (const c of cands) { const f = zoneFit(w, type, c.x, c.y, bw, bh); if (f > 0) zs.push(c); else if (f === 0) uz.push(c) } cands.splice(0, cands.length, ...(zs.length ? zs : uz)) }       // painted zones (Play): inside the right zone first, never inside another
@@ -178,6 +178,7 @@ function planTown(w) {
   if (w.has('carpentry') && pop >= 14 && !w.of('plaza').length && !count('plaza') && w.stock.wood >= 14) placeBuilding(w, 'plaza');
   if (w.has('trade') && w.of('plaza').length && pop >= 30 && w.of('tavern').length + count('tavern') < Math.min(3, 1 + Math.floor(pop / 90)) && w.stock.wood > 40) placeBuilding(w, 'tavern');
   planWorkshops(w);
+  planPower(w);
   planCamps(w);
   planUpgrades(w);
   planRoads(w);

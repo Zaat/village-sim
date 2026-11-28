@@ -4,8 +4,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.39.3', name: 'Events, performance and polish',
-  news: ['A new Events tab: Now (what the village is doing), a ranked feed with filters, and Years and decades. Events with a place have a pin that shows you where.', 'A living crowd: the townsfolk beyond the villagers in play walk to work, work, meet at the plaza and go home by the time of day. You can now select boats, ships, wagons, trees and rocks.', 'The same seed now gives the same village in every browser (six random sorts fixed). A clearer build panel, more of the game in Spanish, and diagnostics that check what sits on top of the tabs.'],
+  version: '0.40', name: 'Farming, energy, reach and City design',
+  news: ['Stone, coal, oil and peat now run out, with the amount left and the trend on each resource card. Winter heat moves from wood to peat or coal to power stations, and a shortage raises a concern you can answer.', 'Explorers reach other islands, and boats fetch stone from far shores. The council now commissions a layout style for the town, scores every district for looks, and keeps a ledger of projects such as squares and heritage homes.', 'The heavy daily work is spread over the day so fast speeds stay smooth, and saves that could not load are fixed, with the reason shown and a Download button.'],
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>
@@ -69,5 +69,5 @@ function menuInit() {
   document.addEventListener('click', e => { if (!e.target.closest('#menu') && e.target !== mb) close() });
   menu.onclick = e => { const b = e.target.closest('[data-mn]'); if (!b) return; close(); ({ new: () => nwOpen(), save: () => saveToStorage(true), load: () => $('loadSave').click(), scen: scenariosOpen, settings: () => toggleDrawer(true), fullscreen: () => toggleFullscreen(), help: helpOpen, about: aboutOpen })[b.dataset.mn]() };
   $('modal_x').onclick = modalClose; $('modal').addEventListener('pointerdown', e => { if (e.target === $('modal')) modalClose() });
-  addEventListener('keydown', e => { if (e.key === 'Escape' && $('modal').style.display !== 'none') { modalClose(); e.stopPropagation() } if (e.key === '?' && !(e.target && e.target.tagName === 'INPUT')) helpOpen() }, true);
+  addEventListener('keydown', e => { if (e.key === 'Escape' && $('modal').style.display !== 'none') { modalClose(); e.stopPropagation() } if (e.key === '?' && !(e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT'))) keysToggle() }, true);
 }

@@ -142,11 +142,10 @@ function drawCrowd(g, w, inView, T, now) {
     const home = live ? cwHome(w, h, C) : null, doorX = h.x + h.w / 2, doorY = h.y + h.h + 0.5;
     for (let i = 0; i < k; i++) {
       const hh = hash2(h.id, i + 11), s = hh % 97, small = (s % 7) === 0 ? 2 : 0;
-      if (!live) {                                                 // the still look, as before, but not at night
-        if (night) continue;
+      if (!live) {                                                 // the still look at the doors; v0.40: shown at every hour, because at 100x a day lasts under a second and hiding them at night made the crowd blink
         const ph = ((now / 700) + s) % 6.283, bob = Math.abs(Math.sin(ph)) < 0.35 ? 1 : 0;
         const ax = Math.round((doorX + ((s % 9) - 4) * 0.34 + Math.sin(ph * 0.4) * 0.15) * T), ay = Math.round((doorY + (((s / 9) | 0) % 4) * 0.3) * T) - bob;
-        cwFigure(g, ax, ay, s, small, 0, 0); continue;
+        cwFigure(g, ax, ay, s, small, 0, 0); st.figures++; continue;
       }
       const t = (tod + ((hh >> 8) % 40) / 1000) % 1;                // a stagger of up to 0.04 of a day
       if (t >= CW_DAY.in) continue;                                // asleep inside

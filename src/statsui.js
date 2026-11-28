@@ -63,17 +63,20 @@ function drawStatChart() {
 function sparkSvg(arr, color) {
   if (!arr.length) return ''; const n = Math.min(arr.length, 24), a = arr.slice(-n), mx = Math.max(1, ...a), bw = 3, gap = 1, W = n * (bw + gap); return `<svg width="${W}" height="14" viewBox="0 0 ${W} 14">${a.map((v, i) => `<rect x="${i * (bw + gap)}" y="${14 - Math.round(v / mx * 13) - (v > 0 ? 1 : 0)}" width="${bw}" height="${Math.round(v / mx * 13) + (v > 0 ? 1 : 0)}" fill="${color}" opacity=".85"/>`).join('')}</svg>`;
 }
+/* v0.39.4: write a panel only when its markup changed. Rebuilding the preset buttons several times a second (every game day at 100x and Max) removed the button under the pointer, so hover and clicks were lost. */
+function setHtmlIfChanged(el, html) { if (el._html !== html) { el._html = html; el.innerHTML = html } }
+let statLastRender = 0;
 function renderStats(force) {
   const w = world; if (!w || !w.stats || !$('statSummary')) return; const day = w.day;
-  if (!force && statUI.renderedDay === day && !statUI.dirty) { drawStatChart(); return } statUI.renderedDay = day; statUI.dirty = false;
+  const nowMs = performance.now(); if (!force && !statUI.dirty && (statUI.renderedDay === day || nowMs - statLastRender < 400)) { drawStatChart(); return } statLastRender = nowMs; statUI.renderedDay = day; statUI.dirty = false;
   const S = w.stats, sm = statsSummary(w), yrs = Math.max(1, w.year);
   // summary
   const cell = (k, v) => `<div><span class="hint">${k}</span><b>${v}</b></div>`;
   $('statSummary').innerHTML = `<div class="stats">${cell('Age of the village', `${(w.day / 32).toFixed(1)} years`)}${cell('Population', `${sm.pop} <span class="hint">peak ${sm.peakPop}</span>`)}${cell('Born / died', `${sm.born} / ${sm.died}`)}${cell('Technologies', sm.techs)}${cell('Great works', sm.projects)}${cell('Peoples known', (w.neigh || []).filter(n => n.found).length)}${cell('Outposts founded', sm.outposts)}${cell('Unrest events', sm.unrest)}</div>
     <div class="hint" style="margin-top:6px">Average mood ${Math.round(sm.meanMood)}, inequality ${sm.meanGini.toFixed(2)}, unity ${sm.meanUnity.toFixed(2)} over the whole run.</div>`;
   // chart controls
-  $('statViews').innerHTML = Object.entries(STAT_VIEWS).map(([k, v]) => `<button data-view="${k}" class="${v.ids.join() === statUI.sel.join() ? 'on' : ''}">${v.label}</button>`).join('');
-  $('statWin').innerHTML = [[5, '5 years'], [20, '20 years'], [0, 'All']].map(([n, l]) => `<button data-win="${n}" class="${statUI.win === n ? 'on' : ''}">${l}</button>`).join('');
+  setHtmlIfChanged($('statViews'), Object.entries(STAT_VIEWS).map(([k, v]) => `<button data-view="${k}" class="${v.ids.join() === statUI.sel.join() ? 'on' : ''}">${v.label}</button>`).join(''));
+  setHtmlIfChanged($('statWin'), [[5, '5 years'], [20, '20 years'], [0, 'All']].map(([n, l]) => `<button data-win="${n}" class="${statUI.win === n ? 'on' : ''}">${l}</button>`).join(''));
   const opts = STAT_SERIES.map(s => `<option value="${s.id}">${escapeHtml(s.group + ': ' + s.label)}</option>`).join(''); const sel = $('statAdd'); if (!sel.dataset.ready) { sel.innerHTML = '<option value="">+ add a measure…</option>' + opts; sel.dataset.ready = 1 }
   drawStatChart();
   // events

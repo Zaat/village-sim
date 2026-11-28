@@ -80,6 +80,17 @@ function concernHtml(w, c) {
     ${acts.map(a => actHtml(w, a)).join('')}
     ${st.state === 'responding' ? `<details class="cnmore"><summary class="hint">More responses</summary><div class="cnr">${btns}</div></details>` : `<div class="cnr">${btns}</div>`}</div>`;
 }
+/* v0.40 council record: title, rating, counts and the stories behind them */
+const CN_OUT = { answered: 'answered', eased: 'eased on its own', bad: 'ended badly' };
+function recordHtml(w) {
+  const r = councilRecord(w); if (!r.total) return '';
+  const pct = r.rating === null ? 0 : Math.round(100 * r.rating), col = r.rating === null ? '#5a6672' : r.rating >= 0.68 ? '#8fd18b' : r.rating >= 0.5 ? '#e0c25c' : '#e07a5a';
+  const line = e => e ? `${escapeHtml(e.t.toLowerCase())} (${cnYear(e.d)})` : '';
+  return `<details class="cnrec" style="margin-top:8px"><summary class="hint">Council record: <b style="color:var(--ink)">${escapeHtml(r.title)}</b>${r.rating === null ? '' : ' · ' + pct + '%'}</summary>
+    <div class="cnbar" style="margin:6px 0"><i style="width:${pct}%;background:${col}"></i></div>
+    <div class="hint">${r.n.answered} answered · ${r.n.eased} eased on their own · ${r.n.bad} ended badly · ${r.open} open. ${r.got} of ${r.poss} points.</div>
+    ${r.best ? `<div class="hint">Best: ${line(r.best)}.</div>` : ''}${r.worst ? `<div class="hint">Worst: ${line(r.worst)}.</div>` : ''}${r.longest && r.longest.days >= 24 ? `<div class="hint">Longest: ${line(r.longest)}, ${r.longest.days} days.</div>` : ''}</details>`;
+}
 function renderConcerns(force) {
   const w = world, C = w && w.concerns; if (!C) return;
   const list = openConcerns(w), crit = list.filter(c => c.sev >= 2).length, hb = $('hudConcern');
@@ -95,11 +106,11 @@ function renderConcerns(force) {
   if (!held || cnUI.dk == null) cnUI.dk = Math.floor(w.day / 4);
   const sig = cnUI.dk + '|' + list.map(c => c.id + ':' + c.sev + ':' + c.text.length + ':' + (c.acts || []).map(a => a.status).join('')).join(',') + '|' + C.hist.length + '|' + cnUI.note;
   if (!force && sig === cnUI.sig) return; cnUI.sig = sig;
-  const fresh = C.hist.filter(h => w.day - h.end <= 16).map(h => `<div class="cn done"><b>✓ ${escapeHtml(h.title)}</b> <span class="hint">resolved day ${h.end}${h.did && h.did.length ? ' · tried: ' + escapeHtml(h.did.join(', ').toLowerCase()) : ''}</span></div>`).join(''), hist = C.hist.slice(0, 8).map(h => `<div class="hint">${cnYear(h.end)}: ${escapeHtml(h.title.toLowerCase())} eased (since day ${h.since})</div>`).join('');
+  const fresh = C.hist.filter(h => w.day - h.end <= 16).map(h => `<div class="cn done"><b>${h.out === 'bad' ? '✗' : '✓'} ${escapeHtml(h.title)}</b> <span class="hint">${CN_OUT[h.out] || 'resolved'} day ${h.end}${h.pts ? ' · ' + h.pts + ' pt' + (h.pts === 1 ? '' : 's') : ''}${h.did && h.did.length ? ' · tried: ' + escapeHtml(h.did.join(', ').toLowerCase()) : ''}</span></div>`).join(''), hist = C.hist.slice(0, 8).map(h => `<div class="hint">${cnYear(h.end)}: ${escapeHtml(h.title.toLowerCase())} ${h.out === 'bad' ? 'ended badly' : h.out === 'answered' ? 'answered' : 'eased'} (since day ${h.since})</div>`).join('');
   const keep = pnl ? pnl.scrollTop : 0;
   $('cnBody').innerHTML = (cnUI.note ? `<div class="cnnote">${escapeHtml(cnUI.note)}</div>` : '') + ordersLine(w)
     + (list.length ? list.sort((a, b) => b.sev - a.sev || a.since - b.since).map(c => concernHtml(w, c)).join('') : '<div class="hint" style="padding:6px 0">Nothing worries the village right now. It watches its population, food and firewood, and the unity of its people and outposts.</div>')
-    + fresh + (hist ? `<details id="cnHist" style="margin-top:8px"${cnUI.histOpen ? ' open' : ''}><summary class="hint">Recently eased</summary>${hist}</details>` : '');
+    + fresh + recordHtml(w) + (hist ? `<details id="cnHist" style="margin-top:8px"${cnUI.histOpen ? ' open' : ''}><summary class="hint">Recently eased</summary>${hist}</details>` : '');
   const hd = $('cnHist'); if (hd) hd.ontoggle = () => { cnUI.histOpen = hd.open };
   if (pnl) pnl.scrollTop = keep;       // a refresh keeps the reader's place
 }

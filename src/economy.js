@@ -34,7 +34,7 @@ function gatherReach(w, kind) {
   const found = [];
   for (let i = 0; i < W * H; i++) {
     const f = w.feat[i]; if (kind === 'wood' ? (f !== FEAT.OAK && f !== FEAT.PINE) || w.res[i] < 3 : f !== FEAT.STONE || w.res[i] < 1) continue;
-    const x = i % W, y = (i / W) | 0; let d = 1e9; for (const p of dep) { const e = Math.hypot(p[0] - x, p[1] - y); if (e < d) d = e } found.push([d, i]);
+    const x = i % W, y = (i / W) | 0; let e2 = 1e18; for (const p of dep) { const dx = p[0] - x, dy = p[1] - y, e = dx * dx + dy * dy; if (e < e2) e2 = e } found.push([Math.sqrt(e2), i]);       // squared distances in the loop (v0.40: the day-change cost)
   }
   found.sort((a, b) => a[0] - b[0] || a[1] - b[1]); const k = Math.min(found.length, ECON.near), list = found.slice(0, k);
   let s = 0, nc = 0; for (const [d, i] of list) { s += d; const x = i % W, y = (i / W) | 0; if (camps.some(p => Math.hypot(p[0] - x, p[1] - y) <= 14)) nc++ }
@@ -79,7 +79,7 @@ function fishReach(w) {
     if (t === TERR.SHALLOW) for (const [dx, dy] of NB) { const tt = w.terr[(y + dy) * W + x + dx]; if (tt === TERR.GRASS || tt === TERR.SAND) { shore = true; break } }
     if (seaOK) for (const k of docks) if ((k.x - x) * (k.x - x) + (k.y - y) * (k.y - y) <= FISH.seaReach * FISH.seaReach) { sea = true; break }
     if (!shore && !sea) continue;
-    let d = 1e9; for (const p of dep) { const e = Math.hypot(p[0] - x, p[1] - y); if (e < d) d = e }
+    let e2 = 1e18; for (const p of dep) { const dx = p[0] - x, dy = p[1] - y, e = dx * dx + dy * dy; if (e < e2) e2 = e } const d = Math.sqrt(e2);
     if (shore && d <= 60) frontage++;
     if (d <= 70) found.push([d, i]);
   }

@@ -46,6 +46,8 @@ function matSource(w, m) {
 const matOk = (w, m) => !!matSource(w, m);
 
 /* ----- seeding ----- */
+/* water within r tiles of a tile (a boat can stop there) */
+function shoreNear(w, i, r) { const { W, H } = CFG, x = i % W, y = (i / W) | 0; for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const nx = x + dx, ny = y + dy; if (nx >= 0 && ny >= 0 && nx < W && ny < H && w.terr[ny * W + nx] <= TERR.SHALLOW && dx * dx + dy * dy <= r * r) return true } return false }
 function genSites(w) {
   const { W, H } = CFG, rng = mulberry32((w.seed ^ 0x2C1B3C6D) >>> 0), R = () => rng(), D = w.disc, reg = landRegions(w), home = reg.label[w.cy * W + w.cx];
   const kindsLand = ['ruin', 'ruin', 'ruin', 'cave', 'cave', 'outcrop', 'outcrop', 'hoard', 'hoard'], kindsSea = ['wreck', 'wreck', 'wreck', 'shoals', 'shoals', 'whales', 'wreck'];
@@ -65,6 +67,9 @@ function genSites(w) {
   for (const k of kindsSea) place(k, k === 'whales' ? deepOk : shallowOk, 0, 16, 70);
   for (const k of ['ruin', 'cave', 'outcrop', 'hoard']) place(k, landOk, 0, 62, 100);                                     // a far ring, heard of only late
   for (const k of ['wreck', 'shoals', 'whales']) place(k, k === 'whales' ? deepOk : shallowOk, 0, 70, 115);
+  /* v0.40: land across the water. Other islands and shores get their own sites; they are reached by boat (the party goes ashore from the sea) */
+  const overOk = i => { const t = w.terr[i], l = reg.label[i]; return (t === TERR.GRASS || t === TERR.ROCK) && l > 0 && l !== home && reg.sizes[l] >= 40 && !w.feat[i] && !w.bmap[i] && shoreNear(w, i, 3) };
+  for (const k of ['ruin', 'cave', 'outcrop', 'hoard']) { const s = place(k, overOk, 0, 24, 110); if (s) s.over = true }
 }
 function addSite(w, kind, x, y, extra) {
   const D = DISC(w), K = SITE_KINDS[kind], s = Object.assign({ id: D.nid++, kind, x: Math.round(x), y: Math.round(y), known: true, done: false, uses: K.reuse || 1, mat: null, prize: 40, lore: true, risk: 0.04 }, extra || {}); D.sites.push(s); return s;
@@ -85,10 +90,10 @@ function ownHistoryDay(w) {
 function rumourDay(w) {
   const D = DISC(w); if (w.day < D.nextRumour) return; const lvl = ladderLevel(w, 'explore'), met = (w.neigh || []).filter(n => n.met).length, R = 34 + 26 * lvl + 9 * met + (w.has('boats') ? 10 : 0);
   D.nextRumour = w.day + Math.round(14 / (1 + 0.4 * lvl + 0.2 * met));
-  const hidden = D.sites.filter(s => !s.known && Math.hypot(s.x - w.cx, s.y - w.cy) <= R && (!SITE_KINDS[s.kind].sea || w.has('boats')) && (!SITE_KINDS[s.kind].tech || w.has(SITE_KINDS[s.kind].tech)));
+  const hidden = D.sites.filter(s => !s.known && Math.hypot(s.x - w.cx, s.y - w.cy) <= R && (!(SITE_KINDS[s.kind].sea || s.over) || w.has('boats')) && (!SITE_KINDS[s.kind].tech || w.has(SITE_KINDS[s.kind].tech)));
   if (!hidden.length) return; hidden.sort((a, b) => Math.hypot(a.x - w.cx, a.y - w.cy) - Math.hypot(b.x - w.cx, b.y - w.cy)); const s = hidden[0]; s.known = true; s.day = w.day;
   const K = SITE_KINDS[s.kind], dir = compass(w, s.x, s.y);
-  w.emit('rumour', K.sea ? `Fishers speak of ${K.name} to the ${dir}.` : `Hunters speak of ${K.name} to the ${dir}.`, { site: s.id }); revealCircle(w, s.x, s.y, 5);
+  w.emit('rumour', K.sea || s.over ? `Fishers speak of ${K.name} ${s.over ? 'across the water, ' : ''}to the ${dir}.` : `Hunters speak of ${K.name} to the ${dir}.`, { site: s.id }); revealCircle(w, s.x, s.y, 5);
 }
 
 /* ----- paths ----- */
@@ -104,7 +109,7 @@ function waterRoute(w, start, goal) {
 }
 function sitePath(w, s, boat) {
   const C = w._pc || (w._pc = new Map()), key = 'e' + s.id + (boat ? ':' + boat.dock : ''); if (C.has(key)) return C.get(key); let p = null;
-  if (SITE_KINDS[s.kind].sea) { if (boat) p = waterRoute(w, Math.floor(boat.my) * CFG.W + Math.floor(boat.mx), (x, y) => Math.hypot(x - s.x, y - s.y) <= 2.2) }
+  if (SITE_KINDS[s.kind].sea || s.over) { if (boat) p = waterRoute(w, Math.floor(boat.my) * CFG.W + Math.floor(boat.mx), (x, y) => Math.hypot(x - s.x, y - s.y) <= (s.over ? 3.2 : 2.2)) }
   else { const goal = (x, y) => Math.hypot(x - s.x, y - s.y) <= 2.5; p = w.search(w.cx, w.cy + 2, goal, 520) || w.search(w.cx, w.cy + 2, goal, 520, true) || null }
   C.set(key, p); return p;
 }
@@ -119,7 +124,7 @@ function planExpeditions(w) {
   for (const s of D.sites) {
     const K = SITE_KINDS[s.kind]; if (!s.known || s.done || s.unreach || (K.tech && !w.has(K.tech)) || act.some(e => e.site === s.id)) continue;
     if (s.seen && s.mat && !D.mats[s.mat] && !w.has(SURVEY[s.mat])) continue;                       // seen, not understood yet
-    const sea = !!K.sea; if (sea && (!w.has('boats') || w.season === 3 || w.pop < 45)) continue; if (act.some(e => e.mode === (sea ? 'sea' : 'land'))) continue;
+    const sea = !!K.sea || !!s.over; if (sea && (!w.has('boats') || w.season === 3 || w.pop < 45)) continue; if (act.some(e => e.mode === (sea ? 'sea' : 'land'))) continue;
     let boat = null; if (sea) { boat = w.boats.find(b => b.crew == null && b.state === 'moored' && !b.noSea && (b.kind || 'fishing') === 'fishing' && w.buildings.get(b.dock) && sitePath(w, s, b)); if (!boat) continue }
     const path = sea ? sitePath(w, s, boat) : sitePath(w, s); if (!path) { if (!sea) s.unreach = true; continue }
     const len = path.length, speed = sea ? 0.07 : 0.1, days = Math.max(2, (2 * len / speed + 160) / CFG.TPD);
@@ -130,7 +135,7 @@ function planExpeditions(w) {
   if (!best.length) return; best.sort((a, b) => b.cb.ratio - a.cb.ratio); proposeExpedition(w, best[0], app);
 }
 function proposeExpedition(w, p, app) {
-  const D = DISC(w), { s, K } = p, what = `${K.name} to the ${compass(w, s.x, s.y)}`, mat = s.mat && !matOk(w, s.mat) ? (w.has(SURVEY[s.mat]) ? ` It may hold ${MATS[s.mat].name}, which we lack.` : ' Hunters say the stone there looks odd.') : '';
+  const D = DISC(w), { s, K } = p, what = `${K.name}${s.over ? ' across the water' : ''} to the ${compass(w, s.x, s.y)}`, mat = s.mat && !matOk(w, s.mat) ? (w.has(SURVEY[s.mat]) ? ` It may hold ${MATS[s.mat].name}, which we lack.` : ' Hunters say the stone there looks odd.') : '';
   ask(w, { kind: 'expedition', topic: `An expedition could ${K.verb === 'fish' || K.verb === 'hunt' ? 'go to' : K.verb} ${what}: about ${p.days} days ${p.sea ? 'by boat' : 'on foot with a party of three'}, ${Math.round(p.risk * 100)}% risk.${mat} Worth about ${Math.round(p.cb.gain)} coins' worth against ${Math.round(p.cb.total * 10) / 10} in labour and risk.`,
     options: [{ id: 'go', text: `Send an expedition (${p.days} days)` }, { id: 'wait', text: 'Not now: keep everyone at home work' }], default: app < 0.7 ? 'wait' : 'go',
     apply: (id, sp, reason, src) => {
@@ -204,8 +209,14 @@ function expedEnd(w, ex, v, how) {
 function expedAbort(w, v) {
   const D = w.disc; if (!D) return; for (const ex of D.exped) if (ex.leader === v.id && ex.state === 'running') { ex.state = 'done'; ex.how = 'abort' }
 }
+/* v0.40: by the later ages the map is known. Flight (aviation) shows the land from above: the known circle grows round the village a few tiles a day until the whole map is seen. */
+function exploredFrac(w) { if (!w.seen) return 1; let n = 0; const s = w.seen; for (let i = 0; i < s.length; i++) n += s[i]; return n / s.length }
+function skyDay(w) {
+  if (!w.fog || !w.seen || !w.has('aviation')) return; const D = DISC(w); if (D.sky === undefined) D.sky = 60; if (D.sky > Math.hypot(CFG.W, CFG.H)) return;
+  D.sky += 3; revealCircle(w, w.cx, w.cy, D.sky);
+}
 function discoveryDay(w) {
-  const D = DISC(w); if (!D.gen) { D.gen = true; genSites(w) } ownHistoryDay(w); rumourDay(w); planExpeditions(w);
+  const D = DISC(w); if (!D.gen) { D.gen = true; genSites(w) } skyDay(w); ownHistoryDay(w); rumourDay(w); planExpeditions(w);
   bargeDay(w); researchDealDay(w);
   triggerDay(w);
   D.exped = D.exped.filter(e => e.state !== 'done' || w.day - (e.day || w.day) < 3);

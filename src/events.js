@@ -21,7 +21,7 @@ const EV_GROUPS = {
 };
 const EV_TIERS = ['small', 'medium', 'big'];
 const EV_KEEP = { 2: 1200, 1: 700, 0: 150 }, EV_TRIM_AT = 2600;
-const EV_DAYS_YEAR = 128;       // DPS 32 x 4 seasons
+const evDaysYear = () => CFG.DPS * 4;       // v0.40: was a fixed 128, which made the Years view lump four game years into one (a year is four seasons of CFG.DPS days)
 
 /* emit type -> [group, tier]; 'event' and 'diplomacy' and 'death' look at their data as well */
 const EV_TYPES = {
@@ -85,7 +85,7 @@ function evBackfill(w) {
   w.ev = null; initEvents(w); const E = w.ev, lines = (w.log || []).slice().reverse();
   for (const l of lines) { const [g, t] = evKind(undefined, l.text || '', null); const e = { i: E.next++, d: l.day, g, t, s: l.text }; E.list.push(e); l.i = e.i; l.g = g; l.t = t }
 }
-const evYearOf = day => Math.floor((day - 1) / EV_DAYS_YEAR) + 1;
+const evYearOf = day => Math.floor((day - 1) / evDaysYear()) + 1;
 
 /* ---- views: filtered feed, yearly rows, the "now" numbers ---- */
 function evFeed(w, opt) {
@@ -98,12 +98,12 @@ function evYears(w) {
   const S = w.stats, E = evEnsure(w), cur = evYearOf(w.day), rows = [];
   const yv = k => (S && S.ev && S.ev[k] && S.ev[k].y) || [];
   const born = yv('born'), died = yv('died'), arr = yv('arrivals');
-  const popAt = day => { if (!S || !S.s || !S.s.pop || !S.days || !S.days.length) return null; let best = null; for (let i = 0; i < S.days.length; i++) { if (S.days[i] <= day) best = S.s.pop[i]; else break } return best };
+  const popAt = day => { if (!S || !S.s || !S.s.pop || !S.days || !S.days.length) return null; let best = null; for (let i = 0; i < S.days.length; i++) { if (S.days[i] <= day) best = S.s.pop[i]; else break } return best == null ? S.s.pop[0] : best };       // before the first sample (the first year's start) the village had the people it began with
   const big = {}; for (const e of E.list) if (e.t === 2) (big[evYearOf(e.d)] = big[evYearOf(e.d)] || []).push(e);
   const tales = (w.chron && w.chron.tales) || [], bestTale = {}; for (const t of tales) { const y = t.year || evYearOf(t.day); if (!bestTale[y] || t.score > bestTale[y].score) bestTale[y] = t }
   const first = S && S.startDay ? evYearOf(S.startDay) : 1;
   for (let y = cur; y >= first; y--) {
-    const d0 = (y - 1) * EV_DAYS_YEAR + 1, d1 = y * EV_DAYS_YEAR;
+    const d0 = (y - 1) * evDaysYear() + 1, d1 = y * evDaysYear();
     const start = popAt(d0), end = y === cur ? w.pop : popAt(d1);
     const spark = []; if (S && S.s && S.s.pop) for (let i = 0; i < S.days.length; i++) if (S.days[i] >= d0 && S.days[i] <= d1) spark.push(S.s.pop[i]);
     rows.push({ year: y, current: y === cur, start, end, births: born[y - 1] || 0, deaths: died[y - 1] || 0, arrivals: arr[y - 1] || 0, big: big[y] || [], tale: bestTale[y] || null, spark });

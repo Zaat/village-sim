@@ -80,7 +80,7 @@ class Villager {
   isChild() { return this.age < CFG.CHILD_DAYS }
   wt(base, key) {
     const w = this.w, st = this.isElder() ? 1.3 : this.stage() === 'youth' ? 1.35 : 1;
-    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1) / (1 + (w.liv ? w.liv.fx.work : 0)) / (1 + techFx(w, 'work') + (key === 'build' ? techFx(w, 'build') : 0))));
+    return Math.max(4, Math.round(base * (1.25 - 0.4 * this.trait.ind) * (1 - 0.35 * (key ? this.skill[key] : 0)) * st * (1.12 - 0.24 * this.mood / 100) * (1 + 0.12 * w.gov.policy.labor) / (w.rx ? w.rx.prod : 1) * (w.energy && w.energy.brown > 0.05 ? 1 + 0.12 * w.energy.brown : 1) * (w.has('tools') ? 0.9 : 1) * (w.has('ironwork') ? 0.9 : 1) / (1 + (w.liv ? w.liv.fx.work : 0)) / (1 + techFx(w, 'work') + (key === 'build' ? techFx(w, 'build') : 0))));
   }
   gain(key) { this.skill[key] = Math.min(1, this.skill[key] + (this.stage() === 'youth' ? 0.024 : 0.012)); addKnowledge(this.w, 0.13, this) }
   traitWords() { const o = []; for (const t of TRAITS) { if (this.trait[t] > 0.66) o.push(TRAIT_WORDS[t][1]); else if (this.trait[t] < 0.34) o.push(TRAIT_WORDS[t][0]) } return o }

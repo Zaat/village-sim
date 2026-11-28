@@ -9,7 +9,7 @@ const a=new ctx.World(12,{});a.disc.gen||ctx.discoveryDay(a);const b=new ctx.Wor
 ok(a.disc.sites.length>=12,'a map holds a dozen or more sites: '+a.disc.sites.length);
 ok(JSON.stringify(a.disc.sites)===JSON.stringify(b.disc.sites),'sites come from the seed alone');
 const reg=ctx.landRegions(a),home=reg.label[a.cy*ctx.CFG.W+a.cx];
-ok(a.disc.sites.every(s=>{const i=s.y*ctx.CFG.W+s.x,K=ctx.SITE_KINDS[s.kind];return K.sea?a.terr[i]<=ctx.TERR.SHALLOW:reg.label[i]===home}),'land sites on the home landmass, sea sites on water');
+ok(a.disc.sites.every(s=>{const i=s.y*ctx.CFG.W+s.x,K=ctx.SITE_KINDS[s.kind];return K.sea?a.terr[i]<=ctx.TERR.SHALLOW:s.over?(reg.label[i]>0&&reg.label[i]!==home):reg.label[i]===home}),'land sites on the home landmass (or across the water, marked over), sea sites on water');
 ok(a.disc.sites.every((s,i)=>a.disc.sites.every((o,j)=>i===j||Math.hypot(s.x-o.x,s.y-o.y)>=9)),'sites keep their distance');
 ok(a.disc.sites.every(s=>!s.known),'every seeded site starts hidden');
 const c=new ctx.World(13,{});ctx.discoveryDay(c);ok(JSON.stringify(c.disc.sites)!==JSON.stringify(a.disc.sites),'other seed, other sites');

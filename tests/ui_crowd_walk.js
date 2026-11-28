@@ -29,8 +29,10 @@ const { chromium } = require('playwright'); const { OLD_PACE } = require('./lib'
   // never more than the per-frame allowance of floods in one frame
   const mx = await p.evaluate(() => { CW.routes.clear(); CW.fails.clear(); const w = world, keep = w.tick; w.tick = Math.floor(w.tick / 1200) * 1200 + 140; let m = 0; for (let i = 0; i < 6; i++) { render(w, null, 40000 + i * 90); m = Math.max(m, CW.floods) } w.tick = keep; return m });
   ok(mx <= 3, 'at most 3 route searches in a frame: ' + mx);
-  // fast play: the still look at the doors, no routes searched
-  const fast = await p.evaluate(() => { R.speed = 100; CW.routes.clear(); CW.stats.floods = 0; const w = world, keep = w.tick; w.tick = Math.floor(w.tick / 1200) * 1200 + 140; render(w, null, 50000); const s = Object.assign({}, CW.stats); w.tick = keep; R.speed = 1; return s });
+  // fast play: the still look at the doors, no routes searched, the same number of figures at every hour so the crowd does not blink (v0.40)
+  const fastAt = off => p.evaluate(o => { R.speed = 100; CW.routes.clear(); CW.stats.floods = 0; const w = world, keep = w.tick; w.tick = Math.floor(w.tick / 1200) * 1200 + o; render(w, null, 50000 + o); const s = Object.assign({}, CW.stats); w.tick = keep; R.speed = 1; return s }, off);
+  const fast = await fastAt(140), fastNight = await fastAt(1100), fastNoon = await fastAt(500);
+  ok(fast.figures > 0 && fast.figures === fastNight.figures && fast.figures === fastNoon.figures, 'at high speed the crowd stays on screen at every hour: ' + [fast.figures, fastNoon.figures, fastNight.figures]);
   ok(fast.floods === 0 && fast.walking === 0, 'at high speed nobody is followed: ' + JSON.stringify(fast));
   // a frame's cost with the whole town out
   const ms = await p.evaluate(() => { const w = world, keep = w.tick; w.tick = Math.floor(w.tick / 1200) * 1200 + 300; for (let i = 0; i < 4; i++) render(w, null, 60000); const t0 = performance.now(); for (let i = 0; i < 20; i++) render(w, null, 60000 + i * 90); const d = (performance.now() - t0) / 20; w.tick = keep; return d });

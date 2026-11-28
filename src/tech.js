@@ -147,7 +147,7 @@ function planUpgrades(w) {
   // the dearest ground is rebuilt first and furthest: each home aims for the style its site deserves (see siteStyle in city.js)
   let best = null, bs = 0;
   for (const h of w.houses()) {
-    if (w.bpAt.has(h.y * CFG.W + h.x)) continue; const want = siteStyle(w, h.x, h.y), gap = want - (h.style || 0); if (gap <= 0) continue;
+    if (h.heritage || w.bpAt.has(h.y * CFG.W + h.x)) continue; const want = siteStyle(w, h.x, h.y), gap = want - (h.style || 0); if (gap <= 0) continue;
     const lv = lvAt(w, h.x, h.y), sc = gap * 10 + (lv > 0 ? lv * 0.2 : 0) - Math.hypot(h.x - w.cx, h.y - w.cy) * 0.05; if (!best || sc > bs) { best = h; bs = sc }
   }
   if (!best) return;

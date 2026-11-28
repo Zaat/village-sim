@@ -61,9 +61,10 @@ function renderEvNow() {
 }
 
 /* ---- Feed ---- */
-function evRowHtml(e) {
+function evRowHtml(e, dated) {
   const gi = EV_GROUPS[e.g] ? EV_GROUPS[e.g].icon : '•', go = e.x !== undefined ? `<button class="evgo" data-x="${e.x}" data-y="${e.y}" title="${i18n('Show on the map')}" aria-label="${i18n('Show on the map')}">📍</button>` : e.v ? `<button class="evgo" data-v="1" title="${i18n('The whole village: go to the village')}" aria-label="${i18n('Go to the village')}">🏘️</button>` : '';
-  return `<div class="evl t${e.t}"><span class="evic" title="${EV_GROUPS[e.g] ? i18n(EV_GROUPS[e.g].label) : ''}">${gi}</span><span class="evtx">${escapeHtml(e.text !== undefined ? e.text : e.s)}</span>${go}</div>`;
+  const dt = dated && e.d ? `<span class="evd" title="${ydTag(e.d).replace(/<[^>]+>/g, '')}">D${((e.d - 1) % (CFG.DPS * 4)) + 1}</span>` : '';
+  return `<div class="evl t${e.t}">${dt}<span class="evic" title="${EV_GROUPS[e.g] ? i18n(EV_GROUPS[e.g].label) : ''}">${gi}</span><span class="evtx">${escapeHtml(e.text !== undefined ? e.text : e.s)}</span>${go}</div>`;
 }
 function renderEvFeed() {
   const w = world, el = $('feedCard'); if (!el || !w) return; const sp = typeof speed === 'number' ? speed : 1, chip = EVUI.chip;
@@ -81,17 +82,18 @@ function renderEvFeed() {
 function evYearRowHtml(r) {
   const flow = r.start != null && r.end != null ? i18n('{a} → {b} people', { a: r.start, b: r.end }) : r.end != null ? i18n('{n} people', { n: r.end }) : '';
   const sp = r.spark.length > 1 ? sparkSvg(r.spark, r.current ? '#8fd18b' : '#8fc4e8') : '';
-  const big = r.big.slice(-12).map(e => evRowHtml(e)).join(''), tale = r.tale ? `<div class="hint" style="margin-top:3px">${i18n('Tale:')} ${escapeHtml(r.tale.text)}</div>` : '';
+  const big = r.big.slice(-12).map(e => evRowHtml(e, true)).join(''), tale = r.tale ? `<div class="hint" style="margin-top:3px">${i18n('Tale:')} ${escapeHtml(r.tale.text)}</div>` : '';
   const sum = `<b>${i18n('Year {n}', { n: r.year })}</b>${r.current ? ' <span class="hint">' + i18n('so far') + '</span>' : ''} <span class="hint">${flow}</span>${sp ? ' <span class="evsp">' + sp + '</span>' : ''}<div class="hint">${i18n('{n} born', { n: r.births })} · ${i18n('{n} died', { n: r.deaths })} · ${i18n('{n} arrived', { n: r.arrivals })}${r.big.length ? ' · ' + i18nPlural(r.big.length, 'big event', 'big events') : ''}</div>`;
   return `<details class="evyr" data-k="y${r.year}"${r.current ? ' data-cur="1"' : ''}${EVUI.open.has('y' + r.year) || (r.current && EVUI.open.has('y')) ? ' open' : ''}><summary>${sum}</summary>${big || '<div class="hint">' + i18n('No big events.') + '</div>'}${tale}</details>`;
 }
 function evDecadeHtml(d, rows) {
   const a = rows[rows.length - 1], b = rows[0], births = rows.reduce((s, r) => s + r.births, 0), deaths = rows.reduce((s, r) => s + r.deaths, 0), arr = rows.reduce((s, r) => s + r.arrivals, 0);
-  const big = rows.flatMap(r => r.big).slice(-14).map(e => evRowHtml(e)).join('');
-  return `<details class="evyr" data-k="d${d}"${EVUI.open.has('d' + d) ? ' open' : ''}><summary><b>${i18n('Years {a}–{b}', { a: a.year, b: b.year })}</b> <span class="hint">${i18n('{a} → {b} people', { a: a.start != null ? a.start : '?', b: b.end != null ? b.end : '?' })}</span><div class="hint">${i18n('{n} born', { n: births })} · ${i18n('{n} died', { n: deaths })} · ${i18n('{n} arrived', { n: arr })}</div></summary>${big || '<div class="hint">' + i18n('No big events.') + '</div>'}</details>`;
+  const big = rows.flatMap(r => r.big).slice(-14).map(e => evRowHtml(e, true)).join('');
+  const ends = rows.slice().reverse().map(r => r.end).filter(x => x != null), sp = ends.length > 1 ? sparkSvg(ends, '#8fc4e8') : '';
+  return `<details class="evyr" data-k="d${d}"${EVUI.open.has('d' + d) ? ' open' : ''}><summary><b>${i18n('Years {a}–{b}', { a: a.year, b: b.year })}</b> <span class="hint">${i18n('{a} → {b} people', { a: a.start != null ? a.start : '?', b: b.end != null ? b.end : '?' })}</span>${sp ? ' <span class="evsp">' + sp + '</span>' : ''}<div class="hint">${i18n('{n} born', { n: births })} · ${i18n('{n} died', { n: deaths })} · ${i18n('{n} arrived', { n: arr })}</div></summary>${big || '<div class="hint">' + i18n('No big events.') + '</div>'}</details>`;
 }
 function renderEvYears() {
-  const w = world, el = $('yearsCard'); if (!el || !w) return; const rows = evYears(w), single = rows.slice(0, 10), older = rows.slice(10);
+  const w = world, el = $('yearsCard'); if (!el || !w) return; const rows = evYears(w), cut = Math.max(0, Math.floor((rows.length ? rows[0].year - 10 : 0) / 10) * 10), single = rows.filter(r => r.year > cut), older = rows.filter(r => r.year <= cut);       // recent years one by one (10 to 19 of them); everything before is grouped in whole decades, 1-10, 11-20 and so on
   let h = '<h3>' + i18n('Years') + '</h3>' + single.map(evYearRowHtml).join('');
   if (older.length) { const dec = {}; for (const r of older) (dec[Math.floor((r.year - 1) / 10)] = dec[Math.floor((r.year - 1) / 10)] || []).push(r); h += Object.keys(dec).sort((a, b) => b - a).map(d => evDecadeHtml(+d, dec[d])).join('') }
   el.innerHTML = h || '<h3>' + i18n('Years') + '</h3><div class="hint">' + i18n('The first year is still being written.') + '</div>';

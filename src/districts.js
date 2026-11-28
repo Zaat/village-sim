@@ -13,7 +13,7 @@ function districtsBuild(w) {
   const c = DIST.cell, map = new Map(), get = (x, y) => { const gx = Math.floor(x / c), gy = Math.floor(y / c), k = distKey(gx, gy); let d = map.get(k); if (!d) map.set(k, d = { key: k, gx, gy, homes: 0, beds: 0, focus: 0, tiers: [0, 0, 0, 0, 0, 0, 0], farms: 0, stores: 0, shops: 0, camps: 0, sx: 0, sy: 0 }); return d };
   for (const b of w.buildings.values()) {
     if (b.type === 'house') { const d = get(b.x, b.y); d.homes++; d.beds += bedsOf(b); d.focus += b.occ.length; d.tiers[b.style || 0]++; d.sx += b.x; d.sy += b.y }
-    else if (b.type === 'farm' || b.type === 'store' || b.type === 'workshop' || b.type === 'market' || b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') { const d = get(b.x, b.y); if (b.type === 'farm') d.farms++; else if (b.type === 'store') d.stores++; else if (b.type === 'workshop' || b.type === 'market') d.shops++; else d.camps++ }
+    else if (b.type === 'farm' || b.type === 'store' || b.type === 'workshop' || b.type === 'power' || b.type === 'market' || b.type === 'logcamp' || b.type === 'minecamp' || b.type === 'lodge') { const d = get(b.x, b.y); if (b.type === 'farm') d.farms++; else if (b.type === 'store') d.stores++; else if (b.type === 'workshop' || b.type === 'market' || b.type === 'power') d.shops++; else d.camps++ }
   }
   const list = [...map.values()].filter(d => d.homes > 0).sort((a, b) => a.key - b.key), C = w.crowd, n = (C ? C.n : 0) + Math.max(0, w.vills.length - list.reduce((a, d) => a + d.focus, 0));       // villagers without a home of their own (newcomers waiting for a bed) are counted with the crowd
   // the crowd goes where beds are free (largest remainder, so the parts add up to the whole)

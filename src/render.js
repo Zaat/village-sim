@@ -298,7 +298,7 @@ function bpArt(g, w, bp, now) {
   if (bp.prog > 0 && bp.type !== 'upgrade') { const hgt = Math.round(Ht * 0.6 * bp.prog / bp.time); rc(g, 'rgba(150,110,70,.75)', X + 3, Y + Ht - 6 - hgt, Wd - 6, hgt) }
 }
 function drawBuilding(g, w, b, now, dark) {
-  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark); else if (b.type === 'tavern') tavernArt(g, w, b, now, dark); else if (b.type === 'workshop') workshopArt(g, w, b, now, dark);
+  if (b.type === 'house') houseArt(g, w, b, dark > 0.3, now); else if (b.type === 'store') storeArt(g, w, b, now); else if (b.type === 'campfire') campfireArt(g, w, b, now, dark); else if (b.type === 'logcamp') logcampArt(g, w, b, now); else if (b.type === 'minecamp') minecampArt(g, w, b, now); else if (b.type === 'lodge') lodgeArt(g, w, b, now); else if (PROJECTS[b.type]) projectArt(g, w, b, now, dark); else if (b.type === 'tavern') tavernArt(g, w, b, now, dark); else if (b.type === 'workshop') workshopArt(g, w, b, now, dark); else if (b.type === 'power') powerArt(g, w, b, now, dark);
 }
 
 /* ---------- animals & villagers ---------- */
@@ -368,6 +368,7 @@ function drawVillager(g, v, w, now, sel) {
   if (v.preg > 0) rc(g, shirt, -4, -6, 8, 2);
   if (R.crown && R.crown.has(v.id)) { rc(g, '#ffd24a', -2, -18, 5, 1); rc(g, '#ffd24a', -2, -19, 1, 1); rc(g, '#ffd24a', 0, -20, 1, 2); rc(g, '#ffd24a', 2, -19, 1, 1) }
   if (st === 'elder') rc(g, '#8a6a4a', 4, -8, 1, 8);
+  if (v.jobKind === 'expedition' || v.jobKind === 'escort') { rc(g, '#5b4630', 4, -20, 1, 12); rc(g, v.jobKind === 'expedition' ? '#e8452e' : '#e8b02e', 5, -20, 4, 3); rc(g, 'rgba(0,0,0,.25)', 5, -18, 4, 1) }       // an explorer carries a small pennant (red for the leader, gold for the party)
   g.restore();
   let em = v.emote; if (v.fighting) em = '!'; else if (/Chat|Talk|Feast/.test(v.label)) em = '…'; else if (w.cold && s === 3) em = '*'; else if (v.hunger < 20) em = '?';
   if (em && em !== '!' && sel !== v) em = null;          // the small emote box is for the selected villager (bubbles say the rest); alarms stay for all
@@ -685,6 +686,10 @@ function drawBubbles(g, w, selV, now, tlx, tly, z) {
   }
   cand.sort((a, b) => a.d - b.d);
   const rec = V.recent || (V.recent = new Map()); if (rec.size > 300) for (const [k, t] of rec) if (now - t > 90000) rec.delete(k);
+  if (act.length > cap) {       // v0.40: bubbles that began at a slow speed stay alive when the speed goes up; above 3x only the cap's worth, nearest the middle of the view, are kept (the rest end quietly)
+    const fo = act.filter(b => b.forced), rest = act.filter(b => !b.forced).sort((a, b) => (a.sx - cx) ** 2 + (a.sy - cy) ** 2 - ((b.sx - cx) ** 2 + (b.sy - cy) ** 2)).slice(0, Math.max(0, cap - fo.length));
+    act.length = 0; act.push(...fo, ...rest);
+  }
   const catN = {}; for (const b of act) catN[b.th.cat] = (catN[b.th.cat] || 0) + 1;
   for (const c of cand) {
     if (act.length >= cap && !c.forced) break;
@@ -746,6 +751,15 @@ function distOverlay(g, w, x0, x1, y0, y1) {
 }
 
 /* a workshop: low timber hall with a wide open front, a forge hearth with a glowing chimney, a bench and stacked work */
+function powerArt(g, w, b, now, dark) {
+  const X = b.x * CFG.T, Y = b.y * CFG.T, Wd = b.w * CFG.T, snow = w.season === 3, ren = w.has('renewables'), E = w.energy, on = !E || E.sup > 0.05, lit = dark > 0.25 || w.tod > 0.55;
+  rc(g, 'rgba(0,0,0,.22)', X + 1, Y + 29, Wd, 3);
+  rc(g, ren ? '#aeb4ba' : '#7a5446', X + 2, Y + 12, Wd - 4, 18); for (let k = 0; k < Wd - 4; k += 6) rc(g, ren ? '#9aa0a6' : '#6a463a', X + 2 + k, Y + 12, 1, 18);
+  rc(g, '#4c5560', X, Y + 8, Wd, 4); if (snow) rc(g, '#f4f6fa', X + 2, Y + 7, Wd - 4, 2);
+  for (let k = 0; k < 3; k++) { rc(g, lit && on ? '#f2d27a' : '#33414d', X + 6 + k * 13, Y + 17, 8, 6); rc(g, '#2a323a', X + 6 + k * 13, Y + 20, 8, 1) }       // tall windows, lit while the power is on
+  if (ren) { rc(g, '#d8dde2', X + Wd - 7, Y - 12, 2, 20); const a = now / (on ? 260 : 4000); for (let k = 0; k < 3; k++) { const r = a + k * 2.09; g.strokeStyle = '#eef1f4'; g.lineWidth = 1; g.beginPath(); g.moveTo(X + Wd - 6, Y - 12); g.lineTo(X + Wd - 6 + Math.cos(r) * 9, Y - 12 + Math.sin(r) * 9); g.stroke() } }
+  else { rc(g, '#55504a', X + Wd - 10, Y - 6, 6, 18); rc(g, '#3c3833', X + Wd - 10, Y - 6, 6, 1); if (on) for (let k = 0; k < 3; k++) { const t = ((now / 800) + k / 3) % 1; g.fillStyle = `rgba(120,120,125,${0.6 * (1 - t)})`; g.fillRect(X + Wd - 9 + Math.sin(t * 3 + k) * 3, Y - 9 - t * 12, 4, 4) } }
+}
 function workshopArt(g, w, b, now, dark) {
   const X = b.x * CFG.T, Y = b.y * CFG.T, Wd = b.w * CFG.T, snow = w.season === 3, stone = w.has('masonry'), lit = dark > 0.25 || w.tod > 0.55;
   rc(g, 'rgba(0,0,0,.22)', X + 1, Y + 29, Wd, 3);

@@ -24,7 +24,7 @@
    ========================================================================== */
 const CITY_CELL = 4;
 const SERVICE_W = { plaza: 30, market: 26, tavern: 18, hall: 24, library: 16, temple: 18, amphitheatre: 14, monument: 10, store: 8, dock: 12, workshop: 6 };
-const NUISANCE = { farm: 9, logcamp: 14, minecamp: 14, lodge: 8, foundry: 16, workshop: 8, barracks: 6 };
+const NUISANCE = { farm: 9, logcamp: 14, minecamp: 14, lodge: 8, foundry: 16, workshop: 8, power: 12, barracks: 6 };
 Object.assign(CFG.COST, { workshop: { wood: 18, stone: 6 } }); Object.assign(CFG.BUILD_TIME, { workshop: 170 }); Object.assign(CFG.SIZE, { workshop: [3, 2] }); Object.assign(CFG.SOLID, { workshop: true });
 const COMPASS = ['east', 'south-east', 'south', 'south-west', 'west', 'north-west', 'north', 'north-east'];
 
@@ -35,7 +35,7 @@ function lvAt(w, x, y) { if (!w._lv) return -1; const { gw } = lvGrid(w); return
 /* how the people like to lay the place out: compact (tight, walled, orderly) against spread out (hamlets, wide lanes) */
 function layoutBias(w) {
   const A = w.rx ? Math.min(1, w.rx.A || 0) : 0.3, ph = (w.settings && w.settings.philosophy) || 'balanced', threat = typeof threatLevel === 'function' ? Math.min(1, threatLevel(w)) : 0;
-  const compact = clamp(0.35 + 0.4 * A + (ph === 'martial' ? 0.2 : 0) + 0.3 * threat - (ph === 'practical' ? 0.08 : 0), 0.1, 1);
+  const compact = clamp(0.35 + 0.4 * A + (ph === 'martial' ? 0.2 : 0) + 0.3 * threat - (ph === 'practical' ? 0.08 : 0) + (typeof designCompact === 'function' ? designCompact(w) : 0), 0.1, 1);
   return { compact, shore: ph === 'mercantile' ? 1.6 : 1, spread: 1 - compact };
 }
 const waterAt = (w, x, y) => x < 0 || y < 0 || x >= CFG.W || y >= CFG.H ? false : w.terr[y * CFG.W + x] <= TERR.SHALLOW;
@@ -45,13 +45,13 @@ function landValueDay(w) {
   const { W, H } = CFG, { gw, gh } = lvGrid(w), lv = w._lv && w._lv.length === gw * gh ? w._lv : (w._lv = new Float32Array(gw * gh));
   const pts = [[w.cx, w.cy, 22]], bad = [], pop = w.pop;
   for (const b of w.buildings.values()) { const s = SERVICE_W[b.type]; if (s) pts.push([b.x + b.w / 2, b.y + b.h / 2, s]); const n = NUISANCE[b.type]; if (n) bad.push([b.x + b.w / 2, b.y + b.h / 2, n]) }
-  const R = 12 + Math.min(14, pop / 35), bias = layoutBias(w); let vmax = 0;
+  const R = 12 + Math.min(14, pop / 35), R2 = R * R, bias = layoutBias(w); let vmax = 0;
   for (let gy = 0; gy < gh; gy++) for (let gx = 0; gx < gw; gx++) {
     const cx = gx * CITY_CELL + 2, cy = gy * CITY_CELL + 2, g = gy * gw + gx; if (cx >= W || cy >= H || w.terr[cy * W + cx] < TERR.SAND) { lv[g] = 0; continue }
-    let v = 0; for (const p of pts) { const d = Math.hypot(p[0] - cx, p[1] - cy); if (d < R) v += p[2] * (1 - d / R) } v = Math.min(70, v);
+    let v = 0; for (const p of pts) { const dx = p[0] - cx, dy = p[1] - cy, d2 = dx * dx + dy * dy; if (d2 < R2) v += p[2] * (1 - Math.sqrt(d2) / R) } v = Math.min(70, v);       // squared distances first: this loop was most of a day-change spike (v0.40)
     let roads = 0, built = 0; for (let dy = 0; dy < CITY_CELL; dy++) for (let dx = 0; dx < CITY_CELL; dx++) { const j = (gy * CITY_CELL + dy) * W + gx * CITY_CELL + dx; if (j < W * H) { if (w.road[j]) roads++; if (w.bmap[j]) built++ } }
     v += Math.min(14, roads * 2.5) + Math.min(8, built * 0.8);
-    for (const p of bad) { const d = Math.hypot(p[0] - cx, p[1] - cy); if (d < 7) v -= p[2] * (1 - d / 7) }
+    for (const p of bad) { const dx = p[0] - cx, dy = p[1] - cy, d2 = dx * dx + dy * dy; if (d2 < 49) v -= p[2] * (1 - Math.sqrt(d2) / 7) }
     if (waterAt(w, cx + 6, cy) || waterAt(w, cx - 6, cy) || waterAt(w, cx, cy + 6) || waterAt(w, cx, cy - 6)) v += 6 * bias.shore;
     v = clamp(v, 0, 100); lv[g] = v; if (v > vmax) vmax = v;
   }
@@ -154,7 +154,7 @@ function pathDay(w) {
 
 /* ---------- daily hook ---------- */
 function cityDay(w) {
-  landValueDay(w); pathDay(w);
+  landValueDay(w); pathDay(w); designDay(w);
   if (w.day % 3 === 0 && autoOn(w, 'build')) { foundHamlet(w); renewalDay(w); hamletStores(w) }
 }
 /* what the city looks like, for the card and the diagnostics */

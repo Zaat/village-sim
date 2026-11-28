@@ -30,7 +30,8 @@ const { chromium } = require('playwright');
   // World tab: neighbours sized to content and last while nobody is met
   await p.click('[data-tab=world]'); await p.waitForTimeout(600);
   const nh = await p.evaluate(() => { const c = document.getElementById('neighCard').parentElement; return { h: c.getBoundingClientRect().height, order: c.style.order } });
-  ok(nh.h < 140, 'the Neighbours card sizes to its content (' + nh.h + ')'); ok(nh.order === '9', 'and sinks below the other World cards while nobody is met');
+  const metAny = await p.evaluate(() => (world.neigh || []).some(n => n.met || n.found));       // the page's world is random; a trader met in the first weeks makes the card taller by design
+  if (!metAny) { ok(nh.h < 140, 'the Neighbours card sizes to its content (' + nh.h + ')'); ok(nh.order === '9', 'and sinks below the other World cards while nobody is met') }
   // land value legend
   await p.evaluate(() => { landValueDay(world); R.lvShow = true; renderCity() }); ok(await p.evaluate(() => /Green is cheap/.test(document.getElementById('cityCard').innerText)), 'land value shows its legend');
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 2).join(' | '));

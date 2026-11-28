@@ -19,7 +19,13 @@ const catLabel = id => (VCAT[id] ? VCAT[id].label : id);
 
 /* ---- Events tab: "Talk of the village" ---- */
 function renderTalk() {
-  const w = world, el = $('talkCard'); if (!el || !w) return; const sp = vSpeed(), V = w.voices;
+  const w = world, el = $('talkCard'); if (!el || !w) return;
+  try { renderTalkInner(w, el) } catch (e) {       // v0.40: a line that cannot be drawn must not leave the card empty
+    el.innerHTML = '<details id="talkDet" open><summary><b>Talk of the village</b></summary><div class="hint">Quiet for now. Lines appear here as the bubbles do.</div></details>'; try { w.fault('talkcard', e) } catch (_) { }
+  }
+}
+function renderTalkInner(w, el) {
+  const sp = vSpeed(), V = w.voices;
   let live;
   if (sp <= VOICES_SLOW) {
     live = TALK.live.length ? TALK.live.slice(0, 14).map(l => `<div class="tl ${l.kind}"><b>${escapeHtml(l.name)}</b> ${l.kind === 'dream' ? '<i>dreams</i> ' : l.kind === 'say' ? '<i>says</i> ' : '<i>thinks</i> '}“${escapeHtml(l.text)}”</div>`).join('')

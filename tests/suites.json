@@ -16,9 +16,14 @@
     "stats_events",
     "tech_events",
     "concerns_events",
+    "concerns_record",
+    "farm_ladder",
+    "energy_ladder",
+    "expedition_overseas",
     "concerns_states",
     "livelihoods_events",
     "stats_legacy",
+    "save_dangling",
     "privacy_events",
     "research_limits",
     "discovery_events",
@@ -42,7 +47,9 @@
     "i18n_events",
     "events_record",
     "determinism",
-    "strife_unity"
+    "strife_unity",
+    "city_design",
+    "death_totals"
   ],
   "first": [
     "save",
@@ -75,6 +82,13 @@
     "ui_sound",
     "ui_mobile",
     "ui_districts",
+    "ui_building_panels",
+    "ui_narrow",
+    "ui_events_followups",
+    "ui_growth_line",
+    "ui_council_record",
+    "ui_check_world",
+    "ui_stats_flicker",
     "ui_lang",
     "ui_events",
     "ui_select",
@@ -146,6 +160,7 @@
       "concerns_states",
       "golden",
       "save",
+      "save_dangling",
       "stats_legacy",
       "timber_events"
     ],
@@ -230,6 +245,16 @@
       "save",
       "golden",
       "living"
+    ],
+    "design": [
+      "city_design",
+      "city_events",
+      "golden",
+      "save",
+      "perf"
+    ],
+    "history": [
+      "death_totals"
     ]
   },
   "est": {
@@ -245,6 +270,10 @@
     "strife_events": 60,
     "regime_events": 47,
     "concerns_events": 47,
+    "concerns_record": 30,
+    "farm_ladder": 10,
+    "energy_ladder": 15,
+    "expedition_overseas": 20,
     "perf": 60,
     "war_events": 150,
     "culture_events": 90,
@@ -268,6 +297,13 @@
     "districts_events": 10,
     "storage_events": 10,
     "ui_districts": 10,
+    "ui_building_panels": 10,
+    "ui_narrow": 10,
+    "ui_events_followups": 20,
+    "ui_growth_line": 10,
+    "ui_council_record": 10,
+    "ui_check_world": 10,
+    "ui_stats_flicker": 10,
     "economy_events": 60,
     "perf_metropolis": 90,
     "i18n_events": 2,
@@ -278,6 +314,8 @@
     "ui_crowd_walk": 60,
     "determinism": 2,
     "strife_unity": 37,
-    "ui_build": 25
+    "ui_build": 25,
+    "city_design": 12,
+    "death_totals": 1
   }
 }

@@ -7,6 +7,7 @@
 const CFG = {
   W: 160, H: 112, MAP_NEW: [260, 180], T: 16,            // map size (tiles), tile size (world px)
   TPD: 1200, TPS: 20,               // ticks per day, ticks per second at 1x
+  DAY_SLOTS: { society: 40, crowd: 120, lives: 200, stats: 280, city: 360, routes: 440 },       // v0.40: ticks into the day at which the four heaviest daily jobs run (world.js dayJob); at 100x that puts each in its own frame
   DPS: 8,                           // days per season (year = 4 seasons)
   INFANT_DAYS: 5, CHILD_DAYS: 17, ADULT_DAYS: 29, ELDER_DAYS: 80, FERTILE_MAX: 70, OLD_DAYS: 120, CHILD_MORT: 0.0035, IMM_CHANCE: 0.03, IMM_MAX: 2, CROWD_DRAW: 0.005, ORDER_BASE: 350, ORDER_BITE: 0.4, SURV_RISK: 1.5, SURV_FOOD: 1.15, HARSH_P: 0.2, DROUGHT_P: 0.17,   // life stages (in days)
   BIRTH_DAMP: 0, COUPLE_TRY: 0.1, COURT_TRY: 0.03, FARM_SLOPE: 5, BIRTH_MULT: 1, DEP_CAP: 2, LIFE_BASE: 2.8,                      // ageing slows by this factor (v0.35: all stage thresholds above stay in 'life days'); real days of life = life days x LIFE_BASE
@@ -20,6 +21,7 @@ const CFG = {
   BIRTH_CHANCE: 0.35, PREGNANCY: 3000, BIRTH_COOLDOWN: 9000,
   LATTICE: 3,                        // buildings snap to a 3-tile grid so lanes stay open
 };
+CFG.DAY_SLOT_AT = {}; for (const k in CFG.DAY_SLOTS) CFG.DAY_SLOT_AT[CFG.DAY_SLOTS[k]] = k;       // tick of the day -> job name
 const TERR = { DEEP: 0, SHALLOW: 1, SAND: 2, GRASS: 3, ROCK: 4, PEAK: 5, FORD: 6, BRIDGE: 7 };      // FORD: shallow river crossing, BRIDGE: built span; both walkable
 const FEAT = { NONE: 0, OAK: 1, PINE: 2, STONE: 3, BUSH: 4 };
 const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter'];

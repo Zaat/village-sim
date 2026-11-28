@@ -2,6 +2,29 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.40 — Farming, energy, reach and City design
+Fuel and stone now run out and the village has to answer it, explorers reach other shores, the day's heavy work is spread across the day, and the council starts to plan how the town looks.
+
+![The City card with the council's layout plan, district beauty scores and project ledger](docs/screenshots/v0.40-feature.png)
+
+**Farming ladder.** The food card shows what each technology adds to a harvest, step by step, and names the next step. It explains the yield; it does not change it.
+
+**Finite deposits and the energy ladder.** Stone, coal, oil and peat are deposits with an amount left and a trend, shown on the resource cards. Winter heat comes from wood first, then peat or coal, and from power stations once the village has electricity. A power station is a real building (one per district at most, none before about 90 people). A shortage slows work by at most 12% and raises a concern with a Prospect response. When the home island's quarries run low, boats fetch stone from far shores.
+
+**Reach and explorers (#180).** Expeditions can land on other islands, a sky survey reveals the map as flight arrives, explorers carry a pennant, and the by-boat reach probe finds nothing unreachable on island and archipelago maps.
+
+**Steadier speed (#134, #135).** The heavy daily jobs (society, crowd, lives, stats, city, routes) run at six fixed moments after the day turns instead of all at once. Reach and land-value loops use squared distances; at 100x a frame has a smaller budget and stops early when the next tick would not fit.
+
+**City design, first version.** At 80 people the council commissions a layout style (grown town, grid, square-centred, radial avenues, garden town; the last two need later house styles). Every district gets a beauty score from 0 to 100, and a project ledger (a square, a rebuilt old home, a heritage home kept as it is) is decided through the council and shown on the City card. Saved with the game.
+
+**Fixes.** Saves could become impossible to load when a house with a queued upgrade was removed: removal now cancels the upgrade, the loader skips such plans, and the Saves and Resume dialogs show the reason with a Download button. Export is a .zip. The crowd no longer blinks at 100x. Stats spike and preset flicker fixed. Clean view works in narrow windows. "Check this world" no longer corrupts the running map. The workshop panel error (#181). Years in the Events tab use real 32-day years, group only after 20 years and start from the first population. The causes-of-death card adds up the same way in all three columns. A growth chip on the population heading, a council record (points and titles) for concerns, and a `?` key overlay.
+
+**Tests.** New suites: `energy_ladder`, `expedition_overseas`, `farm_ladder`, `city_design`, `death_totals`, `save_dangling`, `concerns_record`, and page suites for saves, narrow windows, the crowd, the growth line, Check World, the council record and stats flicker. The golden test was updated once for the new order of daily jobs.
+
+**Moved.** Culture rebuilt (#140), the age look beyond palettes (#141), transport planning (#143), ranks and ambitions (#145), forest regrowth (#4), the wildlife pass (#10), iron, clay and gas deposits (#184), player approval of design projects (#182) and a city that keeps changing over centuries (#183).
+
+Issues: #134, #135, #138, #139, #142, #144, #180, #181
+
 ### v0.39.3 — Events, performance and polish
 A redesigned Events tab with pins on the map, a living crowd, boats and other things you can select, a clearer build panel, more Spanish, and the same seed giving the same village in every browser.
 

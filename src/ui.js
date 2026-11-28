@@ -5,7 +5,7 @@
    ========================================================================== */
 const $ = id => document.getElementById(id);
 let world = null, selected = null, speed = 10, follow = false, selSeen = null;
-/* v0.39.1 layout modes: Docked (map and side panel), Overlay (the map fills the screen, the panels float), Clean (only the essentials). Wide screens only; remembered per device; Docked is the default. */
+/* v0.39.1 layout modes: Docked (map and side panel), Overlay (the map fills the screen, the panels float), Clean (only the essentials). Remembered per device; Docked is the default. */
 const LAYOUTS = ['docked', 'clean'], LAYOUT_NAME = { docked: 'Docked', clean: 'Clean' };
 let layout = 'docked'; try { const v = localStorage.getItem('villagesim.layout'); if (LAYOUTS.includes(v)) layout = v } catch (e) { }
 function setLayout(m, quiet) {
@@ -161,8 +161,10 @@ $('nw_open').addEventListener('click', e => { const b = e.target.closest('button
 $('nw_sizes').addEventListener('click', e => { const b = e.target.closest('button'); if (b) { nwSize = b.dataset.s; nwRender() } });
 $('nw_check').onclick = () => {
   const el = $('nw_traits'); el.textContent = 'Generating this world…'; setTimeout(() => {
+    const keepW = CFG.W, keepH = CFG.H;       // v0.40: building a World sets the map size for everybody; the village on screen must keep its own
     try { const v = $('nw_seed').value.trim(), seed = (v === '' || isNaN(+v) ? 1 : +v) >>> 0, type = nwType === 'auto' ? pickMapType(seed) : nwType, size = sizeFor(type, nwSize), w = new World(seed, { map: type }, MAP_SIZES[size].dims);
       el.innerHTML = `<b>${MAP_TYPES[type].label}, ${MAP_SIZES[size].label}, seed ${seed}</b>` + worldTraits(w).map(([k, t]) => `<div><span style="color:#9fb4c8">${k}:</span> ${escapeHtml(t)}</div>`).join('') } catch (e) { el.textContent = 'Could not check this world: ' + e.message }
+    finally { CFG.W = keepW; CFG.H = keepH; R.terrKey = '' }
   }, 30) };
 let nwSw = null;      // switches taken from a pasted world line, applied at Go
 $('nw_seed').addEventListener('input', () => {
@@ -196,11 +198,13 @@ async function saveToStorage(manual) {
   } catch (e) { saveInfo('This browser would not store the save (' + ((e && (e.name || e.message)) || 'error') + '). Use "Export file" to keep your village.'); return false }
   finally { _saveBusy = false }
 }
+let loadErr = '';       // the last reason a load failed, shown in the Saves and Resume dialogs (v0.40)
 async function loadFromStorage(id = 'auto') {
+  loadErr = '';
   try {
     const r = await savesGet(id); if (!r) { saveInfo('No browser save found.'); return false }
     adoptWorld(deserializeWorld(JSON.parse(r.text))); saveInfo('Loaded ' + (id === 'auto' ? 'the autosave' : r.name || 'the save') + ': ' + metaText(saveMeta(world)) + '.'); return true;
-  } catch (e) { saveInfo('Could not load that save: ' + ((e && e.message) || e)); return false }
+  } catch (e) { loadErr = (e && e.message) || String(e); DBG.lastLoadError = { id, msg: loadErr, at: Date.now() }; saveInfo('Could not load that save: ' + loadErr); return false }
 }
 async function saveTextFile(name, text, okMsg) {
   try {
@@ -209,12 +213,27 @@ async function saveTextFile(name, text, okMsg) {
     return true;
   } catch (e) { saveInfo(e && e.code === 'declined' ? 'Cancelled.' : 'Could not save the file (' + ((e && (e.code || e.message)) || 'error') + ').'); return false }
 }
+/* hand a file to the person: the app's download dialog or a browser download (v0.40: bytes as well as text) */
+async function giveFile(name, data, what) {
+  try {
+    const type = /\.zip$/.test(name) ? 'application/zip' : /\.gz$/.test(name) ? 'application/gzip' : /\.json$/.test(name) ? 'application/json' : 'application/octet-stream';
+    if (DL) { const r = await DL.save({ filename: name, data }); saveInfo(r.status === 'saved' ? what + ' ' + name + '.' : what + ' sent.') }
+    else { const url = URL.createObjectURL(new Blob([data], { type })), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); saveInfo(what + ' ' + name + '.') }
+    return true;
+  } catch (e) { saveInfo(e && e.code === 'declined' ? what + ' cancelled.' : what + ' did not complete (' + ((e && (e.code || e.message)) || 'error') + '). Try again.'); return false }
+}
 async function exportFile() {
   if (!world) return; const json = JSON.stringify(serializeWorld(world)), base = `village-y${world.year}-${SEASONS[world.season].toLowerCase()}-d${world.seasonDay}-seed${world.seed}`;
-  try {
-    if (DL) { const r = await DL.save({ filename: base + '.json', data: json }); saveInfo(r.status === 'saved' ? 'Exported ' + base + '.json.' : 'Export sent.') }   // the app's own download dialog takes text
-    else { const gz = await savesGz(json), name = base + (gz ? '.json.gz' : '.json'), url = URL.createObjectURL(new Blob([gz || json], { type: gz ? 'application/gzip' : 'application/json' })), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); saveInfo('Exported ' + name + '.') }
-  } catch (e) { saveInfo(e && e.code === 'declined' ? 'Export cancelled.' : 'Export did not complete (' + ((e && (e.code || e.message)) || 'error') + '). Try again.') }
+  const bytes = new TextEncoder().encode(json);
+  if (zipOk()) await giveFile(base + '.zip', await zipPack(base + '.json', bytes), 'Exported'); else await giveFile(base + '.json', bytes, 'Exported');
+}
+/* a saved record as a file, even one that will not load: the decoded text when it can be decoded, the stored bytes otherwise (v0.40) */
+async function downloadRecord(id) {
+  const rec = await savesRaw(id); if (!rec) { saveInfo('That save is no longer there.'); return false }
+  let bytes, ext = '.json';
+  try { bytes = new TextEncoder().encode(typeof rec.data === 'string' ? rec.data : await savesDecode(rec.data)) } catch (e) { bytes = typeof rec.data === 'string' ? new TextEncoder().encode(rec.data) : new Uint8Array(rec.data); ext = '.raw' }
+  const base = 'village-' + (id === 'auto' ? 'autosave' : id === 'backup' ? 'backup' : String(rec.name || 'save').replace(/[^\w-]+/g, '-'));
+  return giveFile(zipOk() ? base + '.zip' : base + ext, zipOk() ? await zipPack(base + ext, bytes) : bytes, 'Downloaded');
 }
 function importFileObj(file) {
   const rd = new FileReader();
@@ -233,14 +252,16 @@ async function savesOpen() {
   const dflt = world ? `Year ${world.year} ${SEASONS[world.season]}` : 'My village';
   modal('Saves', `<div class="hint" style="margin-bottom:6px">Kept in this browser only, and clearing the browser's site data removes them. Use Export file for a copy you keep.</div>
     <div class="saverow"><input id="sv_name" maxlength="40" value="${escHtml(dflt)}" aria-label="Name for the new save"><button id="sv_new" ${full ? 'disabled title="Delete a save first"' : ''}>Save</button></div>
+    <div class="hint" id="sv_err" style="color:#e07a5f;min-height:2.4em"></div>
     <div class="hint">${named.length} of ${SAVES.MAX} named saves${full ? ': delete one to make room' : ''}. Loading keeps your current village in the autosave.</div>
-    ${auto ? row(auto, 'Autosave', '<button data-ld="auto">Load</button>') : ''}${back ? row(back, 'Backup <span class="hint">(the village you left when starting a new one)</span>', '<button data-ld="backup">Load</button>') : ''}
-    ${named.map(r => row(r, escHtml(r.name || 'Save'), `<button data-ld="${r.id}">Load</button><button data-ov="${r.id}">Overwrite</button><button data-rn="${r.id}">Rename</button><button data-dl="${r.id}">Delete</button>`)).join('')}`);
+    ${auto ? row(auto, 'Autosave', '<button data-ld="auto">Load</button><button data-dw="auto">Download</button>') : ''}${back ? row(back, 'Backup <span class="hint">(the village you left when starting a new one)</span>', '<button data-ld="backup">Load</button><button data-dw="backup">Download</button>') : ''}
+    ${named.map(r => row(r, escHtml(r.name || 'Save'), `<button data-ld="${r.id}">Load</button><button data-dw="${r.id}">Download</button><button data-ov="${r.id}">Overwrite</button><button data-rn="${r.id}">Rename</button><button data-dl="${r.id}">Delete</button>`)).join('')}`);
   const body = $('modal_b'), snap = () => JSON.stringify(serializeWorld(world)), meta = () => ({ ...saveMeta(world), speed });
   const sure = (b, f) => { if (b.dataset.sure !== '1') { const t = b.textContent; b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = t } }, 3000); return } f() };
-  const fail = e => saveInfo('That did not work: ' + ((e && e.message) || e));
+  const fail = e => { saveInfo('That did not work: ' + ((e && e.message) || e)); const x = $('sv_err'); if (x) x.textContent = $('saveInfo').textContent };
   $('sv_new').onclick = async () => { try { await savesPut('n' + Date.now(), $('sv_name').value.trim() || dflt, meta(), snap()); saveInfo('Saved ' + ($('sv_name').value.trim() || dflt) + '.'); savesOpen() } catch (e) { fail(e) } };
-  body.querySelectorAll('[data-ld]').forEach(b => b.onclick = async () => { const id = b.dataset.ld; if (id !== 'auto' && world && world.tick > 0) await saveToStorage(false); if (await loadFromStorage(id)) { autosaveOn = true; hideResume(); modalClose() } });
+  body.querySelectorAll('[data-ld]').forEach(b => b.onclick = async () => { const id = b.dataset.ld; if (id !== 'auto' && world && world.tick > 0) await saveToStorage(false); if (await loadFromStorage(id)) { autosaveOn = true; hideResume(); modalClose() } else { const e = $('sv_err'); if (e) e.textContent = 'That save could not be loaded: ' + (loadErr || 'unknown error') + '. Download it and send it in a report.' } });
+  body.querySelectorAll('[data-dw]').forEach(b => b.onclick = async () => { await downloadRecord(b.dataset.dw); const e = $('sv_err'); if (e) e.textContent = $('saveInfo').textContent });
   body.querySelectorAll('[data-ov]').forEach(b => b.onclick = () => sure(b, async () => { try { const r = named.find(x => x.id === b.dataset.ov); await savesPut(r.id, r.name, meta(), snap()); saveInfo('Overwrote ' + r.name + '.'); savesOpen() } catch (e) { fail(e) } }));
   body.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => sure(b, async () => { try { await savesDelete(b.dataset.dl); savesOpen() } catch (e) { fail(e) } }));
   body.querySelectorAll('[data-rn]').forEach(b => b.onclick = () => {
@@ -250,11 +271,12 @@ async function savesOpen() {
     inp.onkeydown = e => { if (e.key === 'Enter') done(); e.stopPropagation() }; b.textContent = 'OK'; b.onclick = done;
   });
 }
-$('saveNow').onclick = () => saveToStorage(true);
+$('saveNow').onclick = () => saveToStorage(true); $('newWorldBtn').onclick = () => nwOpen();
 $('loadSave').onclick = savesOpen;
 $('exportBtn').onclick = exportFile; $('importBtn').onclick = () => $('importFile').click();
 $('importFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) importFileObj(f); e.target.value = '' });
-$('resumeBtn').onclick = async () => { if (await loadFromStorage()) { autosaveOn = true; hideResume(); setSpeed(10) } };
+$('resumeBtn').onclick = async () => { if (await loadFromStorage()) { autosaveOn = true; hideResume(); setSpeed(10) } else { $('resumeInfo').textContent = 'The saved village could not be loaded: ' + (loadErr || 'unknown error') + '. Download it to keep a copy.'; $('resumeDl').style.display = '' } };
+$('resumeDl').onclick = () => downloadRecord('auto');
 $('resumeNo').onclick = async () => {          // keep the old save as a backup before the new village starts overwriting it
   try { const r = await savesGet('auto'); if (r) await savesPut('backup', 'Backup', r.meta, r.text) } catch (e) { }
   autosaveOn = true; hideResume(); setSpeed(10);
@@ -293,7 +315,7 @@ function updateUI() {
   const stg = {}; for (const v of w.vills) stg[v.stage()] = (stg[v.stage()] || 0) + 1; if (w.crowd) { stg.child = (stg.child || 0) + w.crowd.kids; stg.adult = (stg.adult || 0) + w.crowd.adults; stg.elder = (stg.elder || 0) + w.crowd.elders }
   const roles = {}; for (const v of w.vills) if (v.age >= CFG.CHILD_DAYS && !v.isElder()) roles[v.role || 'forager'] = (roles[v.role || 'forager'] || 0) + 1;
   const ad = w.vills.filter(v => v.isAdult()), mood = ad.length ? ad.reduce((a, v) => a + v.mood, 0) / ad.length : 0;
-  $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.pop}${w.crowd && w.crowd.n ? `<span class="hint" style="font-weight:400;font-size:12px"> (${w.vills.length} in play)</span>` : ''}</div><div class="hint">mood ${moodWord(mood)}</div></div>
+  $('statCard').innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><div class="big">Population ${w.pop}${w.crowd && w.crowd.n ? `<span class="hint" style="font-weight:400;font-size:12px"> (${w.vills.length} in play)</span>` : ''}</div><div class="hint" style="display:flex;align-items:center;gap:8px">${growthChip(w)}<span>mood ${moodWord(mood)}</span></div></div>
     ${flowLine(w)}
     <div class="hint" style="margin-bottom:4px">${stg.infant || 0} infants · ${stg.child || 0} children · ${stg.youth || 0} youths · ${stg.adult || 0} adults · ${stg.elder || 0} elders</div>
     ${resRow2(w, 'food', w.capOf('food'))}${resRow2(w, 'wood', w.capOf('wood'))}${resRow2(w, 'stone', w.capOf('stone'))}${resNotice(w)}
@@ -443,6 +465,15 @@ function districtCard(w) {
   h += playing ? `<div class="hint" style="margin-top:4px">Group order: its crowd works at</div><div style="display:flex;gap:3px;margin-top:2px">${[['', 'auto'], ['farm', 'farming'], ['wood', 'firewood'], ['stone', 'stone']].map(([k, l]) => `<button class="btn" data-dkey="${sel.key}" data-dord="${k}" style="padding:1px 7px;${(ord || '') === k ? 'outline:1px solid #8fd18b' : ''}">${l}</button>`).join('')}</div>` : '<div class="hint" style="margin-top:4px">Switch to Play to give this district a group order.</div>';
   return h + '</div>';
 }
+/* City design card: the plan, the looks score, and the project ledger */
+function designCard(w) {
+  const D = w.design; if (!D || !D.style) return w.pop >= 60 ? `<div class="hint" style="margin-top:6px">No plan yet. The council will draw one once the village reaches ${DESIGN.first} people.</div>` : '';
+  const view = districtsView(w), rows = view.list.filter(d => D.beauty[d.key] !== undefined).sort((a, b) => D.beauty[a.key] - D.beauty[b.key]);
+  let h = `<div style="border:1px solid var(--line);border-radius:6px;padding:6px 8px;margin-top:6px"><div class="hint">${designText(w)}</div>`;
+  h += rows.slice(0, 6).map(d => `<div class="hint" style="display:flex;gap:6px;align-items:center"><span style="width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(d.name)}</span><span style="flex:1;height:6px;background:var(--line);border-radius:3px"><i style="display:block;height:6px;border-radius:3px;width:${D.beauty[d.key]}%;background:#9bbf7a"></i></span><b style="width:24px;text-align:right">${D.beauty[d.key]}</b></div>`).join('');
+  const L = D.ledger.slice(0, 5); if (L.length) h += `<div class="hint" style="margin-top:4px">Projects</div>` + L.map(e => `<div class="hint">${escapeHtml(e.text)} · ${e.state === 'done' ? 'finished' : e.state === 'lapsed' ? 'lapsed' : 'under way'} · ${cnYear(e.day)}</div>`).join('');
+  return h + '</div>';
+}
 function renderCity() {
   const w = world, el = $('cityCard'); if (!el) return; if (!w._lv) { el.innerHTML = '<div class="hint">The town is still too small to map.</div>'; return }
   const s = cityStats(w), b = s.bias, tot = s.beds.reduce((a, c) => a + c, 0) || 1, lay = b.compact > 0.75 ? 'tight and orderly' : b.compact > 0.5 ? 'fairly compact' : b.compact > 0.3 ? 'loose' : 'spread out';
@@ -454,6 +485,7 @@ function renderCity() {
   if (s.hamlets.length) html += `<div class="grp">${s.hamlets.map(h => `<div class="hint"><b>${escapeHtml(h.name)}</b> · ${h.n} homes, ${h.p} people · founded ${cnYear(h.day)}</div>`).join('')}</div>`;
   const bits = []; if (s.cleared.farm) bits.push(`${s.cleared.farm} field${s.cleared.farm === 1 ? '' : 's'} given up to building`); if (s.cleared.ruin) bits.push(`${s.cleared.ruin} ruin${s.cleared.ruin === 1 ? '' : 's'} cleared`); if (s.paved) bits.push(`${s.paved} path tiles paved where people walk`); if (s.surfaced) bits.push(`${s.surfaced} busy road tiles improved`);
   if (bits.length) html += `<div class="hint" style="margin-top:4px">So far: ${bits.join(', ')}.</div>`;
+  if (typeof designText === 'function') html += designCard(w);
   const hd = w.hdiag; if (hd && hd.why.length && w.beds() < w.pop + 2) html += `<div class="hint" style="margin-top:4px;color:#e0b86a">Housing is held up: ${escapeHtml(hd.why.join('; '))}.</div>`;
   html += `<div style="margin-top:6px"><button id="lvBtn" class="btn">${R.lvShow ? 'Hide' : 'Show'} land value on the map</button> <button id="distBtn" class="btn">${R.distShow ? 'Hide' : 'Show'} districts on the map</button></div>`;
   if (R.distShow) html += districtCard(w);
@@ -483,7 +515,7 @@ function renderWar() {
 }
 function renderDeaths() {
   const w = world, el = $('deathCard'); if (!el) return;
-  const all = {}; for (const why in w.causes) { const k = deathKey(why); all[k] = (all[k] || 0) + w.causes[why] }
+  const all = deathTotals(w);
   const total = Object.values(all).reduce((a, b) => a + b, 0);
   if (!total) { el.innerHTML = '<div class="hint">Nobody has died yet. When they do, the causes are tallied here so you can see what to prepare for.</div>'; return }
   const yr = w.year, cur = w.dyr[yr] || {}, prev = w.dyr[yr - 1] || {}, keys = Object.keys(DEATH_KINDS).sort((a, b) => (all[b] || 0) - (all[a] || 0)), sum = o => keys.reduce((a, k) => a + (o[k] || 0), 0);
@@ -576,9 +608,16 @@ function renderRegime() {
   el.innerHTML = h;
 }
 /* one quiet sentence about where the population came from this past year */
+/* v0.40 growth: a small coloured chip (arrow and yearly rate) on the population heading row beside the mood, so it takes no new space. The line below, which was already there, keeps last year's births, arrivals, deaths and departures, and when the village is not growing it says why instead. */
+function growthParts(w) { return [[flowYear(w, 'born'), 'born'], [flowYear(w, 'arrived'), 'arrived'], [flowYear(w, 'died'), 'died'], [flowYear(w, 'left'), 'left']].filter(p => p[0] > 0).map(p => `${p[0]} ${p[1]}`) }
+function growthChip(w) {
+  const g = growthStatus(w), parts = growthParts(w), icon = { growing: '▲', slowing: '↗', flat: '→', falling: '▼', new: '…' }[g.state], pct = g.state === 'new' ? '' : ' ' + (g.rate >= 0 ? '+' : '') + Math.round(g.rate * 100) + '%';
+  const tip = (g.state === 'new' ? 'Growth: not enough history yet.' : `${g.word}: ${pct.trim()} a year, over the past year.`) + (g.reasons.length ? ' Why: ' + g.reasons.join(', ') + '.' : '') + (parts.length ? ' Past year: ' + parts.join(', ') + '.' : '');
+  return `<span class="gchip" title="${escapeHtml(tip)}" style="color:${g.col};border-color:${g.col}66;background:${g.col}1f">${icon}${pct}</span>`;
+}
 function flowLine(w) {
-  if (!w.flow) return '';
-  const parts = [[flowYear(w, 'born'), 'born'], [flowYear(w, 'arrived'), 'arrived'], [flowYear(w, 'died'), 'died'], [flowYear(w, 'left'), 'left']].filter(p => p[0] > 0).map(p => `${p[0]} ${p[1]}`);
+  if (!w.flow) return ''; const g = growthStatus(w), parts = growthParts(w);
+  if (g.state !== 'growing' && g.state !== 'new' && g.reasons.length) return `<div class="hint" style="margin:-2px 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(g.reasons.join(', '))}">Why not growing: ${escapeHtml(g.reasons.join(' · '))}</div>`;
   return parts.length ? `<div class="hint" style="margin:-2px 0 4px">This past year: ${parts.join(', ')}</div>` : '';
 }
 /* families, wealth and feuds */
@@ -617,6 +656,7 @@ function renderGroups() {
 
 /* ---- selectable-unit panels: small building blocks so every panel reads the same way ---- */
 const sec = (title, body) => body ? `<div class="sec"><div class="sech">${title}</div>${body}</div>` : '';
+const BLD_MAT_WORLD = new Set(Object.keys(BLD_MATERIAL).filter(k => /^\s*(\(?\s*)?w\b/.test(String(BLD_MATERIAL[k]))));
 const kvs = rows => `<div class="stats">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><b>${v}</b></div>`).join('')}</div>`;
 const vlink = (v, extra) => `<a class="lnk" data-vid="${v.id}">${escapeHtml(v.name)}</a>${extra ? ' <span class="hint">' + extra + '</span>' : ''}`;
 const dateText = d => `Day ${d} (year ${Math.floor(d / (CFG.DPS * 4)) + 1})`;
@@ -631,15 +671,15 @@ function compactList(id, rows, recent = 5, max = 30) {       // rows: html strin
 const humanAge = days => `${ageYears(days)} (about ${humanYears(days)} in human years)`;
 const ageYears = days => { const y = days * CFG.LIFE_BASE / (CFG.DPS * 4); return y < 1 ? `${Math.round(days * CFG.LIFE_BASE)} days` : `${y.toFixed(1)} years` };
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
-const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', workshop: 'Workshop', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
+const BUILDING_NAMES = { plaza: 'Village square', tavern: 'Tavern', workshop: 'Workshop', power: 'Power station', hall: 'Great Hall', library: 'Library', bastion: 'Bastion', monument: 'Monument', amphitheatre: 'Amphitheatre', granaryhall: 'Great Granary', lighthouse: 'Lighthouse', temple: 'Temple', foundry: 'Foundry', citadel: 'Citadel', barracks: 'Barracks', watchtower: 'Watchtower', market: 'Market square', house: 'Home', farm: 'Field', store: 'Storehouse', campfire: 'Village campfire', dock: 'Dock', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge' };
 const bName = s => s.type === 'house' ? HOUSE_STYLES[s.style || 0] : s.type === 'store' ? ['Storehouse', 'Timber storehouse', 'Stone granary'][Math.min(2, s.style || 0)] : BUILDING_NAMES[s.type] || s.type;
 const OUTPUT = { logcamp: 'firewood', minecamp: 'stone', lodge: 'food', farm: 'food', dock: 'food' };
 const VENUES = { monument: 'sightseers', temple: 'visitors', library: 'readers', lighthouse: 'sightseers', bastion: 'sightseers', citadel: 'sightseers', barracks: 'visits', watchtower: 'sightseers', foundry: 'sightseers', granaryhall: 'sightseers', plaza: 'visits', tavern: 'visits', hall: 'visits', amphitheatre: 'visits', market: 'visits', campfire: 'visits', dock: 'landings' };
 function buildingPanel(w, s, extra) {
   const pct = Math.max(0, Math.round(100 * s.hp / s.maxHp)), cx = s.x + s.w / 2, cy = s.y + s.h / 2;
   const near = w.vills.filter(v => !v.isChild() && Math.hypot(v.x - cx, v.y - cy) < Math.max(s.w, s.h) + 2.5);
-  const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.', workshop: 'Smiths, carpenters, potters, weavers and other crafts work here side by side, away from the heart of the town.', campfire: 'The first gathering place. Evenings and talk start here.' }[s.type] || '';
-  const mat = (BLD_MATERIAL[s.type] || (() => '-'))(s.type === 'plaza' || s.type === 'tavern' ? w : s.style), wr = (BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0];
+  const proj = PROJECTS[s.type] ? PROJECTS[s.type].gives : '', purpose = { plaza: 'The village meets here in the evenings and for councils when there is no hall. Cobbled once masonry is known.', tavern: 'Adults spend evenings here: talk, rumour, and a lift in spirits.', workshop: 'Smiths, carpenters, potters, weavers and other crafts work here side by side, away from the heart of the town.', power: 'Makes power for electric hearths and lamps, enough for a few score of people. It burns coal or oil, or nothing at all once wind and water are known. Short of fuel, it makes less and the village works a little slower.', campfire: 'The first gathering place. Evenings and talk start here.' }[s.type] || '';
+  const mat = (BLD_MATERIAL[s.type] || (() => '-'))(BLD_MAT_WORLD.has(s.type) ? w : s.style), wr = (BLD_WEAR[s.type] || [0.003])[s.style || 0] || (BLD_WEAR[s.type] || [0.003])[0];
   const facts = kvs([['Age', ageText(w, s)], ['Built', dateText(s.built ?? w.day)], ['Built in', AGES[s.builtEra !== undefined ? s.builtEra : (s.era || 0)]], s.upgraded !== undefined ? ['Rebuilt', dateText(s.upgraded) + ` (${ERAS[s.era || 0]})`] : null, ['Material', escapeHtml(mat)], ['Size', `${s.w} x ${s.h} tiles`], ['Repairs', s.repairs || 0], ['Wear', wr * 100 > 0 ? (wr * 3200).toFixed(1) + '% a year' : '-']]);
   let people = '', use = '';
   if (s.type === 'house') {
@@ -741,7 +781,7 @@ function updateInspector() {
     if (s.type === 'dock') { const bs = w.boats.filter(b => b.dock === s.id); extra = `${bs.length} fishing boat${bs.length === 1 ? '' : 's'} work from here (${bs.filter(b => b.state === 'out').length} at sea). Catches go straight to the stores.` }
     if (s.type === 'logcamp') extra = 'A depot beside the forest. Woodcutters within about 14 tiles work about 15% faster and get a quarter more wood from every tree.';
     if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
-    if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
+    if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state] + ' Soil ' + Math.round((s.fert ?? 1) * 100) + '% fertile. ' + farmLadderText(w); if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
     ensureStats(w, s); el.innerHTML = buildingPanel(w, s, extra);
   } else if (s && s.constructor === Boat && w.boats.includes(s)) { el.innerHTML = boatPanel(w, s)
   } else if (s && s.visitor) { if ((w.econ && w.econ.caravan) || w.visit) el.innerHTML = visitorPanel(w, s); else { selected = null; el.innerHTML = '<h3>Inspector</h3><div class="hint">The visitors have gone.</div>' }
@@ -788,7 +828,7 @@ function pinchEnd(e) { if (e.pointerType !== 'touch') return false; ptrs.delete(
 cv.addEventListener('pointerdown', e => { if (e.pointerType === 'touch') { if (e.isPrimary) { ptrs.clear(); pinch = null } ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (ptrs.size >= 2) { PU.paint = null; PU.box = null; clearTimeout(PU.hold); PU.hold = null; drag = null; try { cv.setPointerCapture(e.pointerId) } catch (_) { } if (ptrs.size === 2) pinch = pinchNow(); return } } if (puDown(e)) return; try { cv.setPointerCapture(e.pointerId) } catch (_) { } drag = { x: e.clientX, y: e.clientY, moved: 0 }; cv.classList.add('drag') });
 cv.addEventListener('pointermove', e => { if (e.pointerType === 'touch' && ptrs.has(e.pointerId)) { ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pinch && ptrs.size === 2) { const n = pinchNow(), r = cv.getBoundingClientRect(); zoomAt(n.d / pinch.d, pinch.x - r.left, pinch.y - r.top); R.cam.x -= (n.x - pinch.x) / R.cam.z; R.cam.y -= (n.y - pinch.y) / R.cam.z; follow = false; clampCam(); pinch = n; return } } if (pinch) return; if (puMove(e)) return; if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.moved += Math.abs(dx) + Math.abs(dy); drag.x = e.clientX; drag.y = e.clientY; if (drag.moved > 5) { R.cam.x -= dx / R.cam.z; R.cam.y -= dy / R.cam.z; follow = false; clampCam() } });
 cv.addEventListener('pointercancel', e => { pinchEnd(e); drag = null; cv.classList.remove('drag') });
-cv.addEventListener('pointerup', e => { if (pinchEnd(e)) return; cv.classList.remove('drag'); cv._moved = drag ? drag.moved : 0; if (puUp(e)) { drag = null; return } if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); pick(e.clientX - r.left, e.clientY - r.top); puPicked(e, selected) } drag = null });
+cv.addEventListener('pointerup', e => { if (pinchEnd(e)) return; cv.classList.remove('drag'); cv._moved = drag ? drag.moved : 0; if (puUp(e)) { drag = null; return } if (drag && drag.moved <= 5) { const r = cv.getBoundingClientRect(); try { pick(e.clientX - r.left, e.clientY - r.top); puPicked(e, selected) } finally { drag = null } } drag = null });       // v0.40: an error while drawing the inspector used to leave the drag on, so the map kept panning with no button down
 /* a finger lifted over a button or outside the canvas never reaches the canvas: clean up at window level, and when the page loses focus (#188) */
 const ptrsDrop = e => { if (e.pointerType === 'touch') { ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null } };
 window.addEventListener('pointerup', ptrsDrop, true); window.addEventListener('pointercancel', ptrsDrop, true);
@@ -826,6 +866,13 @@ document.querySelectorAll('[data-sp]').forEach(b => b.onclick = () => setSpeed(+
 $('playBtn').onclick = () => setSpeed(speed > 0 ? 0 : lastSpeed || 10); $('spDown').onclick = () => stepSpeed(-1); $('spUp').onclick = () => stepSpeed(1); $('stepBtn').onclick = e => advance(e.shiftKey);
 $('zin').onclick = () => zoomAt(1.3, R.vw / 2, R.vh / 2); $('zout').onclick = () => zoomAt(1 / 1.3, R.vw / 2, R.vh / 2);
 $('fol').onclick = () => { follow = !follow && !!selected; $('fol').classList.toggle('on', follow) };
+/* v0.40: "?" shows a light key cheat sheet over the map (not a dialog); ? again, Esc or a click closes it */
+const KEY_ROWS = [['Drag, W A S D, arrows', 'Pan the map'], ['Wheel, + / -', 'Zoom'], ['Click', 'Inspect'], ['Space', 'Pause or resume'], ['1 to 6', 'Speed: 1×, 3×, 10×, 30×, 100×, Max'], ['[ and ]', 'Slower, faster'], ['. and >', 'Advance one day, one year'], ['F', 'Follow the selected villager'], ['G', 'Settings'], ['L', 'Clean view on or off'], ['M', 'Sound on or off'], ['B R Z V', 'Play: build, road, zone, select'], ['Esc', 'Close, deselect'], ['?', 'This list']];
+function keysToggle(force) {
+  const el = $('keysOv'); if (!el) return; const on = force === undefined ? el.style.display === 'none' : force;
+  if (on) { el.innerHTML = '<h4>Keys</h4><div class="kg">' + KEY_ROWS.map(([k, d]) => `<span>${k.split(', ').map(x => '<kbd>' + escapeHtml(x) + '</kbd>').join(' ')}</span><span>${escapeHtml(d)}</span>`).join('') + '</div><div class="kfoot">Press ? or Esc to close</div>' }
+  el.style.display = on ? '' : 'none';
+}
 addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT') return; if (puKey(e)) return; keys[e.key.toLowerCase()] = true;
   if (e.code === 'Space') { e.preventDefault(); setSpeed(speed === 0 ? lastSpeed || 10 : 0) }
@@ -833,8 +880,10 @@ addEventListener('keydown', e => {
   const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 100, '6': 999 }[e.key]; if (m) setSpeed(m);       // 6 is Max: as fast as the machine can go
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
   if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer(); if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) cycleLayout(); if (e.key.toLowerCase() === 'x' && !e.ctrlKey && !e.metaKey) toggleFullscreen();
+  if (e.key === 'Escape' && $('keysOv') && $('keysOv').style.display !== 'none') { keysToggle(false); return }
   if (e.key === 'Escape') { if ($('menu').style.display === 'block') { $('menu').style.display = 'none'; $('menuBtn').classList.remove('on') } else if ($('nw').style.display !== 'none') nwClose(); else if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
 });
+$('keysOv').onclick = () => keysToggle(false);
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
 addEventListener('resize', () => { resizeRender(); clampCam() });
 
@@ -912,6 +961,7 @@ async function undoTimeTravel() {
 }
 $('ttGo').onclick = () => startTimeTravel(+$('ttSel').value); $('ttCancel').onclick = () => { if (tt) tt.cancel = true };
 let lastDrawAt = 0, draws = 0;
+let tickMax = 0;       // the recent worst tick, in ms (decays), used by the frame loop below
 function frame(now) {
   const ts = performance.now(); lastFrameAt = ts; frames++;
   try {
@@ -920,7 +970,8 @@ function frame(now) {
     if (pendingTicks > 0 && !tt) { const t0 = performance.now(); try { while (pendingTicks > 0 && performance.now() - t0 < 30) { world.step(); pendingTicks-- } } catch (e) { dbgNote('step', e); dbgPersist(world); pendingTicks = 0 } }
     if (speed > 0) {
       acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now(); let ran = 0;
-      const budget = speed >= 100 ? 45 : 14; try { while (n-- > 0) { world.step(); ran++; if (performance.now() - t0 > budget) { acc = Math.min(acc + Math.max(0, n), 4); break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
+      const budget = speed >= 100 ? 28 : 14;      /* v0.40: at 100x the budget is 28 ms (was 45) and a frame also stops when a heavy tick (the recent worst) would no longer fit, so long frames stay near 30 ms */
+       try { while (n-- > 0) { const a0 = performance.now(); world.step(); ran++; const a1 = performance.now(); tickMax = Math.max(tickMax * 0.97, a1 - a0); if (a1 - t0 + (speed >= 100 ? tickMax : 0) > budget) { acc = Math.min(acc + Math.max(0, n), 4); break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
       DBG.tpf = (DBG.tpf || 0) * 0.9 + ran * 0.1; if (ran > 0) DBG.stepMs = DBG.stepMs ? DBG.stepMs * 0.9 + (performance.now() - t0) * 0.1 : performance.now() - t0       // the time of the frames that ticked: empty frames at 1x no longer pull it to zero
     }
     const pan = 520 * dt / 1000 / R.cam.z, c = R.cam;

@@ -207,6 +207,7 @@ class World {
     if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.sayAt(b, 'A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
     if (bp.type === 'market') this.sayAt(b, 'A market square is opened. Merchants will know where to find us.');
     if (bp.type === 'plaza') this.sayAt(b, this.has('masonry') ? 'A cobbled village square is finished, with a well at its heart.' : 'A village square is laid out around a new well. The village has a place to meet.');
+    if (bp.type === 'power') this.sayAt(b, this.has('renewables') ? 'A power station is finished. Wind and water will light the village.' : 'A power station is finished. The first lamps and electric hearths come alive.');
     if (bp.type === 'workshop') this.sayAt(b, 'A workshop is finished. The crafts will work side by side now.');
     if (bp.type === 'tavern') this.sayAt(b, 'A tavern opens its doors. Evenings will be livelier.');
     if (bp.type === 'logcamp') this.sayAt(b, 'A logging camp is raised beside the forest.');
@@ -340,6 +341,9 @@ class World {
   }
   removeBuilding(b) {
     this.buildings.delete(b.id); this._bv = (this._bv | 0) + 1; const { W } = CFG;
+    for (const bp of this.bps.slice()) if (bp.type === 'upgrade' && bp.target === b.id) {      // v0.40: a queued upgrade of a building that is gone is cancelled (it made the save impossible to load)
+      bp.alive = false; this.bps.splice(this.bps.indexOf(bp), 1); for (let dy = 0; dy < bp.h; dy++) for (let dx = 0; dx < bp.w; dx++) this.bpAt.delete((bp.y + dy) * W + bp.x + dx);
+    }
     for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * W + b.x + dx; this.bmap[i] = 0; this.blk[i] = 0 }
     this.storeAdj.fill(0); this.bldAdj.fill(0); for (const k in this.campAdj) this.campAdj[k].fill(0); for (const x of this.buildings.values()) if (CFG.SOLID[x.type]) this.markAdj(x, this.adjFor(x.type));
     for (const id of b.occ) { const v = this.vills.find(x => x.id === id); if (v) { v.home = null; v.mood = Math.max(0, v.mood - 20); v.story('Lost their home.') } }
@@ -361,17 +365,16 @@ class World {
     const stc = this.gov.council.find(c => c.title === 'Steward'), std = stc ? this.vills.find(v => v.id === stc.id) : null;
     this.stock.food = Math.floor(this.stock.food * (1 - (s === 1 ? 0.04 : 0.015) * (std ? 1 - 0.3 * std.trait.ind : 1) * (this.has('granary') ? 0.7 : 1) * (projBuilt(this, 'granaryhall') ? 0.7 : 1) * (1 - Math.min(0.5, techFx(this, 'store')))));
     if (s === 3) {
-      const need = winterWood(this);
+      const need = burnFuel(this);
       if (this.stock.wood >= need) { this.stock.wood -= need; if (this.cold) this.say('Warm hearths again; the cold has eased.'); this.cold = false }
       else { this.stock.wood = 0; if (!this.cold) this.emit('cold', 'The firewood has run out. The village is freezing!'); this.cold = true }
     } else this.cold = false;
     for (const k of ['wood', 'stone', 'food']) this.stock[k] = Math.min(this.stock[k], this.capOf(k));
     animalsNewDay(this);
     townNewDay(this);
-    societyNewDay(this);
+    try { energyDay(this) } catch (e) { this.fault('energy', e) }
     techDay(this);
     tradeDay(this);
-    routesDay(this);
     outpostDay(this);
     try { warDay(this) } catch (e) { this.fault('war', e) }
     try { cultureAll(this) } catch (e) { this.fault('culture', e) }
@@ -382,19 +385,23 @@ class World {
     try { voicesDay(this) } catch (e) { this.fault('voices', e) }
     neighbourDay(this);
     buildingDay(this);
-    try { cityDay(this) } catch (e) { this.fault('city', e) }
-    try { crowdDay(this) } catch (e) { this.fault('crowd', e) }
     try { gameoverDay(this) } catch (e) { this.fault('over', e) }
     try { playDay(this) } catch (e) { this.fault('play', e) }
     characterDay(this);
     regimeDay(this);
     strifeDay(this);
-    livesDay(this);
     projectDay(this);
     historyDay(this);
     livelihoodsDay(this);
     concernsDay(this);
-    statsDay(this);
+  }
+  /* v0.40 (#134/#135): the four heaviest day jobs run a little after the day turns, one per slot, so no tick and no fast-forward frame carries the whole day's work.
+     The slots are fixed ticks of the day (nothing is stored, so a loaded game keeps the same rhythm); all fall before the evening council and holiday. */
+  dayJob(k) {
+    const S = CFG.DAY_SLOTS;
+    if (k === S.society) societyNewDay(this); else if (k === S.crowd) { try { crowdDay(this) } catch (e) { this.fault('crowd', e) } }
+    else if (k === S.lives) livesDay(this); else if (k === S.stats) statsDay(this);
+    else if (k === S.city) { try { cityDay(this) } catch (e) { this.fault('city', e) } } else if (k === S.routes) routesDay(this);
   }
 
   /* ----- diagnostics: every subsystem is timed and isolated, so one bug cannot stop the village ----- */
@@ -463,6 +470,7 @@ class World {
   step() {
     const t0 = nowMs(), d = this.dbg; this.tick++; this._nodes = 0; this.deferredSearch = false;
     if (this.tick % CFG.TPD === 0) { this._nodes = -1e9; this.section('calendar', () => this.onNewDay()); this._nodes = 0; this.section('sanity', () => this.sanity()) }       // daily planning is not rationed
+    { const k = this.tick % CFG.TPD; if (k > 0 && CFG.DAY_SLOT_AT[k]) this.section(CFG.DAY_SLOT_AT[k], () => this.dayJob(k)) }
     this.section('nature', () => this.nature());
     if (this.tick % 4 === 0) this.section('grid', () => this.rebuildGrid());
     this.section('animals', () => { for (const a of this.animals) if (a.alive) { try { a.update() } catch (e) { this.entityFault('animal', a, e) } } if (this.tick % 20 === 0) this.animals = this.animals.filter(a => a.alive) });

@@ -61,9 +61,9 @@
     </div>
     <div class="card"><h3>Save &amp; load</h3>
       <div class="hint" id="saveInfo">Nothing saved yet.</div>
-      <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave">Saves…</button></div>
+      <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave">Saves…</button><button id="newWorldBtn" title="Start a new village">New world…</button></div>
       <div class="btnrow"><button id="exportBtn">Export file</button><button id="importBtn">Import file</button></div>
-      <input type="file" id="importFile" accept=".json,.gz,.json.gz,application/json,application/gzip" style="display:none">
+      <input type="file" id="importFile" accept=".json,.gz,.json.gz,.zip,application/json,application/gzip,application/zip" style="display:none">
       <label class="tog" style="margin-top:8px"><input type="checkbox" id="autoresume" checked><span class="sw"></span><span>Resume automatically <span class="hint">when the page opens</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="bubbleToggle" checked><span class="sw"></span><span>Thought bubbles <span class="hint">speech, thoughts and dreams above villagers</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
@@ -101,7 +101,7 @@
     <div id="over" style="display:none"><div class="nwbox">
       <h3 id="over_title"></h3><div id="over_text" style="margin-bottom:10px"></div>
       <canvas id="over_chart" width="470" height="90" style="width:100%;height:90px;display:block;background:#10151a;border-radius:6px"></canvas>
-      <div id="over_facts" class="kvl" style="margin:10px 0"></div><div id="over_tales"></div>
+      <div id="over_facts" class="kvl" style="margin:10px 0"></div><div id="over_tales"></div><div class="hint" id="over_rec" style="margin:4px 0 8px"></div>
       <div class="hint wline" id="over_line" style="margin-bottom:10px"></div>
       <div class="btnrow"><button id="over_again" class="on" title="The same seed and settings, from the start">Same world again</button><button id="over_new">New world…</button><button id="over_cont" title="Keep watching what is left">Keep watching</button><button id="over_copy">Copy world line</button></div>
     </div></div>
@@ -118,8 +118,9 @@
       <div class="btnrow" style="margin-top:12px"><button id="nw_go" class="on">Start</button><button id="nw_cancel">Cancel</button></div>
     </div></div>
     <canvas id="mini" title="Click to move the camera"></canvas>
-    <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeNo">Start fresh</button></div></div>
-    <div id="hint">Drag to pan · wheel to zoom · click to inspect · WASD · Space pause · [ ] speed</div>
+    <div id="resume" style="display:none"><div><b>Saved village found</b><div class="hint" id="resumeInfo"></div><div class="hint">The game is paused until you choose.</div></div><div class="btnrow"><button id="resumeBtn" class="on">Resume</button><button id="resumeDl" style="display:none">Download save</button><button id="resumeNo">Start fresh</button></div></div>
+    <div id="hint">Drag pan · wheel zoom · click inspect · Space pause · [ ] speed · ? keys</div>
+    <div id="keysOv" style="display:none"></div>
   </div>
   <aside id="side">
     <div class="tabbar" id="tabbar"><button data-tab="village" class="on">Village</button><button data-tab="society">Society</button><button data-tab="progress">Progress</button><button data-tab="world">World</button><button data-tab="stats">Stats</button><button data-tab="events">Events</button></div>
@@ -212,6 +213,8 @@
 <script src="src/war.js"></script>
 <script src="src/culture.js"></script>
 <script src="src/city.js"></script>
+<script src="src/energy.js"></script>
+<script src="src/design.js"></script>
 <script src="src/diag.js"></script>
 <script src="src/crowd.js"></script>
 <script src="src/play.js"></script>

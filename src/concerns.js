@@ -30,9 +30,9 @@ const CONCERN_KINDS = {
 };
 
 function initConcerns(w) {
-  w.concerns = { v: 1, list: [], hist: [], pending: [], pop: [], led: [], snap: [], cd: {}, orders: {}, muted: {}, lowUnity: 0, raised: 0, critical: 0, used: 0, nid: 1 };
+  w.concerns = { v: 1, list: [], hist: [], pending: [], pop: [], led: [], snap: [], cd: {}, orders: {}, muted: {}, lowUnity: 0, raised: 0, critical: 0, used: 0, nid: 1, log: [] };
 }
-const CN = w => w.concerns || (initConcerns(w), w.concerns);
+const CN = w => { const C = w.concerns || (initConcerns(w), w.concerns); if (!C.log) C.log = []; return C };
 
 /* what the boats have done about it, and what stopped them (timber.js) */
 function timberNote(w) {
@@ -41,13 +41,10 @@ function timberNote(w) {
   return a + (t.why ? ` No timber run now: ${t.why}.` : '');
 }
 /* the firewood a winter will take (shared with the winter upkeep in world.js) */
-function winterWood(w) {
-  return Math.ceil((w.pop * 0.22 + w.houses().length * 0.5 + 1) * (w.harsh ? 1.8 : 1) * (w.settings.survival ? 1.4 : 1) * (1 - 0.1 * styleNow(w)) * fuelFx(w) * hardOf(w).cold);
-}
-/* what technology saves on firewood (v0.37): stone hearths, brick chimneys, glazed windows, coal where it has been found, electric heat; never below 30 percent */
+function winterWood(w) { return fuelMix(w).wood }      // v0.40: what is left for wood after power, coal and peat (energy.js); heatNeed is the whole heat
+/* what technology saves on firewood: stone hearths, brick chimneys, glazed windows; never below 30 percent. Coal, peat and power are the fuel ladder in energy.js (v0.40) */
 function fuelFx(w) {
   let k = 1; if (w.has('masonry')) k -= 0.08; if (w.has('brickwork')) k -= 0.08; if (w.has('glass')) k -= 0.06;
-  if (w.has('mining') && typeof matOk === 'function' && matOk(w, 'coal')) k -= 0.22; if (w.has('electricity')) k -= 0.2;
   return Math.max(0.3, k);
 }
 
@@ -159,24 +156,71 @@ function concernsDay(w) {
   C.pop.push(pop); if (C.pop.length > 192) C.pop.shift();
   if (w.day % 4 === 0) { C.snap.push({ d: w.day, c: { ...w.causes } }); if (C.snap.length > 12) C.snap.shift() }
   if (w.day < 12) return;
-  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found); warRules(w, C, found); plagueRules(w, C, found);
+  const found = []; popRules(w, C, found); foodRules(w, C, found); fuelRules(w, C, found); energyRules(w, C, found); housingRules(w, C, found); unityRules(w, C, found); outpostRules(w, C, found); warRules(w, C, found); plagueRules(w, C, found);
   const seen = new Set();
   for (const f of found) {
     seen.add(f.key); let c = C.list.find(x => x.key === f.key);
     if (!c) {
-      c = { id: C.nid++, key: f.key, title: concernTitle(f.key, f), sev: f.sev, max: f.sev, since: w.day, text: f.text, why: f.why, fix: f.fix, m: f.m || null, trail: [], acts: [], miss: 0 }; C.list.push(c); C.raised++; statCount(w, 'concern');
+      c = { id: C.nid++, key: f.key, title: concernTitle(f.key, f), sev: f.sev, max: f.sev, since: w.day, text: f.text, why: f.why, fix: f.fix, m: f.m || null, trail: [], acts: [], miss: 0, base: concernBase(w), deep: 0 }; C.list.push(c); C.raised++; statCount(w, 'concern');
       announce(w, C, c, true);
     } else {
-      const up = f.sev > c.sev; c.sev = f.sev; c.max = Math.max(c.max, f.sev); c.text = f.text; c.why = f.why; c.fix = f.fix; c.m = f.m || null; c.miss = 0;
+      const up = f.sev > c.sev; c.sev = f.sev; c.max = Math.max(c.max, f.sev); c.text = f.text; c.why = f.why; c.fix = f.fix; c.m = f.m || null; c.miss = 0; c.deep = Math.max(c.deep || 0, concernGauge(c).frac);
       if (up && f.sev === 2) announce(w, C, c, false);
     }
   }
   for (const c of C.list) if (seen.has(c.key)) { c.trail = c.trail || []; c.trail.push(c.m ? c.m.v : 0); if (c.trail.length > 16) c.trail.shift(); settleActs(w, c) }
   for (let i = C.list.length - 1; i >= 0; i--) {
     const c = C.list[i]; if (seen.has(c.key)) continue;
-    if (++c.miss >= 3) { C.list.splice(i, 1); C.hist.unshift({ key: c.key, title: c.title, sev: c.max, since: c.since, end: w.day, text: c.text, did: (c.acts || []).map(a => a.label).filter((x, j, a) => a.indexOf(x) === j) }); if (C.hist.length > 12) C.hist.pop(); w.say(`Concern eased: ${c.title.toLowerCase()}.`) }
+    if (++c.miss >= 3) { C.list.splice(i, 1); const rec = concernRecord(w, C, c); C.hist.unshift({ key: c.key, title: c.title, sev: c.max, since: c.since, end: w.day, text: c.text, out: rec.out, pts: rec.pts, did: (c.acts || []).map(a => a.label).filter((x, j, a) => a.indexOf(x) === j) }); if (C.hist.length > 12) C.hist.pop(); w.say(`Concern eased: ${c.title.toLowerCase()}.`) }
   }
   for (const k in C.muted) if (C.muted[k] <= w.day) delete C.muted[k];
+}
+
+/* ----- v0.40 council record: how each concern ended, what it was worth, and a rating over the whole run -----
+   Severity points 1 to 5 (watch is 1; critical 3; +1 if it ran a month or more; +1 if the gauge went to the bottom). The outcome multiplies them:
+   answered 1.0 (a response was tried and the trouble went), eased on its own 0.5, ended badly -1.0 (a circle sailed away, an outpost was lost, or a fifth of the village was gone).
+   Nothing here draws a random number: it only reads the world and writes record fields. */
+const CN_BAND = [[0.85, 'Steady hand'], [0.68, 'Sure footed'], [0.5, 'Getting by'], [0.3, 'Slow to act'], [0, 'Asleep at the table']];
+function concernBase(w) { const S = w.strife; return { sec: S ? S.secessions || 0 : 0, op: typeof outpostsAlive === 'function' && w.out ? outpostsAlive(w).length : 0, pop: w.pop } }
+function concernPoints(c, endDay) { return Math.min(5, (c.max >= 2 ? 3 : 1) + (endDay - c.since >= 32 ? 1 : 0) + ((c.deep || 0) >= 0.95 ? 1 : 0)) }
+function concernRecord(w, C, c) {
+  const b = c.base || concernBase(w), S = w.strife, op = typeof outpostsAlive === 'function' && w.out ? outpostsAlive(w).length : 0;
+  const bad = (S && (S.secessions || 0) > b.sec) || op < b.op || (b.pop >= 20 && w.pop <= b.pop * 0.8);
+  const tried = (c.acts || []).some(a => a.status !== 'declined' && a.status !== 'lapsed');
+  const out = bad ? 'bad' : tried ? 'answered' : 'eased', pts = concernPoints(c, w.day), mult = out === 'answered' ? 1 : out === 'eased' ? 0.5 : -1;
+  const e = { t: c.title, k: c.key, s: c.since, d: w.day, days: w.day - c.since, sev: c.max, out, p: pts, got: pts * mult };
+  C.log.push(e); if (C.log.length > 240) C.log.shift(); return { out, pts };
+}
+function councilRecord(w) {
+  const C = CN(w), log = C.log, open = C.list.filter(c => w.day - c.since >= 24);
+  let got = 0, poss = 0; const n = { answered: 0, eased: 0, bad: 0 };
+  for (const e of log) { got += e.got; poss += e.p; n[e.out]++ }
+  let openPts = 0; for (const c of open) { poss += concernPoints(c, w.day); openPts++ }
+  const total = log.length + openPts, rating = poss > 0 ? clamp(got / poss, 0, 1) : null;
+  const title = total < 3 || rating === null ? 'Too early to say' : CN_BAND.find(b => rating >= b[0])[1];
+  const best = log.filter(e => e.out === 'answered').sort((a, b) => b.got - a.got || b.days - a.days)[0] || null, worst = log.filter(e => e.out === 'bad').sort((a, b) => b.p - a.p)[0] || null;
+  return { total, got, poss, rating, title, n, open: C.list.length, best, worst, longest: log.slice().sort((a, b) => b.days - a.days)[0] || null };
+}
+
+/* ----- v0.40 growth status: is the village growing, slowing, holding or shrinking, and the main reasons why (read-only, from data the game already keeps) ----- */
+function growthStatus(w) {
+  const C = CN(w), h = C.pop, n = h.length, now = w.pop, YEAR = CFG.DPS;
+  if (n < YEAR * 2 || now < 2) return { state: 'new', word: 'Settling in', rate: 0, reasons: [], col: '#8693a0' };
+  const a = h[n - 1 - YEAR] || now, b = h[n - 1 - 2 * YEAR] || a, g = (now - a) / Math.max(1, a), gPrev = (a - b) / Math.max(1, b);
+  const born = flowYear(w, 'born'), died = flowYear(w, 'died'), left = flowYear(w, 'left'), arrived = flowYear(w, 'arrived');
+  const state = g <= -0.03 ? 'falling' : g < 0.03 ? 'flat' : gPrev - g > 0.06 ? 'slowing' : 'growing';
+  const reasons = [], pop = Math.max(1, now), beds = typeof w.beds === 'function' ? w.beds() : 0, ad = w.vills.filter(v => v.isAdult()), mood = ad.length ? ad.reduce((s, v) => s + v.mood, 0) / ad.length : 60;
+  if (state !== 'growing') {
+    if (beds - now <= 0) reasons.push('no free beds');
+    if (w.stock.food < pop * 1.5) reasons.push('food is short');
+    if (died > born && born + arrived >= 0) reasons.push(`${died} died against ${born} born`);
+    if (left > arrived) reasons.push(`${left} left`);
+    if (mood < 42) reasons.push('people are unhappy');
+    if (w.stock.wood < pop * 0.3 && (w.season === 3 || w.cold)) reasons.push('firewood is short');
+    if (!reasons.length) reasons.push(state === 'flat' ? 'births only match deaths' : 'no single cause stands out');
+  }
+  const word = { growing: 'Growing', slowing: 'Slowing', flat: 'Holding', falling: 'Falling' }[state], col = { growing: '#8fd18b', slowing: '#e0c25c', flat: '#8ab4d8', falling: '#e07a5a' }[state];
+  return { state, word, rate: g, reasons: reasons.slice(0, 3), col, born, died, left, arrived };
 }
 function announce(w, C, c, fresh) {
   if (c.sev >= 2) {
@@ -233,6 +277,10 @@ const RESPONSES = {
     dur: 10, label: 'All hands', cd: 64, blurb: 'For 10 days nobody idles: farming, hunting, fishing and wood all get the most hands. Costs mood.',
     can: w => ordersOf(w).allhands ? 'Already in force' : '',
     run: w => { const C = CN(w); C.orders.allhands = w.day + 10; w.emit('council', 'All hands are called to work. There will be no idling until the crisis passes.', {}) } },
+  prospect: {
+    dur: 30, label: 'Send prospectors', cd: 90, blurb: 'For 30 days prospectors look for new faces in the coal, oil and peat workings and hurry the next expedition. They may open a deposit that was thought spent.',
+    can: w => EN(w).prospect > w.day ? 'Already out' : '',
+    run: w => { const E = EN(w); E.prospect = w.day + 30; try { const D = DISC(w); D.nextPlan = Math.min(D.nextPlan, w.day + 1); D.nextRumour = Math.min(D.nextRumour, w.day + 1) } catch (e) { } w.emit('council', 'Prospectors are sent out to look for coal, oil and peat, and for new rock.', {}) } },
   nudge_family: {
     label: 'Ask: encourage families', cd: 24, blurb: 'The council may push its growth policy up, so more families raise children.',
     can: () => '', run: (w, act) => askNudge(w, 'You ask the council to do more to help families grow.', 'Encourage families', () => shiftPolicy(w, 'growth', 0.3), act) },
@@ -257,7 +305,7 @@ function responseState(w, id) {
 function respond(w, id, key) {
   const r = RESPONSES[id]; if (!r) return false; const st = responseState(w, id); if (!st.ok) return false;
   const C = CN(w), c = key ? C.list.find(x => x.key === key) : null;
-  const act = { id, label: r.label, start: w.day, until: w.day + (r.dur || 0), status: r.dur ? 'active' : 'council', at: w.day };
+  const act = { id, label: r.label, start: w.day, until: w.day + (r.dur || 0), status: r.dur ? 'active' : 'council', at: w.day, key: key || null };
   if (c) (c.acts = c.acts || []).push(act);
   C.cd[id] = w.day + r.cd; C.used++; statCount(w, 'concern_response'); try { logAction(w, 'response', id + (key ? ' for ' + key : '')) } catch (e) { } r.run(w, act); return true;
 }

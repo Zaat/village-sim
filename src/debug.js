@@ -4,7 +4,7 @@
    debug.js — diagnostics shared by the UI: error history (kept across page
    loads), a full report you can copy or download, and live performance numbers.
    ========================================================================== */
-const APP_VERSION = '0.39.3';
+const APP_VERSION = '0.40';
 const ERR_KEY = 'villagesim.errors';
 const DBG = { fps: 0, tps: 0, frameMs: 0, renderMs: 0, restarts: 0, lastRestart: null, session: new Map(), previous: [], watchdog: [], persistAt: 0 };
 
@@ -64,6 +64,6 @@ function dbgReport(w, speed) {
     stats: (() => { try { const S = w.stats; if (!S || !S.days.length) return null; const n = S.days.length, take = id => (S.s[id] || []).slice(Math.max(0, n - 6)); return { lastDays: S.days.slice(Math.max(0, n - 6)), pop: take('pop'), food: take('food'), mood: take('mood') } } catch (e) { return null } })(),
     sections: secs, unstuckVillagers: d.unstuck, watchdogEvents: DBG.watchdog.slice(-10), restarts: DBG.restarts,
     errors: dbgAllErrors(w).map(r => ({ where: r.where, message: r.msg, count: r.count, firstDay: r.first && r.first.day, entity: r.ent, stack: r.stack })),
-    previousSessionErrors: DBG.previous, recentEvents: w.log.slice(0, 30).map(l => `D${l.day} ${l.text}`),
+    previousSessionErrors: DBG.previous, lastLoadError: DBG.lastLoadError || null, recentEvents: w.log.slice(0, 30).map(l => `D${l.day} ${l.text}`),
   };
 }

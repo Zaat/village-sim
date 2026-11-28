@@ -35,21 +35,41 @@ const { chromium } = require('playwright');
   await p.evaluate(() => savesOpen()); await p.waitForTimeout(400);
   ok(await p.evaluate(() => document.getElementById('sv_new').disabled && /10 of 10/.test(document.getElementById('modal_b').textContent)), 'the Save button stops at ten named saves');
   await p.click('#modal_x');
-  // export and import: .json.gz both ways, and a plain .json too
+  // export and import (v0.40): the export is a .zip, import reads .zip, .json.gz and plain .json
   const [dl] = await Promise.all([p.waitForEvent('download'), p.evaluate(() => exportFile())]); const path = await dl.path();
-  ok(/\.json\.gz$/.test(dl.suggestedFilename()), 'export writes a .json.gz file (' + dl.suggestedFilename() + ')');
-  const fs = require('fs'), buf = fs.readFileSync(path); ok(buf[0] === 0x1f && buf[1] === 0x8b, 'the exported file is gzip');
+  ok(/\.zip$/.test(dl.suggestedFilename()), 'export writes a .zip file (' + dl.suggestedFilename() + ')');
+  const fs = require('fs'), buf = fs.readFileSync(path); ok(buf[0] === 0x50 && buf[1] === 0x4b, 'the exported file is a zip');
   const seed = await p.evaluate(() => __sim.world.seed); await p.evaluate(() => __sim.newWorld(4242));
   await p.setInputFiles('#importFile', path); await p.waitForTimeout(1200);
-  ok(await p.evaluate(s => __sim.world.seed === s, seed), 'importing the .json.gz file restores the village');
-  const plain = require('zlib').gunzipSync(buf); fs.writeFileSync('/tmp/plain-save.json', plain); await p.evaluate(() => __sim.newWorld(4243));
+  ok(await p.evaluate(s => __sim.world.seed === s, seed), 'importing the .zip file restores the village');
+  const plain = require('child_process').execSync('unzip -p ' + path); fs.writeFileSync('/tmp/plain-save.json', plain); fs.writeFileSync('/tmp/plain-save.json.gz', require('zlib').gzipSync(plain)); await p.evaluate(() => __sim.newWorld(4244));
+  await p.setInputFiles('#importFile', '/tmp/plain-save.json.gz'); await p.waitForTimeout(1200);
+  ok(await p.evaluate(s => __sim.world.seed === s, seed), 'importing an older .json.gz file still works'); await p.evaluate(() => __sim.newWorld(4243));
   await p.setInputFiles('#importFile', '/tmp/plain-save.json'); await p.waitForTimeout(1200);
   ok(await p.evaluate(s => __sim.world.seed === s, seed), 'importing an older plain .json file still works');
+  // a save that cannot be loaded says why in the dialog and can be downloaded
+  await p.evaluate(async () => { await savesPut('backup', 'Backup', { pop: 1, year: 1, season: 0, day: 1, seed: 1 }, '{"v":1,"seed":1,"vills":5}') });
+  await p.evaluate(() => savesOpen()); await p.waitForTimeout(400);
+  ok(await p.evaluate(() => !!document.querySelector('#modal_b [data-dw=backup]') && !!document.querySelector('#modal_b [data-dw=auto]')), 'every save has a Download button');
+  await p.click('#modal_b [data-ld=backup]'); await p.waitForTimeout(600);
+  ok(await p.evaluate(() => document.getElementById('modal').style.display !== 'none' && /could not be loaded/.test(document.getElementById('sv_err').textContent)), 'a failed load says so inside the dialog: ' + await p.evaluate(() => document.getElementById('sv_err').textContent));
+  const [dl2] = await Promise.all([p.waitForEvent('download'), p.click('#modal_b [data-dw=backup]')]);
+  ok(/^village-backup\.zip$/.test(dl2.suggestedFilename()), 'the broken save downloads as a zip (' + dl2.suggestedFilename() + ')');
+  await p.click('#modal_x'); await p.evaluate(async () => { await savesDelete('backup') });
   // migration of an old plain localStorage save
   await p.evaluate(async () => { const json = JSON.stringify(serializeWorld(__sim.world)); localStorage.setItem('villagesim.save', json); localStorage.setItem('villagesim.meta', JSON.stringify({ ...saveMeta(__sim.world), speed: 10 })); await savesDelete('auto') });
   await p.reload(); await p.waitForTimeout(1500);
   ok(await p.evaluate(async s => { const g = await savesGet('auto'); return !!g && JSON.parse(g.text).seed === s && !localStorage.getItem('villagesim.save') }, seed), 'an older plain save is moved into the store and removed from localStorage');
   ok(await p.evaluate(s => __sim.world.seed === s, seed), 'and the village resumes from it');
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 3).join(' | '));
+  // the Resume screen of a village that cannot be loaded says why and offers the download (v0.40)
+  await p.evaluate(async () => { localStorage.removeItem('villagesim.autoresume'); await savesPut('auto', 'Autosave', { pop: 9, year: 2, season: 0, day: 1, seed: 5, speed: 10 }, '{"v":1,"seed":5,"vills":5}') });
+  await p.reload(); await p.waitForTimeout(1500);
+  const rs = await p.evaluate(() => ({ shown: document.getElementById('resume').style.display !== 'none', info: document.getElementById('resumeInfo').textContent }));
+  ok(rs.shown, 'the Resume screen shows for the saved village: ' + JSON.stringify(rs));
+  await p.click('#resumeBtn'); await p.waitForTimeout(600);
+  const rs2 = await p.evaluate(() => ({ info: document.getElementById('resumeInfo').textContent, dl: document.getElementById('resumeDl').style.display }));
+  ok(/could not be loaded/.test(rs2.info) && rs2.dl === '', 'a failed Resume says why and offers the download: ' + JSON.stringify(rs2));
+  await p.evaluate(async () => { await savesDelete('auto') });
   console.log(fail ? fail + ' failed' : 'ui_saves ok'); await b.close(); process.exit(fail ? 1 : 0);
 })();

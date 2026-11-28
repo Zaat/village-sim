@@ -3,6 +3,8 @@ const fs=require('fs'),vm=require('vm'),path=require('path');
 const code=require('./lib').SRC.map(f=>fs.readFileSync(path.join(__dirname,'..','src',f+'.js'),'utf8')).join('\n')+'\n;Object.assign(globalThis,{World,CFG,regimeEvents,tryCoup,uprising,managedElection,holdElection,onChiefDeath,chiefOf,adultsOf,regimeDay,crisisIndex});';
 const ctx={console,Buffer,performance};vm.createContext(ctx);vm.runInContext(code,ctx);
 const w=new ctx.World(777);for(let d=1;d<=90;d++){for(let t=0;t<1200;t++)w.step()}
+// the uprising rule needs 14 adults; a seed's early growth shifts whenever the sim's day order does, so grow to 16 adults rather than rely on day 90 (v0.40)
+for(let d=0;d<120&&ctx.adultsOf(w).length<16;d++){for(let t=0;t<1200;t++)w.step()}
 const log=[];w.listeners.push((t,txt)=>{if(t==='regime'||t==='election')log.push(`[${t}] ${txt}`)});
 const R=w.regime,ad=()=>ctx.adultsOf(w),force=fn=>{const o=w.rng;w.rng=()=>0.001;try{fn()}finally{w.rng=o}};
 let ok=0,bad=0;const check=(name,cond,extra)=>{console.log((cond?'PASS ':'FAIL ')+name+(extra?'  '+extra:''));cond?ok++:bad++};

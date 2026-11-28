@@ -49,7 +49,7 @@ const I18N = {
     'The same seed and settings, from the start': 'La misma semilla y ajustes, desde el principio', 'Keep watching what is left': 'Seguir observando lo que queda', 'Pick a random seed': 'Elegir una semilla al azar',
     'Generate this world and list what it is good for': 'Generar este mundo y listar sus ventajas',
     // main panel
-    'Drag to pan · wheel to zoom · click to inspect · WASD · Space pause · [ ] speed': 'Arrastra para mover · rueda para acercar · clic para inspeccionar · WASD · Espacio pausa · [ ] velocidad',
+    'Drag pan · wheel zoom · click inspect · Space pause · [ ] speed · ? keys': 'Arrastra: mover · rueda: zoom · clic: inspeccionar · Espacio: pausa · [ ] velocidad · ? teclas',
     'Village': 'Aldea', 'Society': 'Sociedad', 'Progress': 'Progreso', 'Stats': 'Estadísticas', 'Events': 'Sucesos', 'History': 'Historia', 'World': 'Mundo', 'population': 'población', 'food stock': 'reserva de comida',
     'Inspector': 'Inspector', 'Click something on the map.': 'Haz clic en algo del mapa.', 'How the village is ruled': 'Cómo se gobierna la aldea', 'Village council': 'Consejo de la aldea', 'Culture & guilds': 'Cultura y gremios',
     'Causes of death': 'Causas de muerte', 'Families & feuds': 'Familias y enemistades', 'Social circles': 'Círculos sociales', 'Knowledge & discoveries': 'Conocimiento y descubrimientos', 'Trade & treasury': 'Comercio y tesoro',

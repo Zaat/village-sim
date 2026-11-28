@@ -190,7 +190,9 @@ function updateRuling(w, election) {
   if (!grp) { if (old) { g.ruling = null; w.emit('faction', 'No single circle holds the council now. It governs as a coalition of independents.') } return }
   if (old && old.gid === grp.id) { old.seats = n; old.name = grp.name; if (election) old.terms = (old.terms || 1) + 1; return }
   g.ruling = { gid: grp.id, name: grp.name, seats: n, since: w.day, terms: 1 };
-  w.emit('faction', `${grp.name} now leads the council with ${n} of ${g.council.length} seats, pledging ${platformText(grp)}.`, {});
+  // v0.40: a circle that wins back the lead within two months, or any change within 20 days of the last announcement, is not announced again (the same line was repeating three times a year)
+  const ls = g.leadSay, quiet = ls && (w.day - ls.day < 20 || (ls.gid === grp.id && w.day - ls.day < 64));
+  if (!quiet) { g.leadSay = { gid: grp.id, day: w.day }; w.emit('faction', `${grp.name} now leads the council with ${n} of ${g.council.length} seats, pledging ${platformText(grp)}.`, {}) }
 }
 /* a circle is content when policy moves its way, bitter when it moves against it */
 function factionDay(w) {
@@ -397,7 +399,8 @@ function societyNewDay(w) {
   const g = w.gov, fr = new Map(), en = new Map();
   for (const [k, r] of w.rel) {
     const nr = r * 0.994; if (Math.abs(nr) < 1) { w.rel.delete(k); continue } w.rel.set(k, nr);
-    const [a, b] = k.split('_').map(Number); if (nr >= 50) { fr.set(a, (fr.get(a) || 0) + 1); fr.set(b, (fr.get(b) || 0) + 1) } else if (nr <= -40) { en.set(a, (en.get(a) || 0) + 1); en.set(b, (en.get(b) || 0) + 1) }
+    if (nr < 50 && nr > -40) continue;          // v0.40: most ties are neither friend nor enemy; the key is split only for those that count
+    const u = k.indexOf('_'), a = +k.slice(0, u), b = +k.slice(u + 1); if (nr >= 50) { fr.set(a, (fr.get(a) || 0) + 1); fr.set(b, (fr.get(b) || 0) + 1) } else if (nr <= -40) { en.set(a, (en.get(a) || 0) + 1); en.set(b, (en.get(b) || 0) + 1) }
   }
   for (const v of w.vills) { v.friends = fr.get(v.id) || 0; v.enemies = en.get(v.id) || 0; v.updateMood(); v.checkDesire() }
   const ad = adultsOf(w); g.approval = ad.length ? ad.reduce((s, v) => s + v.mood, 0) / ad.length : 70;

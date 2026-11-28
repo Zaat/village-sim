@@ -27,8 +27,11 @@ const { chromium } = require('playwright'); const { OLD_PACE } = require('./lib'
   await p.mouse.click(vp[0], vp[1]); await p.waitForTimeout(150);
   ok(await ev(() => selected instanceof Villager && PU.sel.length === 1 && PU.sel[0] === selected), 'a click selects the villager and puts them in the group'); vid = await ev(() => selected.id);
   ok(await vis('pcmd'), 'the command bar appears for the group');
-  const bd = await ev(() => { const b = [...world.buildings.values()].find(b => b.type === 'house'); return { x: b.x, y: b.y, id: b.id } }); const bp0 = await scr(bd.x + 0.5, bd.y + 0.5);
-  await ev(() => { R.cam.x = world.cx * CFG.T; R.cam.y = world.cy * CFG.T }); const bp1 = await scr(bd.x + 0.5, bd.y + 0.5); await p.mouse.click(bp1[0], bp1[1]); await p.waitForTimeout(150);
+  // a house with no villager and no thought bubble over its door (either would take the click; the day order of v0.40 put one there). Bubbles are drawn per frame, so look after the camera has settled
+  const cands = await ev(() => { const hs = [...world.buildings.values()].filter(b => b.type === 'house'), gap = b => Math.min(99, ...world.vills.map(v => Math.hypot(v.x - b.x - 1, v.y - b.y - 1))); return hs.sort((a, c) => gap(c) - gap(a)).slice(0, 8).map(b => ({ x: b.x, y: b.y, id: b.id })) });
+  let bd = cands[0]; for (const c of cands) { await ev(b => { R.cam.x = (b.x + 1) * CFG.T; R.cam.y = (b.y + 1) * CFG.T }, c); await p.waitForTimeout(160); const q = await scr(c.x + 0.5, c.y + 0.5); if (!(await ev(([x, y]) => { const r = cv.getBoundingClientRect(); return !!bubbleAt(x - r.left, y - r.top) }, q))) { bd = c; break } }
+  const bp0 = await scr(bd.x + 0.5, bd.y + 0.5);
+  await ev(b => { R.cam.x = (b.x + 1) * CFG.T; R.cam.y = (b.y + 1) * CFG.T }, bd); const bp1 = await scr(bd.x + 0.5, bd.y + 0.5); await p.mouse.click(bp1[0], bp1[1]); await p.waitForTimeout(150);
   ok(await ev(id => selected && selected.type === 'house' && PU.sel.length === 1 && PU.sel[0].id === id, vid), 'a click on a building only inspects it: the group is kept and nothing is ordered');
   ok(await ev(id => !world.play.orders[id], vid), 'no order was given by selecting');
 
@@ -66,6 +69,7 @@ const { chromium } = require('playwright'); const { OLD_PACE } = require('./lib'
   await p.keyboard.press('b'); await p.waitForTimeout(100); ok(await ev(() => PU.tool === 'build') && await vis('ppanel'), 'B opens the build tool and menu');
   await ev(b => { R.cam.x = (b.x + 0.5) * CFG.T; R.cam.y = (b.y + 0.5) * CFG.T }, bd); const bad = await scr(bd.x + 0.5, bd.y + 0.5); await p.mouse.move(bad[0], bad[1]); await p.waitForTimeout(100); ok(await ev(() => PU.ok && !PU.ok.ok) && await ev(() => document.getElementById('pghost').className === 'bad'), 'over a building the ghost is red and says why'); await ev(() => { R.cam.x = world.cx * CFG.T; R.cam.y = world.cy * CFG.T });
   const spot = await ev(() => { for (let r = 3; r < 30; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = world.cx + dx, y = world.cy + dy; if (playCanPlace(world, 'house', x, y, false).ok) return [x, y] } return null });
+  await ev(s => { R.cam.x = (s[0] + 1) * CFG.T; R.cam.y = (s[1] + 1) * CFG.T + R.vh * 0.2 / R.cam.z }, spot);       // show the spot in the upper part of the map, clear of the build menu that rises from the foot of it
   const sp = await scr(spot[0] + 1, spot[1] + 1); await p.mouse.move(sp[0], sp[1]); await p.waitForTimeout(100);
   ok(await ev(() => PU.ok && PU.ok.ok) && await ev(() => document.getElementById('pghost').className === 'ok'), 'over open grass the ghost is green');
   { const edge = await ev(() => { PU.hover = { x: 3, y: 3, sx: cv.clientWidth - 2, sy: cv.clientHeight - 2 }; PU.ok = { ok: false, why: 'Something is already here, so this is a long reason that needs room' }; puGhostTip(); const g = document.getElementById('pghost').getBoundingClientRect(), c = cv.getBoundingClientRect(); return g.right <= c.right + 1 && g.bottom <= c.bottom + 1 }); ok(edge, 'the ghost tip stays on screen at the edge of the map'); await ev(() => { PU.hover = { x: 3, y: 3, sx: 100, sy: 100 }; PU.ok = { ok: false, why: 'Something is already here' }; puGhostTip() }); }
@@ -76,6 +80,7 @@ const { chromium } = require('playwright'); const { OLD_PACE } = require('./lib'
 
   // road: drag lays sites along the way
   await p.keyboard.press('r'); await p.waitForTimeout(100); const run = await ev(() => { const { W } = CFG, fr = (x, y) => { const k = y * W + x; return world.terr[k] === TERR.GRASS && !world.feat[k] && !world.bmap[k] && !world.road[k] && !world.bpAt.has(k) }; for (let r = 2; r < 30; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x = world.cx + dx, y = world.cy + dy; if ([0, 1, 2, 3, 4].every(i => fr(x + i, y))) return [x, y] } return null });
+  await ev(r => { R.cam.x = (r[0] + 2) * CFG.T; R.cam.y = r[1] * CFG.T + R.vh * 0.2 / R.cam.z }, run);       // the run in the upper part of the map, clear of the build menu
   const ra = await scr(run[0], run[1]), rb = await scr(run[0] + 4, run[1]);
   const r0 = await ev(() => world.bps.filter(b => b.type === 'road' && b.player).length); await p.mouse.move(ra[0], ra[1]); await p.mouse.down(); await p.mouse.move(rb[0], rb[1], { steps: 6 }); await p.mouse.up(); await p.waitForTimeout(150);
   const r1 = await ev(() => world.bps.filter(b => b.type === 'road' && b.player).length); ok(r1 > r0, 'a road drag lays road sites: ' + (r1 - r0));

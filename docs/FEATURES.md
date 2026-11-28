@@ -2,6 +2,17 @@
 
 The newest sections are first. For one page per release with screenshots see [docs/releases](releases/) and the [changelog](../CHANGELOG.md).
 
+## Farming, energy, reach and City design (new in 0.40)
+- **Farming ladder:** the food card lists what each farming technology adds to a harvest and the next step. It explains; it changes nothing.
+- **Deposits and fuel:** stone, coal, oil and peat are finite, with the amount left and a trend on the resource cards. Heat is wood, then peat or coal, then electricity from power stations.
+- **Power stations:** a building with a 3x2 footprint; one per district at most, from about 90 people with electricity. A shortage slows work by up to 12% and raises a concern with a Prospect response.
+- **Stone by boat:** when the home quarries run low, a boat load of stone arrives from a far shore about every ten days.
+- **Explorers:** expeditions can cross to other islands; a sky survey and a pennant on explorers; an explored share in Stats.
+- **City design:** at 80 people the council commissions a layout style (grown town, grid, square-centred, radial, garden). Each district has a beauty score; a ledger of projects (square, rebuilt home, heritage home) shows on the City card.
+- **Speed:** six heavy daily jobs run at fixed moments of the day; 100x frames are shorter.
+- **Saves:** a removed house can no longer make a save unloadable; load errors show in the Saves and Resume dialogs with a Download button; export is a .zip.
+- **Events and stats:** Years use real years and decades, start from the first population; the causes-of-death card adds up in all three columns; a growth chip beside the population; a council record for concerns; a `?` key overlay.
+
 ## Events, performance and polish (new in 0.39.3)
 - **Events tab:** three cards. *Now* shows the season and day, a bar of what the villagers in play are doing (working, sleeping, socialising, free time), the top concern and the last eight days in numbers. *Events* is a ranked feed with chips (All, Important, People, Hardships, Society, Progress, World); at fast speeds it shows only the lines that mattered and says how many small ones are folded away. *Years* has a row per year (people at the start and end, births, deaths, arrivals, a sparkline, big events, a tale) and folds older years into decades. Talk of the village is a fold-out that opens at slow speeds and stays as you left it.
 - **Event pins:** an event with a place has a 📍 that moves the camera there (🏘️ for village-wide events such as storms), and a new event shows a short ring on the map.

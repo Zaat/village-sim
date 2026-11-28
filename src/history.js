@@ -88,6 +88,13 @@ const DEATH_KINDS = {
 function deathKey(why) {
   return /old age/.test(why) ? 'age' : /starv/.test(why) ? 'starved' : /froze/.test(why) ? 'cold' : /wolf/.test(why) ? 'wolf' : /fever|plague|sick/.test(why) ? 'fever' : /sea/.test(why) ? 'sea' : /raid|battle|unrest/.test(why) ? 'fight' : 'age';
 }
+/* v0.40: the all-time column is summed from the same per-year tally as "this year" and "last year", so a row can never read 0 in all while it has deaths this year. (It used to re-read the raw cause text, which files the crowd's ordinary illness under "Fever season".) Saves with no yearly tally fall back to the raw text. */
+function deathTotals(w) {
+  const all = {}; let n = 0;
+  for (const y in w.dyr) for (const k in DEATH_KINDS) { const c = w.dyr[y][k] || 0; if (c) { all[k] = (all[k] || 0) + c; n += c } }
+  if (n) return all;
+  for (const why in w.causes) { const k = deathKey(why); all[k] = (all[k] || 0) + w.causes[why] } return all;
+}
 function noteDeath(w, v, why) {
   let k = deathKey(why); if (k === 'fever' && v && v.plague) k = 'plague'; const y = w.year, g = v.isChild() ? 'child' : v.isElder() ? 'elder' : 'adult';
   const Y = (w.dyr[y] = w.dyr[y] || {}); Y[k] = (Y[k] || 0) + 1; Y[g] = (Y[g] || 0) + 1;

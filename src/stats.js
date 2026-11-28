@@ -102,6 +102,7 @@ const STAT_SERIES = [
   { id: 'wontiles', label: 'Tiles won from rock and water', group: 'Expansion', get: w => w.terra ? w.terra.tiles : 0 },
   { id: 'sitesknown', label: 'Sites heard of and not yet visited', group: 'Expansion', get: w => w.disc ? w.disc.sites.filter(s => s.known && !s.done).length : 0 },
   { id: 'finds', label: 'Expeditions with a find (total)', group: 'Expansion', get: w => w.disc ? w.disc.finds : 0 },
+  { id: 'explored', label: 'Map known (%)', group: 'Knowledge', get: w => Math.round(100 * exploredFrac(w)) },
   { id: 'mats', label: 'Materials in hand (of 4)', group: 'Knowledge', get: w => MAT_LIST.filter(m => matOk(w, m)).length },
   { id: 'fishstock', label: 'Fish in the water (average per tile x100)', group: 'Expansion', get: w => { if (!w._wn) { let n = 0; for (let i = 0; i < w.terr.length; i++) if (w.terr[i] <= TERR.SHALLOW) n++; w._wn = n || 1 } let t = 0; const f = w.fish; for (let i = 0; i < f.length; i++) t += f[i]; return Math.round(100 * t / w._wn) } },
   { id: 'outpop', label: 'People living in outposts', group: 'Expansion', get: w => w.out ? w.out.list.reduce((t, o) => t + (o.state === 'active' ? o.pop || 0 : 0), 0) : 0 },
@@ -117,6 +118,13 @@ function initStats(w) {
 function statsEnsure(S) {
   const n = S.days.length;
   for (const s of STAT_SERIES) { const a = S.s[s.id] || (S.s[s.id] = []); while (a.length < n) a.push(0); if (a.length > n) a.length = n }
+  /* v0.39.4: before this, a series added after a village began (the death causes of v0.39.1) took the whole running total as its first day, a spike as tall as every death so far.
+     Repair that once: when the first non-zero day of the old-age series follows nothing but zeros and is far taller than anything after it, it is that artefact. */
+  if (!S.fix394) {
+    S.fix394 = true;
+    const a = S.s.d_age, ids = ['d_age', 'd_hunger', 'd_cold', 'd_illness', 'd_other'];
+    if (a) { const k = a.findIndex(v => v > 0); if (k > 0 && a[k] > 30 && a.slice(k + 1).every(v => v < a[k] / 3)) for (const id of ids) if (S.s[id] && S.s[id][k] > 0) S.s[id][k] = 0 }
+  }
 }
 const ST = w => w.stats || (initStats(w), w.stats);
 /* one thing happened: count it in the total and in this year's column */
@@ -172,7 +180,7 @@ function statsDay(w) {
   S.days.push(w.day);
   for (const s of STAT_SERIES) {
     let v;
-    if (s.delta) { const keys = Array.isArray(s.delta) ? s.delta : [s.delta], tot = keys.reduce((a, k) => a + evTotal(w, k), 0); v = tot - (S.prev[s.id] || 0); S.prev[s.id] = tot } else { try { v = s.get(w) } catch (e) { v = 0 } }
+    if (s.delta) { const keys = Array.isArray(s.delta) ? s.delta : [s.delta], tot = keys.reduce((a, k) => a + evTotal(w, k), 0); if (S.prev[s.id] === undefined) S.prev[s.id] = tot;   /* v0.39.4: a series new to an old village starts from today's total, not from nothing */ v = tot - S.prev[s.id]; S.prev[s.id] = tot } else { try { v = s.get(w) } catch (e) { v = 0 } }
     (S.s[s.id] || (S.s[s.id] = new Array(Math.max(0, S.days.length - 1)).fill(0))).push(Number.isFinite(v) ? Math.round(v * 1000) / 1000 : 0);   // v0.39.1: a save from before this series existed has no array for it
   }
   if (S.days.length > STAT_CAP) {                // very long runs: halve the oldest half by averaging pairs
