@@ -149,3 +149,13 @@ Profile first. Then exact path caching with invalidation when the map changes (t
 **Direction decided** 2026-11-27 · **Planned** from v0.40
 
 After the population plateaus the game can feel static. The direction is new problems that scale with size (factions, energy, pollution), then a simple loop players can follow without effort: ranks with a celebration from hamlet to metropolis, an Ambitions list of next great works and goals with visible rewards, and scale crises tied to the energy ladder. A second village on a neighbouring map is a bigger idea for later.
+
+## 23. Saves: compressed, in IndexedDB, ten named
+**Decided** 2026-11-28 (after the first large saves reached 1.4 MB) · **Built** v0.39.2
+
+Browser localStorage holds about 5 MB per site and blocks the page while it writes, so a year-56 village (1.4 MB) plus its backup and undo copy was already near the limit. Saves are gzip-compressed (about 4.4 times smaller) and kept in IndexedDB: an autosave, a backup of the village left behind when a new one starts, and up to ten named saves; the time-travel Undo copy lives there too. The world format is unchanged, and plain older saves and files still load. Alternatives considered: compressed text in localStorage (works for 3 to 5 saves but meets the 5 MB limit as worlds grow, and the compressor is asynchronous either way) and unlimited named saves (ten keeps the screen tidy). Where the browser has no compressor, records are stored as plain text. A known limit: a tab closed mid-write can lose up to about a minute of play, which autosaves every minute, at each season and when the tab is hidden keep small. Export writes `.json.gz` and Import accepts both forms. The saves code is isolated in `src/saves.js`, so the store can change without touching the world format.
+
+## 24. Drawing is limited to what the village can afford
+**Decided** 2026-11-28 · **Built** v0.39.2
+
+Reports from the Claude app's built-in browser showed the frame loop called about 255 times a second, with one draw of a 1,900-person town taking about 3.8 ms: drawing used about 98% of the time, so the simulation ran at 0.64× at 1× speed. Safari and Chrome stop at 60 frames a second, which hid it. Drawing is now at most 60 a second, and at most about a third of the time when a draw is expensive (down to about 10 a second); the simulation takes the rest. The simulation itself is unchanged, so results and saves are identical. The report says what limits the speed (a verdict line plus busy and draw percentages and the last 30 seconds), so a future slow-run report can be read at once.

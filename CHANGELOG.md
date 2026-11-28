@@ -2,6 +2,21 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.39.2 — Saves and steadier speed
+Named, compressed saves; drawing limited to what the village can afford; and Diagnostics that say what is limiting the speed.
+
+![The Saves screen](docs/screenshots/v0.39.2.png)
+
+**Saves.** Menu > Saves lists the autosave, a backup of the village you left when starting a new one, and up to ten named saves (Load, Overwrite, Rename, Delete). Saves are gzip-compressed (a 1.4 MB year-56 village becomes about 320 KB) and kept in the browser's IndexedDB, so large villages no longer run out of the 5 MB localStorage allowance. Export now writes `.json.gz`; Import accepts it and older plain `.json` files, and plain older browser saves are moved over once. The time-travel Undo copy lives in the same store.
+
+**Steadier speed.** In the Claude app's built-in browser the game was called about 255 times a second and one draw of a 1,900-person town takes about 3.8 ms, so drawing took almost all the time and the simulation ran at 0.6× at 1×. Drawing is now at most 60 a second and at most about a third of the time. The simulation is unchanged.
+
+**Diagnostics.** The report has a verdict line on what limits the speed, busy and draw percentages, frame calls a second, cores, focus and the last 30 seconds of speed, ticks and draw time.
+
+**Tests.** New `ui_saves` page suite (store, named saves, overwrite, rename, delete, the limit of ten, export and import both forms, migration of an older save).
+
+Issues: #132, #133, #171, #172, #173
+
 ### v0.39.1 — Tidier panels and clearer deaths
 A tidy-up of the side panels and Stats, a clearer account of why people die, and a fix for the game losing time at high speed.
 

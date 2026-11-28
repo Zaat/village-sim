@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.39.1 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.39.2 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
 <h2 align="center"><a href="https://zaat.github.io/village-sim/">▶&nbsp; Play it now in your browser</a></h2>
 <p align="center"><b>One click. No install, no account.</b> Works on a computer, a tablet or a phone.<br><sub>Start a world, then watch it live, or switch to Play and take the lead. <a href="https://zaat.github.io/village-sim/">zaat.github.io/village-sim</a></sub></p>
@@ -44,6 +44,7 @@
 Every release has its own page with a screenshot of that version: see the table below.
 
 ## What's new
+**[v0.39.2 Saves and steadier speed](docs/releases/v0.39.2.md):** ten named, compressed saves (Menu > Saves) with an autosave and a backup, a smaller `.json.gz` export, drawing limited to what the village can afford so a fast display no longer slows the simulation, and Diagnostics that say what is limiting the speed.
 **[v0.39.1 Tidier panels and clearer deaths](docs/releases/v0.39.1.md):** a Deaths chart with illness split into fever season, plague and everyday illness; long lists (Chronicle, expeditions, trade, defence) show the recent few and an "Earlier" block, with dates like Y53 D7; hover a stat name for its history; a Clean layout (key L); one Diagnostics card with live timing numbers.
 **[v0.39 Late ages and language](docs/releases/v0.39.md):** the Atomic and Information ages (148 technologies in eleven ages), a Spanish version that follows your browser, full screen, and a fairer early game.
 **[v0.38 Pace](docs/releases/v0.38.md), [v0.37 Metropolis](docs/releases/v0.37.md) and [v0.35 Play](docs/releases/v0.35.md):** a realistic growth pace, big towns kept as a crowd of numbers around the 160 villagers simulated one by one, and a Watch / Play switch that lets you take the lead.
@@ -85,6 +86,7 @@ Open the **Diagnostics** panel and use **Copy report**. It holds timings, state 
 
 | Version | Title |
 |---|---|
+| [v0.39.2](docs/releases/v0.39.2.md) | Saves and steadier speed |
 | [v0.39.1](docs/releases/v0.39.1.md) | Tidier panels and clearer deaths |
 | [v0.39](docs/releases/v0.39.md) | Late ages and language |
 | [v0.38.2](docs/releases/v0.38.2.md) | Diagnostics you can copy, and the pace lab |

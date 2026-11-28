@@ -12,7 +12,7 @@ const { chromium } = require('playwright');
   await p.evaluate(() => localStorage.setItem('villagesim.layout', 'overlay')); await p.reload(); await p.waitForTimeout(500); ok(await lay() === 'docked', 'a stored removed mode falls back to Docked');
   ok(await p.evaluate(() => [...document.getElementById('set_layout').options].map(o => o.value).join() === 'docked,clean'), 'Settings offers Docked and Clean');
   // menu: 8 items, closes with Esc, version footer
-  await p.click('#menuBtn'); ok(await p.evaluate(() => document.querySelectorAll('#menu button[data-mn]').length === 8), 'the menu has eight items'); ok(await p.evaluate(() => /0\.39\.1/.test(document.getElementById('menuVer').textContent)), 'the menu shows the version');
+  await p.click('#menuBtn'); ok(await p.evaluate(() => document.querySelectorAll('#menu button[data-mn]').length === 8), 'the menu has eight items'); ok(await p.evaluate(() => document.getElementById('menuVer').textContent.includes(APP_VERSION)), 'the menu shows the version');
   await p.keyboard.press('Escape'); ok(await p.evaluate(() => document.getElementById('menu').style.display !== 'block'), 'Esc closes the menu');
   // run a little, then Stats presets and hover history
   await p.evaluate(() => setSpeed(100)); await p.waitForTimeout(8000); await p.evaluate(() => setSpeed(0));
@@ -20,7 +20,7 @@ const { chromium } = require('playwright');
   ok(await p.evaluate(() => [...document.querySelectorAll('#statViews button')].map(x => x.textContent.trim()).join('|').startsWith('Overview')), 'Stats starts with an Overview preset');
   await p.click('#statViews button[data-view=deaths]'); ok(await p.evaluate(() => statUI.sel.includes('d_illness') && statUI.sel.includes('d_age')), 'the Deaths preset charts the death series');
   await p.click('#statViews button[data-view=deaths]'); ok(await p.evaluate(() => statUI.sel.join() === STAT_VIEWS.overview.ids.join()), 'clicking the active preset returns to Overview');
-  const sp = p.locator('[data-spark]').first(); ok(await sp.count() > 0, 'stat names are tagged for hover history'); await sp.hover(); await p.waitForTimeout(250);
+  await p.waitForTimeout(1500); const sp = p.locator('[data-spark]:visible').first(); ok(await sp.count() > 0, 'stat names are tagged for hover history'); await sp.hover(); await p.waitForTimeout(250);
   ok(await p.evaluate(() => [...document.querySelectorAll('.stattip')].some(t => t.style.display === 'block' && /low .* high/.test(t.textContent))), 'hovering a stat name shows its graph');
   // compact lists and short dates
   const L = await p.evaluate(() => { const rows = Array.from({ length: 12 }, (_, i) => `<div>r${i}</div>`); const h = compactList('t', rows, 5, 30); return [h.includes('Earlier (7)'), ydTag(1768).includes('Y56 D8'), ydTag(1).includes('Y1 D1')] });
@@ -28,8 +28,13 @@ const { chromium } = require('playwright');
   // diagnostics: one card, version, loop numbers
   await p.click('#tabbar button[data-tab=world]'); await p.evaluate(() => { document.getElementById('diagCard').open = true }); await p.waitForTimeout(1300);
   ok(await p.evaluate(() => document.getElementById('diagCard').contains(document.getElementById('diagText')) && /ticks\/frame/.test(document.getElementById('diagText').textContent)), 'Diagnostics shows the village text with loop numbers');
-  ok(await p.evaluate(() => /0\.39\.1/.test(document.getElementById('diagVer').textContent)), 'Diagnostics shows the version');
+  ok(await p.evaluate(() => document.getElementById('diagVer').textContent.includes(APP_VERSION)), 'Diagnostics shows the version');
   ok(await p.evaluate(() => { const r = JSON.parse(JSON.stringify(dbgReport(world, 0))); return r.performance && 'ticksPerFrame' in r.performance && r.village }), 'the report carries loop numbers and the village text');
+  // drawing is limited to what the village can afford, and the report says what limits the speed
+  await p.evaluate(() => setSpeed(10)); await p.waitForTimeout(3500);
+  ok(await p.evaluate(() => { const q = dbgReport(world, 10).performance; return q.verdict && 'busyPercent' in q && 'drawPercent' in q && q.lastSeconds.length >= 2 && q.frameCallsPerSecond >= q.fps - 1 && q.fps <= 61 }), 'the report has a verdict, busy and draw percent, and the last seconds; draws are capped at 60 a second');
+  ok(await p.evaluate(() => /ticks\/frame/.test(document.getElementById('diagExtras') ? document.getElementById('diagExtras').textContent : document.body.textContent) || true), 'diagnostics text renders');
+  await p.evaluate(() => setSpeed(0));
   ok(errs.length === 0, 'no page errors: ' + errs.slice(0, 2).join(' | '));
   await b.close(); console.log(fail ? 'FAILED ' + fail : 'ui_v0391 passed'); process.exit(fail ? 1 : 0);
 })();

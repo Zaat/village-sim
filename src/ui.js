@@ -184,19 +184,22 @@ let autosaveOn = true, DL = null;
 const seasonName = m => SEASONS[m.season];
 const metaText = m => `Year ${m.year}, ${seasonName(m)}, day ${m.day} · ${m.pop} people · seed ${m.seed}`;
 function saveInfo(t) { $('saveInfo').textContent = t }
-function readMeta(key = META_KEY) { try { const m = JSON.parse(localStorage.getItem(key) || 'null'); return m && m.pop !== undefined ? m : null } catch (e) { return null } }
-function saveToStorage(manual) {
-  if (!world || world.tick === 0) return false;
+const readMeta = async (id = 'auto') => { try { const r = (await savesList()).find(x => x.id === id); return r && r.meta && r.meta.pop !== undefined ? { ...r.meta, savedAt: r.at } : null } catch (e) { return null } };
+let _saveBusy = false;
+async function saveToStorage(manual) {
+  if (!world || world.tick === 0 || _saveBusy) return false;
+  _saveBusy = true;
   try {
     const json = JSON.stringify(serializeWorld(world)), meta = { ...saveMeta(world), speed };
-    localStorage.setItem(SAVE_KEY, json); localStorage.setItem(META_KEY, JSON.stringify(meta));
-    saveInfo(`${manual ? 'Saved' : 'Autosaved'} at ${new Date().toLocaleTimeString()}: ${metaText(meta)} (${Math.round(json.length / 1024)} KB).`); $('loadSave').disabled = false; return true;
-  } catch (e) { saveInfo('This browser would not store the save (' + ((e && e.name) || 'error') + '). Use "Export file" to keep your village.'); return false }
+    const bytes = await savesPut('auto', 'Autosave', meta, json);
+    saveInfo(`${manual ? 'Saved' : 'Autosaved'} at ${new Date().toLocaleTimeString()}: ${metaText(meta)} (${Math.max(1, Math.round(bytes / 1024))} KB).`); return true;
+  } catch (e) { saveInfo('This browser would not store the save (' + ((e && (e.name || e.message)) || 'error') + '). Use "Export file" to keep your village.'); return false }
+  finally { _saveBusy = false }
 }
-function loadFromStorage() {
+async function loadFromStorage(id = 'auto') {
   try {
-    const raw = localStorage.getItem(SAVE_KEY); if (!raw) { saveInfo('No browser save found.'); return false }
-    adoptWorld(deserializeWorld(JSON.parse(raw))); saveInfo('Loaded the browser save: ' + metaText(saveMeta(world)) + '.'); return true;
+    const r = await savesGet(id); if (!r) { saveInfo('No browser save found.'); return false }
+    adoptWorld(deserializeWorld(JSON.parse(r.text))); saveInfo('Loaded ' + (id === 'auto' ? 'the autosave' : r.name || 'the save') + ': ' + metaText(saveMeta(world)) + '.'); return true;
   } catch (e) { saveInfo('Could not load that save: ' + ((e && e.message) || e)); return false }
 }
 async function saveTextFile(name, text, okMsg) {
@@ -207,25 +210,53 @@ async function saveTextFile(name, text, okMsg) {
   } catch (e) { saveInfo(e && e.code === 'declined' ? 'Cancelled.' : 'Could not save the file (' + ((e && (e.code || e.message)) || 'error') + ').'); return false }
 }
 async function exportFile() {
-  if (!world) return; const json = JSON.stringify(serializeWorld(world)), name = `village-y${world.year}-${SEASONS[world.season].toLowerCase()}-d${world.seasonDay}-seed${world.seed}.json`;
+  if (!world) return; const json = JSON.stringify(serializeWorld(world)), base = `village-y${world.year}-${SEASONS[world.season].toLowerCase()}-d${world.seasonDay}-seed${world.seed}`;
   try {
-    if (DL) { const r = await DL.save({ filename: name, data: json }); saveInfo(r.status === 'saved' ? 'Exported ' + name + '.' : 'Export sent.') }
-    else { const url = URL.createObjectURL(new Blob([json], { type: 'application/json' })), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); saveInfo('Exported ' + name + '.') }
+    if (DL) { const r = await DL.save({ filename: base + '.json', data: json }); saveInfo(r.status === 'saved' ? 'Exported ' + base + '.json.' : 'Export sent.') }   // the app's own download dialog takes text
+    else { const gz = await savesGz(json), name = base + (gz ? '.json.gz' : '.json'), url = URL.createObjectURL(new Blob([gz || json], { type: gz ? 'application/gzip' : 'application/json' })), a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000); saveInfo('Exported ' + name + '.') }
   } catch (e) { saveInfo(e && e.code === 'declined' ? 'Export cancelled.' : 'Export did not complete (' + ((e && (e.code || e.message)) || 'error') + '). Try again.') }
 }
 function importFileObj(file) {
   const rd = new FileReader();
-  rd.onload = () => { try { adoptWorld(deserializeWorld(JSON.parse(rd.result))); autosaveOn = true; hideResume(); saveInfo('Imported ' + file.name + ': ' + metaText(saveMeta(world)) + '.') } catch (e) { saveInfo('That file could not be loaded: ' + ((e && e.message) || e)) } };
-  rd.onerror = () => saveInfo('Could not read that file.'); rd.readAsText(file);
+  rd.onload = async () => { try { adoptWorld(deserializeWorld(JSON.parse(await savesDecode(rd.result)))); autosaveOn = true; hideResume(); saveInfo('Imported ' + file.name + ': ' + metaText(saveMeta(world)) + '.') } catch (e) { saveInfo('That file could not be loaded: ' + ((e && e.message) || e)) } };
+  rd.onerror = () => saveInfo('Could not read that file.'); rd.readAsArrayBuffer(file);
 }
 function hideResume() { $('resume').style.display = 'none' }
+/* Saves screen: the autosave, the backup and up to SAVES.MAX named saves */
+const escHtml = t => String(t).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+async function savesOpen() {
+  let list = []; try { list = await savesList() } catch (e) { modal('Saves', `<div class="hint">${escHtml((e && e.message) || 'Saves are not available in this browser.')} Export file still works.</div>`); return }
+  const named = list.filter(r => r.id[0] === 'n'), auto = list.find(r => r.id === 'auto'), back = list.find(r => r.id === 'backup'), full = named.length >= SAVES.MAX;
+  const when = t => t ? new Date(t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  const kb = b => b > 1048576 ? (b / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(b / 1024)) + ' KB';
+  const row = (r, label, btns) => `<div class="saverow" data-id="${r.id}"><div><b class="sv_label">${label}</b> <span class="hint">${r.meta ? metaText(r.meta) : ''}</span><div class="hint">saved ${when(r.at)} · ${kb(r.bytes)}</div></div><div class="btnrow">${btns}</div></div>`;
+  const dflt = world ? `Year ${world.year} ${SEASONS[world.season]}` : 'My village';
+  modal('Saves', `<div class="hint" style="margin-bottom:6px">Kept in this browser only, and clearing the browser's site data removes them. Use Export file for a copy you keep.</div>
+    <div class="saverow"><input id="sv_name" maxlength="40" value="${escHtml(dflt)}" aria-label="Name for the new save"><button id="sv_new" ${full ? 'disabled title="Delete a save first"' : ''}>Save</button></div>
+    <div class="hint">${named.length} of ${SAVES.MAX} named saves${full ? ': delete one to make room' : ''}. Loading keeps your current village in the autosave.</div>
+    ${auto ? row(auto, 'Autosave', '<button data-ld="auto">Load</button>') : ''}${back ? row(back, 'Backup <span class="hint">(the village you left when starting a new one)</span>', '<button data-ld="backup">Load</button>') : ''}
+    ${named.map(r => row(r, escHtml(r.name || 'Save'), `<button data-ld="${r.id}">Load</button><button data-ov="${r.id}">Overwrite</button><button data-rn="${r.id}">Rename</button><button data-dl="${r.id}">Delete</button>`)).join('')}`);
+  const body = $('modal_b'), snap = () => JSON.stringify(serializeWorld(world)), meta = () => ({ ...saveMeta(world), speed });
+  const sure = (b, f) => { if (b.dataset.sure !== '1') { const t = b.textContent; b.dataset.sure = '1'; b.textContent = 'Sure?'; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ''; b.textContent = t } }, 3000); return } f() };
+  const fail = e => saveInfo('That did not work: ' + ((e && e.message) || e));
+  $('sv_new').onclick = async () => { try { await savesPut('n' + Date.now(), $('sv_name').value.trim() || dflt, meta(), snap()); saveInfo('Saved ' + ($('sv_name').value.trim() || dflt) + '.'); savesOpen() } catch (e) { fail(e) } };
+  body.querySelectorAll('[data-ld]').forEach(b => b.onclick = async () => { const id = b.dataset.ld; if (id !== 'auto' && world && world.tick > 0) await saveToStorage(false); if (await loadFromStorage(id)) { autosaveOn = true; hideResume(); modalClose() } });
+  body.querySelectorAll('[data-ov]').forEach(b => b.onclick = () => sure(b, async () => { try { const r = named.find(x => x.id === b.dataset.ov); await savesPut(r.id, r.name, meta(), snap()); saveInfo('Overwrote ' + r.name + '.'); savesOpen() } catch (e) { fail(e) } }));
+  body.querySelectorAll('[data-dl]').forEach(b => b.onclick = () => sure(b, async () => { try { await savesDelete(b.dataset.dl); savesOpen() } catch (e) { fail(e) } }));
+  body.querySelectorAll('[data-rn]').forEach(b => b.onclick = () => {
+    const rowEl = b.closest('.saverow'), r = named.find(x => x.id === b.dataset.rn), lab = rowEl.querySelector('.sv_label');
+    const inp = document.createElement('input'); inp.maxLength = 40; inp.value = r.name || ''; lab.replaceWith(inp); inp.focus(); inp.select();
+    const done = async () => { try { await savesRename(r.id, inp.value.trim() || r.name) } catch (e) { fail(e) } savesOpen() };
+    inp.onkeydown = e => { if (e.key === 'Enter') done(); e.stopPropagation() }; b.textContent = 'OK'; b.onclick = done;
+  });
+}
 $('saveNow').onclick = () => saveToStorage(true);
-$('loadSave').onclick = () => { if (loadFromStorage()) { autosaveOn = true; hideResume() } };
+$('loadSave').onclick = savesOpen;
 $('exportBtn').onclick = exportFile; $('importBtn').onclick = () => $('importFile').click();
 $('importFile').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; if (f) importFileObj(f); e.target.value = '' });
-$('resumeBtn').onclick = () => { if (loadFromStorage()) { autosaveOn = true; hideResume(); setSpeed(10) } };
-$('resumeNo').onclick = () => {          // keep the old save as a backup before the new village starts overwriting it
-  try { const raw = localStorage.getItem(SAVE_KEY); if (raw) { localStorage.setItem(BACKUP_KEY, raw); localStorage.setItem(BACKUP_META, localStorage.getItem(META_KEY) || '') } } catch (e) { }
+$('resumeBtn').onclick = async () => { if (await loadFromStorage()) { autosaveOn = true; hideResume(); setSpeed(10) } };
+$('resumeNo').onclick = async () => {          // keep the old save as a backup before the new village starts overwriting it
+  try { const r = await savesGet('auto'); if (r) await savesPut('backup', 'Backup', r.meta, r.text) } catch (e) { }
   autosaveOn = true; hideResume(); setSpeed(10);
 };
 setInterval(() => { if (!tt && autosaveOn && $('autosave').checked && speed >= 0) saveToStorage(false) }, 60000);
@@ -392,7 +423,7 @@ function renderNeigh() {
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
 /* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
 const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a', '#3f6f9a', '#4a9a6a'];
-function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · loop: ${(DBG.tpf || 0).toFixed(1)} ticks/frame, ${(DBG.stepMs || 0).toFixed(1)} ms ticking, ${DBG.frameMs.toFixed(1)} ms/frame, ${DBG.fps.toFixed(0)} fps, longest gap ${Math.round(DBG.lastDtMax || 0)} ms · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
+function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · loop: ${(DBG.tpf || 0).toFixed(1)} ticks/frame, ${(DBG.stepMs || 0).toFixed(1)} ms ticking, ${DBG.frameMs.toFixed(1)} ms/frame, ${DBG.fps.toFixed(0)} drawn fps (display calls ${(DBG.rafFps || 0).toFixed(0)}/s), longest gap ${Math.round(DBG.lastDtMax || 0)} ms · ${perfVerdict(speed)} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
 function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } renderDiagText() } catch (e) { } }
 /* the Diagnostics text in the World card: filled the moment the section opens and every second while it is open; a failure is shown there instead of leaving it blank (v0.38.1) */
 function renderDiagText() { const d = $('diagText'); if (!d || !d.parentElement.open) return; let t = ''; try { t = diagText(world) } catch (e) { t = 'world line: ' + worldLineShort(world) + '\n(the full snapshot could not be built: ' + (e && e.message || e) + ')' } try { t += '\n' + diagExtras() } catch (e) { t += '\n(browser details unavailable: ' + (e && e.message || e) + ')' }
@@ -755,6 +786,7 @@ mini.addEventListener('pointerdown', e => { mini.setPointerCapture(e.pointerId);
 const SPEED_STEPS = [0.25, 0.5, 1, 3, 10, 30, 100, 999]; let lastSpeed = 10, pendingTicks = 0;
 const speedText = s => s <= 0 ? 'Paused' : s >= 999 ? 'Max' : s === 0.25 ? '¼×' : s === 0.5 ? '½×' : s + '×';
 function setSpeed(s) {
+  DBG.speedSince = performance.now();
   speed = s; if (s > 0) lastSpeed = s;
   document.querySelectorAll('[data-sp]').forEach(b => b.classList.toggle('on', +b.dataset.sp === s));
   $('playBtn').textContent = s > 0 ? '⏸' : '▶'; $('playBtn').classList.toggle('paused', s === 0); $('spLabel').textContent = speedText(s);
@@ -819,10 +851,12 @@ $('autoresume').addEventListener('change', e => { try { localStorage.setItem(AUT
 let last = performance.now(), acc = 0, uiAcc = 0, miniAcc = 0, lastFrameAt = performance.now(), frames = 0;
 /* ---- time travel: run the simulation flat out for a chosen span, then report what changed ---- */
 let tt = null;
-function startTimeTravel(days) {
-  if (tt || !world) return; const w = world;
-  try { localStorage.setItem('villagesim.pretravel', JSON.stringify(serializeWorld(w))) } catch (e) { $('ttInfo').textContent = 'Could not keep a copy to undo with, so nothing was skipped. Use Export file, then try again.'; return }
-  tt = { target: w.tick + days * CFG.TPD, start: w.tick, days, prevSpeed: speed, t0: performance.now(), day0: w.day, pop0: w.pop, deaths0: w.deaths, chron0: w.chron ? w.chron.events.length : 0, known0: new Set(Object.keys(w.tech.known)), done0: new Set(Object.keys(w.proj.done)), logMark: (w.chron && w.chron.events[0]) || null };
+let ttStarting = false;
+async function startTimeTravel(days) {
+  if (tt || ttStarting || !world) return; const w = world, prevSpeed = speed; ttStarting = true; setSpeed(0);       // paused first, so the copy kept for Undo is exactly where the skip starts
+  try { await savesPut('undo', 'Before time travel', { ...saveMeta(w), speed: prevSpeed }, JSON.stringify(serializeWorld(w))) } catch (e) { ttStarting = false; setSpeed(prevSpeed); $('ttInfo').textContent = 'Could not keep a copy to undo with, so nothing was skipped. Use Export file, then try again.'; return }
+  ttStarting = false; if (world !== w || tt) return;
+  tt = { target: w.tick + days * CFG.TPD, start: w.tick, days, prevSpeed, t0: performance.now(), day0: w.day, pop0: w.pop, deaths0: w.deaths, chron0: w.chron ? w.chron.events.length : 0, known0: new Set(Object.keys(w.tech.known)), done0: new Set(Object.keys(w.proj.done)), logMark: (w.chron && w.chron.events[0]) || null };
   setSpeed(0); $('ttGo').disabled = true; $('ttCancel').disabled = false; $('ttSel').disabled = true; $('ttResult').innerHTML = '';
 }
 function stepTimeTravel() {
@@ -842,12 +876,13 @@ function finishTimeTravel() {
   $('ttResult').innerHTML = `<b>${spanDays} days passed.</b> Population ${T.pop0} → ${w.pop}, ${w.deaths - T.deaths0} died.${newTech.length ? `<br>Discovered: ${esc(newTech.join(', '))}.` : ''}${newProj.length ? `<br>Built: ${esc(newProj.join(', '))}.` : ''}${w.gov.ruling ? `<br>${esc(w.gov.ruling.name)} leads the council.` : ''}${evs.length ? '<br>' + evs.map(e => '· ' + esc(e.text.length > 90 ? e.text.slice(0, 87) + '…' : e.text)).join('<br>') : ''}`;
   w.say(`Time travel: ${spanDays} days passed.`); $('ttResult').innerHTML += '<div style="margin-top:6px"><button id="ttUndo">Undo: go back to before</button></div>'; $('ttUndo').onclick = undoTimeTravel;
 }
-function undoTimeTravel() {
-  if (tt) return;
-  try { const raw = localStorage.getItem('villagesim.pretravel'); if (!raw) { $('ttInfo').textContent = 'No earlier copy found.'; return } adoptWorld(deserializeWorld(JSON.parse(raw))); setSpeed(10); $('ttResult').textContent = ''; $('ttInfo').textContent = 'Back to before the skip.'; $('ttBar').style.width = '0' }
+async function undoTimeTravel() {
+  if (tt || ttStarting) return;
+  try { const r = await savesGet('undo'); if (!r) { $('ttInfo').textContent = 'No earlier copy found.'; return } adoptWorld(deserializeWorld(JSON.parse(r.text))); setSpeed(10); $('ttResult').textContent = ''; $('ttInfo').textContent = 'Back to before the skip.'; $('ttBar').style.width = '0' }
   catch (e) { $('ttInfo').textContent = 'Could not restore: ' + ((e && e.message) || e) }
 }
 $('ttGo').onclick = () => startTimeTravel(+$('ttSel').value); $('ttCancel').onclick = () => { if (tt) tt.cancel = true };
+let lastDrawAt = 0, draws = 0;
 function frame(now) {
   const ts = performance.now(); lastFrameAt = ts; frames++;
   try {
@@ -863,7 +898,10 @@ function frame(now) {
     if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }
     if (follow && selected && Number.isFinite(selected.x) && Number.isFinite(selected.y) && selected.alive !== false) { const tx = selected.type ? (selected.x + selected.w / 2) * CFG.T : selected.x * CFG.T, ty = selected.type ? (selected.y + selected.h / 2) * CFG.T : selected.y * CFG.T; c.x += (tx - c.x) * 0.12; c.y += (ty - c.y) * 0.12 }
     if (!Number.isFinite(c.x) || !Number.isFinite(c.y) || !Number.isFinite(c.z) || c.z <= 0) { c.x = (world.cx + 1) * CFG.T; c.y = (world.cy + 1) * CFG.T; c.z = Number.isFinite(c.z) && c.z > 0 ? c.z : 2; follow = false }       // a bad number in the camera would otherwise break every frame
-    const r0 = performance.now(); R.speed = speed; try { clampCam(); render(world, selected, now) } catch (e) { dbgNote('render', e); dbgPersist(world) } DBG.renderMs = DBG.renderMs * 0.9 + (performance.now() - r0) * 0.1;
+    // Drawing is limited to what the village can afford (v0.39.2): some displays call this at 120-250 times a second and one draw of a big town takes 4-8 ms,
+    // which left the simulation nothing but scraps. At most 60 draws a second, and no more than about a third of the time spent drawing.
+    const gap = Math.max(1000 / 60, Math.min(speed >= 30 ? 120 : 100, (DBG.renderMs || 0) * (speed >= 30 ? 4 : 3)));
+    if (now - lastDrawAt >= gap - 1) { lastDrawAt = now; draws++; const r0 = performance.now(); R.speed = speed; try { clampCam(); render(world, selected, now) } catch (e) { dbgNote('render', e); dbgPersist(world) } DBG.renderMs = DBG.renderMs * 0.9 + (performance.now() - r0) * 0.1 }
     uiAcc += dt; if (uiAcc > 300) { uiAcc = 0; try { updateUI() } catch (e) { dbgNote('ui', e); dbgPersist(world) } }
     miniAcc += dt; if (miniAcc > 120) { miniAcc = 0; try { drawMinimap(world, selected) } catch (e) { dbgNote('minimap', e) } }
   } catch (e) { dbgNote('frame', e); dbgPersist(world) }
@@ -874,7 +912,7 @@ function frame(now) {
 let wd = { tick: 0, changedAt: performance.now(), stage: 0 };
 setInterval(() => {
   const nowT = performance.now(), dt = (nowT - lastDiag.t) / 1000; if (dt <= 0) return;
-  DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick }; DBG.lastDtMax = DBG.dtMax || 0; DBG.dtMax = 0;
+  DBG.rafFps = (frames - lastDiag.frames) / dt; DBG.fps = (draws - (lastDiag.draws || 0)) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, draws, t: nowT, tick: world.tick }; (DBG.hist = DBG.hist || []).push({ speed, tps: +DBG.tps.toFixed(1), calls: +DBG.rafFps.toFixed(0), drawn: +DBG.fps.toFixed(0), renderMs: +DBG.renderMs.toFixed(1), stepMs: +(DBG.stepMs || 0).toFixed(1) }); if (DBG.hist.length > 60) DBG.hist.shift(); DBG.lastDtMax = DBG.dtMax || 0; DBG.dtMax = 0;
   if (++diagTimer % 10 === 0) { world.profReset(); renderWorldLine() } else renderDiagText()
   try { updateDiag() } catch (e) { }
   try { if (typeof tagSparks === 'function') tagSparks() } catch (e) { }
@@ -890,7 +928,7 @@ setInterval(() => {
   else if (speed > 0 && nowT - wd.changedAt > 8000) {               // frames are drawn but the village has not moved
     const reason = 'simulation made no progress for ' + Math.round((nowT - wd.changedAt) / 1000) + ' s (stage ' + (wd.stage + 1) + ')'; DBG.restarts++; DBG.watchdog.push({ at: new Date().toISOString(), reason }); dbgNote('watchdog', new Error(reason));
     try { if (wd.stage === 0) { world.sanity(); for (const v of world.vills) { try { v.abort(0) } catch (e) { } } }      // 1st: repair numbers and reset every job
-      else if (wd.stage === 1) { saveToStorage(false); if (loadFromStorage()) saveInfo('The village stopped responding, so it was reloaded from the last autosave.') }   // 2nd: reload the last autosave
+      else if (wd.stage === 1) { saveToStorage(false).then(() => loadFromStorage()).then(ok => { if (ok) saveInfo('The village stopped responding, so it was reloaded from the last autosave.') }) }   // 2nd: reload the last autosave
     } catch (e) { dbgNote('recover', e) }
     wd.stage = Math.min(2, wd.stage + 1); wd.changedAt = nowT; dbgPersist(world);
   }
@@ -905,14 +943,16 @@ addEventListener('unhandledrejection', e => { dbgNote('promise', e.reason); if (
 window.__sim = { get world() { return world }, select(o) { selected = o; updateUI() }, newWorld, setSpeed, saveToStorage, loadFromStorage, run(n) { for (let i = 0; i < n; i++) world.step() }, R, MIND, DBG, dbgReport: () => dbgReport(world, speed) };
 dbgLoadPrevious();
 if (typeof sndInit === 'function') sndInit(); initStatsUI(); concernsInit(); voicesInit(); voicesAiInit(); newWorld((Math.random() * 1e9) | 0); mindInit(); requestAnimationFrame(frame);
-{
-  const m = readMeta();
+(async () => {
+  autosaveOn = false;     // never let a fresh world overwrite the save before the resume choice is made
+  try { await savesMigrate([['auto', 'Autosave', SAVE_KEY, META_KEY], ['backup', 'Backup', BACKUP_KEY, BACKUP_META]]) } catch (e) { }
+  const m = await readMeta();
   if (m) {
-    $('loadSave').disabled = false; let resumed = false;
-    if ($('autoresume').checked) { autosaveOn = false; resumed = loadFromStorage(); if (resumed) { autosaveOn = true; setSpeed(m.speed > 0 ? m.speed : 10); saveInfo('Resumed your saved village automatically: ' + metaText(m) + '.') } }
+    let resumed = false;
+    if ($('autoresume').checked) { autosaveOn = false; resumed = await loadFromStorage(); if (resumed) { autosaveOn = true; setSpeed(m.speed > 0 ? m.speed : 10); saveInfo('Resumed your saved village automatically: ' + metaText(m) + '.') } }
     if (!resumed) { autosaveOn = false; setSpeed(0); $('resumeInfo').textContent = metaText(m) + (m.savedAt ? ' · saved ' + new Date(m.savedAt).toLocaleString() : ''); $('resume').style.display = 'flex'; saveInfo('A saved village is waiting: ' + metaText(m) + '.') }
-  } else if (!navigator.webdriver && !lsGet(WELCOME_KEY, '')) { setSpeed(0); welcomeOpen() }
-}
+  } else { autosaveOn = true; if (!navigator.webdriver && !lsGet(WELCOME_KEY, '')) { setSpeed(0); welcomeOpen() } }
+})();
 
 $('diagTextCopy') && ($('diagTextCopy').onclick = async () => { let ok = false; try { await navigator.clipboard.writeText(diagCopyText()); ok = true } catch (e) { } const b = $('diagTextCopy'), old = b.textContent; b.textContent = ok ? 'Copied' : 'Select the text and copy it'; setTimeout(() => { b.textContent = old }, 1400) });
 

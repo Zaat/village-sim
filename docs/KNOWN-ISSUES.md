@@ -1,11 +1,12 @@
 # Known issues and limits
 
-What is known to be wrong, missing or deliberately limited, with the GitHub issue that tracks it where there is one. Report something new through the [bug report form](https://github.com/Zaat/village-sim/issues/new/choose); pasting the world line and the Diagnostics report (Menu > Settings > Diagnostics > Copy) makes it much easier to fix. The current version is v0.39.1. Planned work is in the [roadmap](ROADMAP.md).
+What is known to be wrong, missing or deliberately limited, with the GitHub issue that tracks it where there is one. Report something new through the [bug report form](https://github.com/Zaat/village-sim/issues/new/choose); pasting the world line and the Diagnostics report (Menu > Settings > Diagnostics > Copy) makes it much easier to fix. The current version is v0.39.2. Planned work is in the [roadmap](ROADMAP.md).
 
 ## Bugs and open questions
 | What | Status | Issue |
 |---|---|---|
-| One report of the game running at about 0.4× at 1× speed on a 120 Hz screen with a year-56 village; not reproduced elsewhere | Needs a Diagnostics report taken while running (v0.39.1 adds the numbers) | [#137](https://github.com/Zaat/village-sim/issues/137) |
+| The game ran at about 0.6× at 1× (and far below Max) in the Claude app's built-in browser, which redraws 255 times a second; a drawing cap in v0.39.2 should fix it | Waiting for confirmation on that machine | [#137](https://github.com/Zaat/village-sim/issues/137), [#171](https://github.com/Zaat/village-sim/issues/171) |
+| In the Claude app's built-in browser in full screen, the first two tabs show no hand cursor and do not respond | Not reproduced elsewhere; may share the cause above | [#174](https://github.com/Zaat/village-sim/issues/174) |
 | Housing stalled at 54 homes in one early run | Not reproduced; the housing diagnostic exists | [#6](https://github.com/Zaat/village-sim/issues/6) |
 | Forest regrows too fast | Planned for v0.40 | [#4](https://github.com/Zaat/village-sim/issues/4) |
 | Heavy ticks: every villager decides on the same tick, and the day rollover is long, so a large village has brief pauses | Planned (performance) | [#134](https://github.com/Zaat/village-sim/issues/134) |
@@ -16,7 +17,6 @@ What is known to be wrong, missing or deliberately limited, with the GitHub issu
 | The crowd stands at its houses instead of walking | Planned; drawing only | [#136](https://github.com/Zaat/village-sim/issues/136) |
 | Culture reaches 100 in any village of about 160 people, so the number says little | Planned model rebuild | [#140](https://github.com/Zaat/village-sim/issues/140) |
 | Spanish covers the main screens, menus and Settings; the rest is English | Ongoing | [#150](https://github.com/Zaat/village-sim/issues/150) |
-| Only one save slot (plus Export and Import) | Planned | [#133](https://github.com/Zaat/village-sim/issues/133) |
 | Events and the Chronicle are hard to read at high speed | Planned redesign | [#2](https://github.com/Zaat/village-sim/issues/2), [#147](https://github.com/Zaat/village-sim/issues/147) |
 | Date display has no panel behind it | Open | [#3](https://github.com/Zaat/village-sim/issues/3) |
 | Farm, dock and civic buildings look the same in every age | Planned | [#141](https://github.com/Zaat/village-sim/issues/141) |

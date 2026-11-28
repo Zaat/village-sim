@@ -4,7 +4,7 @@
    debug.js — diagnostics shared by the UI: error history (kept across page
    loads), a full report you can copy or download, and live performance numbers.
    ========================================================================== */
-const APP_VERSION = '0.39.1';
+const APP_VERSION = '0.39.2';
 const ERR_KEY = 'villagesim.errors';
 const DBG = { fps: 0, tps: 0, frameMs: 0, renderMs: 0, restarts: 0, lastRestart: null, session: new Map(), previous: [], watchdog: [], persistAt: 0 };
 
@@ -24,6 +24,16 @@ function dbgSections(w) {
   const d = w.dbg, rows = Object.entries(d.prof).map(([k, p]) => ({ name: k, avgMs: p.t / Math.max(1, p.n), totalMs: p.t, maxMs: p.max, calls: p.n })), tot = rows.reduce((s, r) => s + r.totalMs, 0) || 1;
   for (const r of rows) r.share = r.totalMs / tot; return rows.sort((a, b) => b.totalMs - a.totalMs);
 }
+/* one line saying what is limiting the speed, so a report explains itself (v0.39.2) */
+function perfVerdict(sp) {
+  if (!(sp > 0)) return 'paused';
+  const raf = DBG.rafFps || 0, busy = (DBG.frameMs || 0) * raf / 10, draw = (DBG.renderMs || 0) * raf / 10, eff = DBG.tps / (CFG.TPS * sp), budget = sp >= 100 ? 45 : 14;
+  if (eff >= 0.9) return 'on speed';
+  if (busy > 85 && draw > 50) return `drawing takes ${Math.round(draw)}% of the time (${(DBG.renderMs || 0).toFixed(1)} ms a draw, ${raf.toFixed(0)} frame calls a second), so the simulation only gets what is left`;
+  if ((DBG.stepMs || 0) > budget * 0.8) return `ticking is the limit: ${(DBG.stepMs || 0).toFixed(0)} ms of every frame goes to ticks`;
+  return `neither drawing (${Math.round(draw)}%) nor ticking is saturated (${Math.round(busy)}% busy): the page is being slowed from outside (other programs, power saving, a throttled window)`;
+}
+function timerStep() { let a = performance.now(), b = a, n = 0; while (b === a && n++ < 2e6) b = performance.now(); return +(b - a).toFixed(4) }
 function dbgReport(w, speed) {
   const d = w.dbg, mem = (typeof performance !== 'undefined' && performance.memory) ? { usedMB: Math.round(performance.memory.usedJSHeapSize / 1048576), limitMB: Math.round(performance.memory.jsHeapSizeLimit / 1048576) } : null;
   const secs = dbgSections(w).map(r => ({ ...r, avgMs: +r.avgMs.toFixed(3), totalMs: Math.round(r.totalMs), maxMs: +r.maxMs.toFixed(2), share: +(r.share * 100).toFixed(1) + '%' }));
@@ -31,7 +41,7 @@ function dbgReport(w, speed) {
     app: 'Village Sim', version: APP_VERSION, when: new Date().toISOString(), userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'node',
     world: { seed: w.seed, settings: w.settings, tick: w.tick, year: w.year, season: SEASONS[w.season], dayOfSeason: w.seasonDay, day: w.day, requestedSpeed: speed },
     counts: { villagers: w.vills.length, animals: w.animals.length, blueprints: w.bps.length, buildings: w.buildings.size, relations: w.rel.size, groups: w.groups.length, councillors: w.gov.council.length, logLines: w.log.length, history: w.hist.length },
-    performance: { fps: +DBG.fps.toFixed(1), ticksPerSecond: +DBG.tps.toFixed(1), targetTicksPerSecond: CFG.TPS * speed, avgTickMs: d.ticks ? +(d.tickMs / d.ticks).toFixed(3) : null, maxTickMs: +d.tickMax.toFixed(2), frameMs: +DBG.frameMs.toFixed(2), renderMs: +DBG.renderMs.toFixed(2), stepMs: +(DBG.stepMs || 0).toFixed(2), ticksPerFrame: +(DBG.tpf || 0).toFixed(2), longestFrameMs: Math.round(DBG.dtMax || 0), speedSetting: speed, memory: mem },
+    performance: { fps: +DBG.fps.toFixed(1), frameCallsPerSecond: +(DBG.rafFps || 0).toFixed(1), ticksPerSecond: +DBG.tps.toFixed(1), targetTicksPerSecond: CFG.TPS * speed, avgTickMs: d.ticks ? +(d.tickMs / d.ticks).toFixed(3) : null, maxTickMs: +d.tickMax.toFixed(2), frameMs: +DBG.frameMs.toFixed(2), renderMs: +DBG.renderMs.toFixed(2), stepMs: +(DBG.stepMs || 0).toFixed(2), ticksPerFrame: +(DBG.tpf || 0).toFixed(2), longestFrameMs: Math.round(DBG.dtMax || 0), speedSetting: speed, secondsAtThisSpeed: Math.round((performance.now() - (DBG.speedSince || 0)) / 1000), busyPercent: Math.round((DBG.frameMs || 0) * (DBG.rafFps || 0) / 10), drawPercent: Math.round((DBG.renderMs || 0) * (DBG.rafFps || 0) / 10), verdict: perfVerdict(speed), cores: navigator.hardwareConcurrency || null, timerStepMs: timerStep(), focused: document.hasFocus(), visible: document.visibilityState, memory: mem, lastSeconds: (DBG.hist || []).slice(-30) },
     village: (() => { try { return diagText(w).split('\n') } catch (e) { return ['(snapshot unavailable: ' + (e && e.message || e) + ')'] } })(),
     crowd: w.crowd ? { people: w.crowd.n, kids: w.crowd.kids, adults: w.crowd.adults, elders: w.crowd.elders, workers: w.crowd.workers, hungry: w.crowd.hungry, simulatedVillagers: w.vills.length } : null,
     activity: (() => { const L = {}; for (const v of w.vills) { const k = v.sleeping ? 'Sleeping' : (v.label || 'none'); L[k] = (L[k] || 0) + 1 } return Object.entries(L).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => k + ': ' + n) })(),

@@ -66,6 +66,7 @@
     "ui_over",
     "ui_help",
     "ui_v0391",
+    "ui_saves",
     "ui_patch",
     "ui_sound",
     "ui_mobile",
@@ -74,6 +75,7 @@
   ],
   "ui_only": [
     "render",
+    "saves",
     "debug",
     "statsui",
     "concernsui",
@@ -241,6 +243,7 @@
     "ui_over": 15,
     "ui_help": 15,
     "ui_v0391": 30,
+    "ui_saves": 25,
     "ui_patch": 12,
     "ui_mobile": 10,
     "ui_sound": 25,

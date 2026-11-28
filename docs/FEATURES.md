@@ -2,6 +2,13 @@
 
 The newest sections are first. For one page per release with screenshots see [docs/releases](releases/) and the [changelog](../CHANGELOG.md).
 
+## Saves and steadier speed (new in 0.39.2)
+- **Saves:** Menu > Saves lists the autosave, the backup (the village you left when starting a new one) and up to ten named saves. Each has Load; named saves also have Overwrite, Rename and Delete (overwrite and delete ask a second time). Loading keeps the village you were playing in the autosave. Saves are compressed and kept in the browser's IndexedDB; the screen says that clearing site data removes them.
+- **Export and Import:** Export writes a compressed `.json.gz` file; Import accepts it and older plain `.json` saves. Older plain browser saves are moved into the new store once.
+- **Time travel:** the Undo copy is kept in the same store, and the game pauses before the copy so Undo returns to exactly where the skip began.
+- **Speed:** drawing is limited to what the village can afford (at most 60 a second, at most about a third of the time), so a display that calls the game 120 to 250 times a second no longer starves the simulation.
+- **Diagnostics:** the report has a verdict on what limits the speed, busy and draw percentages, the frame-call rate, core count, focus and the last 30 seconds of timings.
+
 ## Interface, saves and diagnostics (new in 0.39.1)
 - **Menu:** eight items in three groups (New world, Scenarios, Save now, Load saved; Settings, Full screen; How to play, About) with the version at the foot. Opening the menu closes the Events drawer and the other way round; Esc closes either. Show tips again moved to Settings.
 - **Layouts:** *Docked* (default) and *Clean* (map, a play bar, and a few counters; L or the corner button returns). Settings > Layout; remembered per device.

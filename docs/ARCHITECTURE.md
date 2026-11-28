@@ -27,6 +27,7 @@
 | `src/city.js` | land value, density, redevelopment, hamlets, desire paths |
 | `src/crowd.js` | the crowd: everyone beyond the 160 people simulated one by one, kept as numbers by age |
 | `src/debug.js` | diagnostics: error history, performance numbers (including the main loop's ticks per frame), the full copyable report |
+| `src/saves.js` | browser only: compressed saves in IndexedDB (autosave, backup, ten named saves, the time-travel Undo copy); reads plain older saves |
 | `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
 | `src/stats.js` | statistics kept for the whole run: dozens of series sampled every four days, event counters, yearly rates |
 | `src/statsui.js` | the Stats tab (chart, presets, events table) and the hover history graph on stat names |

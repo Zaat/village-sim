@@ -4,8 +4,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.39.1', name: 'Tidier panels and clearer deaths',
-  news: ['A Deaths chart in Stats, with illness split into fever season, plague and everyday illness.', 'Long lists (Chronicle, expeditions, trade, defence) show the recent few and an "Earlier" block; dates read like Y53 D7.', 'Hover a stat name to see its history; a Clean layout (key L) for play and screenshots.', 'One Diagnostics card with live timing numbers, an eight-item menu, and fixes for layout whitespace and older saves.']
+  version: '0.39.2', name: 'Saves and steadier speed',
+  news: ['Saves: ten named saves (Menu > Saves), compressed, with an autosave and a backup; Export now writes a smaller .json.gz file.', 'Steadier speed: drawing is limited to what the village can afford, so a fast display no longer starves the simulation.', 'Diagnostics say what is limiting the speed, with the last 30 seconds of timings.', 'The time-travel Undo copy is kept in the same compressed store.']
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>
@@ -17,7 +17,7 @@ const HELP = `
 <h4>Research and the village plans</h4><p><b>Research</b> lists what can be studied. The three <b>Village plans</b> switches say what the village still decides for itself: <i>Buildings</i> (new sites, roads, upgrades, bridges), <i>Research</i>, and <i>Jobs</i> (who does what). Amber means you are in charge of that part. Orders and sites you place always come first.</p>
 <h4>Speed and sound</h4><p>The speed buttons go from 1× to 100×, and <b>Max</b> runs as fast as your machine can (it shows the days a second). The ♪ button (or the M key) turns on the music, which is made in your browser as you play. Skip it, or press Like or Dislike: a track is just a number, so the same number is always the same tune.</p><h4>Scenarios</h4><p>Menu, then <b>Scenarios…</b> offers ready-made starts: a gentle island, a hard winter continent, river country, islands, the lake country and more.</p><h4>The crowd</h4><p>Once the town has more than 160 people, only some are followed one by one; the rest are the <b>crowd</b>. The Crowd panel sets how much of their effort goes to food, wood and stone.</p>
 <h4>When it ends</h4><p>If everyone is gone, or fewer than five people remain for a whole month, the village is over. You will see what it was, and can keep watching, start the same world again, or begin a new one.</p>
-<h4>Saving</h4><p>The game saves by itself and resumes where you left off. Settings has Save now, Export and Import for keeping a village as a file.</p>
+<h4>Saving</h4><p>The game saves by itself and resumes where you left off. Menu > Saves keeps up to ten named saves; Settings has Export and Import for keeping a village as a file.</p>
 <h4>Tips</h4><ul><li>Food first: a granary and a few farms before more houses.</li><li>Roads between homes, stores and fields make everyone faster.</li><li>Pausing is free. Plan while paused, then watch what happens.</li><li>If something looks wrong, About has a button that copies a report.</li></ul>`;
 /* scenarios (v0.36): ready-made starts; each is just a seed, a map and the settings, so they need no files and stay true as the game grows */
 const SCENARIOS = [
@@ -65,7 +65,7 @@ function welcomeOpen() {
 }
 function menuInit() {
   const mb = $('menuBtn'), menu = $('menu'), close = () => { menu.style.display = 'none'; mb.classList.remove('on') };
-  mb.onclick = e => { e.stopPropagation(); const open = menu.style.display === 'block'; if (open) close(); else { if (drawerOpen()) toggleDrawer(false); menu.style.display = 'block'; mb.classList.add('on'); $('menuVer').textContent = 'Village Sim v' + APP_VERSION; $('mn_load').disabled = $('loadSave').disabled } };
+  mb.onclick = e => { e.stopPropagation(); const open = menu.style.display === 'block'; if (open) close(); else { if (drawerOpen()) toggleDrawer(false); menu.style.display = 'block'; mb.classList.add('on'); $('menuVer').textContent = 'Village Sim v' + APP_VERSION;  } };
   document.addEventListener('click', e => { if (!e.target.closest('#menu') && e.target !== mb) close() });
   menu.onclick = e => { const b = e.target.closest('[data-mn]'); if (!b) return; close(); ({ new: () => nwOpen(), save: () => saveToStorage(true), load: () => $('loadSave').click(), scen: scenariosOpen, settings: () => toggleDrawer(true), fullscreen: () => toggleFullscreen(), help: helpOpen, about: aboutOpen })[b.dataset.mn]() };
   $('modal_x').onclick = modalClose; $('modal').addEventListener('pointerdown', e => { if (e.target === $('modal')) modalClose() });

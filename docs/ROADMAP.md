@@ -2,15 +2,9 @@
 
 What is planned, in rough order, and why. Plans change as the game is played; when one does, this file is updated. The reasoning behind decisions is in [DESIGN.md](DESIGN.md), what exists today is in [FEATURES.md](FEATURES.md), and each release is in the [changelog](../CHANGELOG.md).
 
-Current version: **v0.39.1** · [all milestones](https://github.com/Zaat/village-sim/milestones) · [open issues](https://github.com/Zaat/village-sim/issues) (see the [changelog](../CHANGELOG.md)). Everything below is not built yet.
+Current version: **v0.39.2** · [all milestones](https://github.com/Zaat/village-sim/milestones) · [open issues](https://github.com/Zaat/village-sim/issues) (see the [changelog](../CHANGELOG.md)). Everything below is not built yet.
 
 Status key: **planned** (scope agreed), **proposed** (idea, scope still open).
-
-## Saves — proposed
-- **Compressed saves.** Saves are stored gzip-compressed (a 1.3 MB world should drop to a few hundred KB); older uncompressed saves keep loading.
-- **Save slots.** About eight named slots plus two rotating autosaves, each with the village name, year, population, age, map and a thumbnail. Save, Save as new, Load, Rename, Delete and Export per slot; Import adds a file as a new slot, so a player can jump between worlds. Stored in the browser's IndexedDB (localStorage is too small for several worlds). The current single save moves into a slot automatically.
-
-Issues: [#132](https://github.com/Zaat/village-sim/issues/132), [#133](https://github.com/Zaat/village-sim/issues/133) · Milestone: [Saves](https://github.com/Zaat/village-sim/milestone/51)
 
 ## Performance — planned
 - Profile large villages (year 50 and beyond) and smooth the heavy ticks: villagers currently re-decide together every 32 ticks and the day rollover is long.

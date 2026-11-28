@@ -61,9 +61,9 @@
     </div>
     <div class="card"><h3>Save &amp; load</h3>
       <div class="hint" id="saveInfo">Nothing saved yet.</div>
-      <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave" disabled>Load saved</button></div>
+      <div class="btnrow"><button id="saveNow">Save now</button><button id="loadSave">Saves…</button></div>
       <div class="btnrow"><button id="exportBtn">Export file</button><button id="importBtn">Import file</button></div>
-      <input type="file" id="importFile" accept=".json,application/json" style="display:none">
+      <input type="file" id="importFile" accept=".json,.gz,.json.gz,application/json,application/gzip" style="display:none">
       <label class="tog" style="margin-top:8px"><input type="checkbox" id="autoresume" checked><span class="sw"></span><span>Resume automatically <span class="hint">when the page opens</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="bubbleToggle" checked><span class="sw"></span><span>Thought bubbles <span class="hint">speech, thoughts and dreams above villagers</span></span></label>
       <label class="tog" style="margin-top:6px"><input type="checkbox" id="autosave" checked><span class="sw"></span><span>Autosave <span class="hint">every minute, in this browser</span></span></label>
@@ -96,7 +96,7 @@
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
     <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
-    <div id="menu" style="display:none"><button data-mn="new">New world…</button><button data-mn="scen">Scenarios…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><hr><button data-mn="settings">Settings</button><button data-mn="fullscreen" id="mn_fs">Full screen (X)</button><hr><button data-mn="help">How to play</button><button data-mn="about">About</button><div class="mver" id="menuVer"></div></div>
+    <div id="menu" style="display:none"><button data-mn="new">New world…</button><button data-mn="scen">Scenarios…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Saves…</button><hr><button data-mn="settings">Settings</button><button data-mn="fullscreen" id="mn_fs">Full screen (X)</button><hr><button data-mn="help">How to play</button><button data-mn="about">About</button><div class="mver" id="menuVer"></div></div>
     <div id="modal" style="display:none"><div class="nwbox"><div class="drawerhead"><h3 id="modal_t"></h3><button id="modal_x" title="Close (Esc)">✕</button></div><div id="modal_b" class="mbody"></div></div></div>
     <div id="over" style="display:none"><div class="nwbox">
       <h3 id="over_title"></h3><div id="over_text" style="margin-bottom:10px"></div>
@@ -225,6 +225,7 @@
 <script src="src/overui.js"></script>
 <script src="src/helpui.js"></script>
 <script src="src/sound.js"></script>
+<script src="src/saves.js"></script>
 <script src="src/ui.js"></script>
 <script src="src/treeui.js"></script>
 </body>
