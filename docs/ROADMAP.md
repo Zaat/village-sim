@@ -33,9 +33,10 @@ Issues: [#138](https://github.com/Zaat/village-sim/issues/138), [#139](https://g
 ## Polish release (before v1.0) — planned
 - **Events redesign**, including the Chronicle and daily summaries.
 - **A clearer build screen** and a full interface sweep before 1.0.
+- **Select ships and other map objects** (boats, barges, trade ships, caravans, resource tiles) to see their information; today only people, animals, outposts, neighbours and buildings can be selected.
 - **More of the game in Spanish.**
 
-Issues: [#2](https://github.com/Zaat/village-sim/issues/2), [#147](https://github.com/Zaat/village-sim/issues/147), [#148](https://github.com/Zaat/village-sim/issues/148), [#149](https://github.com/Zaat/village-sim/issues/149), [#150](https://github.com/Zaat/village-sim/issues/150), [#151](https://github.com/Zaat/village-sim/issues/151), [#3](https://github.com/Zaat/village-sim/issues/3) · Milestone: [Polish release](https://github.com/Zaat/village-sim/milestone/54)
+Issues: [#170](https://github.com/Zaat/village-sim/issues/170), [#2](https://github.com/Zaat/village-sim/issues/2), [#147](https://github.com/Zaat/village-sim/issues/147), [#148](https://github.com/Zaat/village-sim/issues/148), [#149](https://github.com/Zaat/village-sim/issues/149), [#150](https://github.com/Zaat/village-sim/issues/150), [#151](https://github.com/Zaat/village-sim/issues/151), [#3](https://github.com/Zaat/village-sim/issues/3) · Milestone: [Polish release](https://github.com/Zaat/village-sim/milestone/54)
 
 ## Pace — proposed
 A single, smoother birth model for villagers and crowd, and a faster march through the ages (the last current age by about year 30 instead of 60), calibrated with the pace lab tool across maps and hardship levels. Waits for a decision after more play testing; see DESIGN.md entry 3.
