@@ -26,15 +26,49 @@
 | `src/culture.js` | weddings, funerals, story nights, the culture score |
 | `src/city.js` | land value, density, redevelopment, hamlets, desire paths |
 | `src/crowd.js` | the crowd: everyone beyond the 160 people simulated one by one, kept as numbers by age |
-| `src/debug.js` | diagnostics: error history, performance numbers, downloadable reports |
+| `src/debug.js` | diagnostics: error history, performance numbers (including the main loop's ticks per frame), the full copyable report |
 | `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
+| `src/stats.js` | statistics kept for the whole run: dozens of series sampled every four days, event counters, yearly rates |
+| `src/statsui.js` | the Stats tab (chart, presets, events table) and the hover history graph on stat names |
+| `src/concerns.js` | the village watches its own numbers and raises concerns with states |
+| `src/concernsui.js` | the Concerns badge, panel and toasts |
+| `src/lives.js` | hobbies, leisure, families and feuds, the depth behind each life |
+| `src/livelihoods.js` | trades besides the six heavy roles, demand and supply, invented jobs |
+| `src/resources.js` | what each resource is for, how much is wanted and why a store may be short |
+| `src/economy.js` | what the crowd's work yields, so crowd and villagers follow the same rules |
+| `src/districts.js` | the town read as 16x16 districts (nothing stored) |
+| `src/timber.js` | wood brought from far shores by boat |
+| `src/terraform.js` | works that reshape the land: grading, drainage, terraces, dikes, reclamation |
+| `src/bridges.js` | spanning a strait or river so the village can reach land it cannot walk to |
+| `src/outposts.js` | settlements founded by the village and how loyal they stay |
+| `src/discovery.js` | hidden sites, expeditions, materials and old writings |
+| `src/war.js` | soldiers, raids, campaigns, morale and battle records |
+| `src/gameover.js` | the two ways a village ends, and the choice to carry on |
+| `src/techtree.js` | the tree of knowledge: about 150 technologies in 8 branches and 11 ages |
+| `src/unlocks.js` | what each technology needs and what it is good for |
+| `src/treeui.js` | the dependency tree drawn as boxes and lines |
+| `src/voices.js` | what villagers think and say, chosen from their real state |
+| `src/voicesui.js` | the talk feed, daily summaries, the thought block and clickable bubbles |
+| `src/play.js` | the player's hands: orders, building, roads and zones, kept as plain data on the world |
+| `src/playui.js` | the Play screen: toolbar, group orders, build panels |
+| `src/helpui.js` | the game menu, the manual, About and the first-visit welcome |
+| `src/overui.js` | the end screen |
+| `src/sound.js` | music and effects generated in code; off until turned on |
+| `src/i18n.js` | the language layer: English text is the key, Spanish where translated |
+| `src/diag.js` | what is needed to look at a run without guessing (world line, diagnostics text) |
 | `src/render.js` | camera, seasonal terrain cache, pixel art drawn in code, lighting, minimap |
-| `src/ui.js` | panels, input, Claude narrator toggle, main loop |
+| `src/ui.js` | panels, input, layout modes (Docked, Clean), the menu, compact lists, the main loop |
 | `tests/` | the release suites (listed in `tests/suites.json`), golden trajectories, the performance gate, Playwright page tests; old one-off scripts live in `tests/legacy/` |
 | `tools/checkpoint.js` | make and list the saved worlds in `tests/checkpoints/` that suites load instead of simulating the early game |
 | `tools/run.js` | the test runner behind `tools/check.sh` (affected suites, `full`, `pages`, timings, green stamp) |
 
 The simulation files never touch the DOM, so they run in Node for batch experiments.
+
+## Rules the code relies on
+- **The simulation is deterministic.** One seeded generator and a tick counter; rendering, sound and panels never draw from the generator or write simulation state. Anything that is only a label is added as a separate display key, so the keys game logic reads stay unchanged. See [DESIGN.md](DESIGN.md) entries 4 and 5.
+- **The crowd is numbers.** Up to 160 villagers are simulated one by one; the rest are counts by age and work. Drawing the crowd is a render-only matter.
+- **One loop, one budget.** The page loop adds owed ticks each frame and stops a frame's ticking after a time budget (14 ms normally, 45 ms at Max speed); owed time carries over so a long tick does not slow the game. Live numbers for it are in Diagnostics.
+- **Saves** store everything except terrain, which is regenerated from the seed. The save records which version wrote it.
 
 ## How it works
 - **Time:** 1200 ticks = 1 day, 8 days per season, 32-day year. Same seed = same world.

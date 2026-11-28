@@ -2,6 +2,36 @@
 
 The newest sections are first. For one page per release with screenshots see [docs/releases](releases/) and the [changelog](../CHANGELOG.md).
 
+## Interface, saves and diagnostics (new in 0.39.1)
+- **Menu:** eight items in three groups (New world, Scenarios, Save now, Load saved; Settings, Full screen; How to play, About) with the version at the foot. Opening the menu closes the Events drawer and the other way round; Esc closes either. Show tips again moved to Settings.
+- **Layouts:** *Docked* (default) and *Clean* (map, a play bar, and a few counters; L or the corner button returns). Settings > Layout; remembered per device.
+- **Compact lists:** Chronicle, Expeditions, Trade and Defence show the recent few entries and an "Earlier (N)" block, with dates written like "Y53 D7" (day 7 of the 32-day year; hover for the full form). Trade also has a treasury line.
+- **Hover history:** hover a stat name in the side panel (Population, Food, Mood, Culture, Technologies and others) for its graph over the run.
+- **Deaths:** a Deaths preset in Stats (old age, hunger, cold, illness, other); illness is split into fever season, plague and everyday illness in the card, series and counters. The Stats tab opens on an Overview preset; selecting the active preset again returns to it.
+- **Diagnostics:** one card: the village text first (version tag, world, crowd, activity, device, language and loaded-from details), the engine details below, one Copy button. The live line shows ticks per frame, tick time, frame time, frames per second and the longest gap between frames.
+- **Fixes:** the inspector scrolls the selected villager into view; Time travel and Fast-forward no longer wrap or leave blank space; fixed-height cards no longer leave empty space (Tree of knowledge, Society, Chronicle); a Stats crash on saves that lacked a newer series is fixed; the main loop no longer drops time after a long tick.
+
+## Late ages, language and settings study (new in 0.39)
+- **Atomic and Information ages:** 39 new technologies (148 in eleven ages), high-rise (32 beds) and arcology (64 beds) homes, farms that keep gaining yield.
+- **Spanish:** starts in Spanish when the browser is set to it; Settings has a language switch. The main screens, menus and Settings are translated; the rest follows.
+- **Full screen:** Menu or X.
+- **Settings study:** survival is the main brake on growth; harsh winters and droughts are rarer; fevers and fires depend on village size.
+
+## Pace and developer tools (new in 0.38)
+- **A real childhood** (about two and a half game years to grow up), a narrower fertile span, slower families, fewer and smaller groups of newcomers, an order brake on large towns, and wider Hardship levels. Old saves carry over.
+- **Copyable Diagnostics** and a **pace lab** tool (`tools/pace_lab.js`) that compares birth models.
+- Steadier resource notices, a clearer stats graph for the first two years, and a stronger land-value overlay.
+
+## Metropolis (new in 0.37)
+- **Big towns** are a crowd kept as numbers around the 160 villagers simulated one by one, with the same food, housing and work rules.
+- **Districts** overlay with names and head counts; **storage** (yards, storehouses, granaries, spoilage); food and wood by sea; resources as one table; homes may clear woodland; faster building searches; a measured Hardship scorecard; phone fixes.
+
+## Insight, look and sound (new in 0.36)
+- **Growth** that no longer stalls near 250 people, generated **music** that follows the village (M), icons on the build palette, Max speed, touch building with Undo, scenarios in the Menu, game-over tales, and coverage and statistics tools.
+
+## Play (new in 0.35 and 0.35.1)
+- **Watch / Play** switch; orders by click, shift-click and box select; a command bar; building, roads and zones; research choices; village-plan switches; lifespans; game over. Watch and Play switch seamlessly, and a first-time tip explains that you are in charge.
+
 ## Technology, eras and building
 - **Knowledge** comes from debating, practising a trade and teaching. The council chooses what to study next (rules by default; Claude can deliberate). 15 discoveries across four ages: Founding, Craft, Stone & Sail, Iron.
 - **Effects:** bigger catches (nets), faster work (tools, ironwork), more storage and less spoilage (granaries), higher crop yields (rotation, plow), safer winters (medicine, watchtowers), and more.
