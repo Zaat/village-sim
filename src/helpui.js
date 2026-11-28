@@ -4,8 +4,8 @@
    The news list in ABOUT is rewritten at each release (tools/release.sh checks that its version matches APP_VERSION). */
 const ABOUT = {
   home: 'https://github.com/Zaat/village-sim', issues: 'https://github.com/Zaat/village-sim/issues/new/choose', changelog: 'https://github.com/Zaat/village-sim/blob/main/CHANGELOG.md', license: 'https://github.com/Zaat/village-sim/blob/main/LICENSE',
-  version: '0.39', name: 'Late ages and language',
-  news: ['Two new ages after the Modern Age: the Atomic Age (nuclear power, jets, rockets, the green revolution, high-rise housing) and the Information Age (the internet, robotics, renewables, fusion, vertical farms, arcologies, spaceflight): 39 new technologies, a farm-yield ladder far beyond the old one, and two taller kinds of home.', 'Spanish: the game starts in Spanish when your browser is set to it, and Settings has a language switch (English or Español). The main screens are translated; more follows.', 'Full screen: Menu > Full screen, or the X key (not available on iPhone Safari).', 'Settings now tag how much harder each switch makes the game, and a note appears while the hard ones are on. Disasters are fairer to young villages (fewer fevers and fires where there is little to burn or catch, harsh winters and droughts less often), survival mode is less brutal, and a village down to a handful of people gets a warning and more travellers when it has room and food, so a collapse can be avoided.']
+  version: '0.39.1', name: 'Tidier panels and clearer deaths',
+  news: ['A Deaths chart in Stats, with illness split into fever season, plague and everyday illness.', 'Long lists (Chronicle, expeditions, trade, defence) show the recent few and an "Earlier" block; dates read like Y53 D7.', 'Hover a stat name to see its history; a Clean layout (key L) for play and screenshots.', 'One Diagnostics card with live timing numbers, an eight-item menu, and fixes for layout whitespace and older saves.']
 };
 const HELP = `
 <h4>The idea</h4><p>A small village on its own island or shore. Watch it grow from a handful of people into a town: farms, houses, trade, ideas, quarrels. Every world is made from a seed, so the same seed always starts the same land.</p>
@@ -65,9 +65,9 @@ function welcomeOpen() {
 }
 function menuInit() {
   const mb = $('menuBtn'), menu = $('menu'), close = () => { menu.style.display = 'none'; mb.classList.remove('on') };
-  mb.onclick = e => { e.stopPropagation(); const open = menu.style.display === 'block'; if (open) close(); else { menu.style.display = 'block'; mb.classList.add('on'); $('mn_load').disabled = $('loadSave').disabled } };
+  mb.onclick = e => { e.stopPropagation(); const open = menu.style.display === 'block'; if (open) close(); else { if (drawerOpen()) toggleDrawer(false); menu.style.display = 'block'; mb.classList.add('on'); $('menuVer').textContent = 'Village Sim v' + APP_VERSION; $('mn_load').disabled = $('loadSave').disabled } };
   document.addEventListener('click', e => { if (!e.target.closest('#menu') && e.target !== mb) close() });
-  menu.onclick = e => { const b = e.target.closest('[data-mn]'); if (!b) return; close(); ({ resume: () => { if (speed === 0) setSpeed(lastSpeed || 10) }, new: () => nwOpen(), save: () => saveToStorage(true), load: () => $('loadSave').click(), scen: scenariosOpen, settings: () => toggleDrawer(true), fullscreen: () => toggleFullscreen(), tips: () => { tipsReset(); if (typeof puNote === 'function') puNote('Tips are back on.') }, help: helpOpen, about: aboutOpen })[b.dataset.mn]() };
+  menu.onclick = e => { const b = e.target.closest('[data-mn]'); if (!b) return; close(); ({ new: () => nwOpen(), save: () => saveToStorage(true), load: () => $('loadSave').click(), scen: scenariosOpen, settings: () => toggleDrawer(true), fullscreen: () => toggleFullscreen(), help: helpOpen, about: aboutOpen })[b.dataset.mn]() };
   $('modal_x').onclick = modalClose; $('modal').addEventListener('pointerdown', e => { if (e.target === $('modal')) modalClose() });
   addEventListener('keydown', e => { if (e.key === 'Escape' && $('modal').style.display !== 'none') { modalClose(); e.stopPropagation() } if (e.key === '?' && !(e.target && e.target.tagName === 'INPUT')) helpOpen() }, true);
 }

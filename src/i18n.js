@@ -40,7 +40,7 @@ const I18N = {
     'Several harder switches are on: expect slow early growth and setbacks.': 'Hay varios interruptores difíciles activos: espera un crecimiento inicial lento y reveses.',
     'Language': 'Idioma', 'the game text; your browser language is used the first time': 'el texto del juego; la primera vez se usa el idioma de tu navegador',
     // menu
-    'New world…': 'Mundo nuevo…', 'Resume': 'Reanudar', 'Scenarios…': 'Escenarios…', 'Full screen (X)': 'Pantalla completa (X)', 'Show tips again': 'Mostrar los consejos otra vez', 'How to play': 'Cómo jugar', 'About': 'Acerca de',
+    'New world…': 'Mundo nuevo…', 'Resume': 'Reanudar', 'Scenarios…': 'Escenarios…', 'Full screen (X)': 'Pantalla completa (X)', 'Layout': 'Diseño', 'Docked': 'Acoplado', 'Overlay': 'Superpuesto', 'Clean': 'Limpio', 'Show tips again': 'Mostrar los consejos otra vez', 'How to play': 'Cómo jugar', 'About': 'Acerca de',
     'Tree of knowledge': 'Árbol del conocimiento', 'Tree of knowledge…': 'Árbol del conocimiento…',
     // new world dialog
     'New world': 'Mundo nuevo', 'Seed': 'Semilla', 'Map type': 'Tipo de mapa', 'Map size': 'Tamaño del mapa', 'Check this world': 'Revisar este mundo', 'Start': 'Empezar', 'Same world again': 'El mismo mundo otra vez', 'Keep watching': 'Seguir observando',

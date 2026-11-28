@@ -2,6 +2,23 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.39.1 — Tidier panels and clearer deaths
+A tidy-up of the side panels and Stats, a clearer account of why people die, and a fix for the game losing time at high speed.
+
+![Stats tab with the Overview preset](docs/screenshots/v0.39.1.png)
+
+**Layout.** Two layout modes, Docked and Clean (the Overlay mode tried in this cycle was removed: it added buttons without saving space). The menu is down to eight items with the version at the bottom, Diagnostics is one card, the inspector scrolls the selected villager into view, and the Time travel and Fast-forward area has no stray whitespace.
+
+**Stats.** New Overview and Deaths presets; illness deaths are split three ways; hovering a stat name shows its history graph; the Treasury has a sparkline; a crash when opening Stats on older saves is fixed.
+
+**Lists and dates.** Chronicle, battles, discoveries, trades and harbour trips show the latest few entries with the rest under an "Earlier" fold, and dates read as Y56 D8 (year and day) everywhere. The Culture card explains what builds the score.
+
+**Speed.** The main loop no longer drops time when a frame runs long: it carries the remainder instead, and a long gap between frames is allowed to catch up. Diagnostics now report ticks per frame, time spent ticking, frame time and the longest gap, to help find why one machine runs well below its speed setting (see #137).
+
+**Tests.** New UI suite for the layouts, menu, presets, hover graphs, compact lists and merged Diagnostics.
+
+Issues: #157, #158, #159, #160, #161, #162, #163, #164, #165, #166, #167, #168, #169
+
 ### v0.39 — Late ages and language
 Two new ages, a Spanish version, a full screen option and a fairer start for small villages.
 

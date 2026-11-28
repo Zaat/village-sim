@@ -10,7 +10,7 @@ ok(S.days.length===Math.floor((w.day-1)/4)||Math.abs(S.days.length-Math.floor(w.
 ok(ctx.STAT_SERIES.every(s=>S.s[s.id].length===S.days.length),'all series have equal length');
 ok(ctx.evTotal(w,'born')===w.births-8||Math.abs(ctx.evTotal(w,'born')-w.births)<=12,'births counter ~ world births: '+ctx.evTotal(w,'born')+' vs '+w.births);
 ok(ctx.evTotal(w,'died')===w.deaths,'deaths counter equals world deaths: '+ctx.evTotal(w,'died')+' vs '+w.deaths);
-const causes=['died_age','died_hunger','died_cold','died_fever','died_wolf','died_sea','died_violence','died_other'].reduce((a,k)=>a+ctx.evTotal(w,k),0);ok(causes===ctx.evTotal(w,'died'),'death causes add up: '+causes);
+const causes=['died_age','died_hunger','died_cold','died_fever','died_plague','died_sickness','died_wolf','died_sea','died_violence','died_other'].reduce((a,k)=>a+ctx.evTotal(w,k),0);ok(causes===ctx.evTotal(w,'died'),'death causes add up: '+causes);
 const yr=S.ev.died.y.reduce((a,b)=>a+b,0);ok(yr===S.ev.died.n,'yearly columns add up to the total');
 console.log('events:',ctx.STAT_EVENTS.map(e=>(S.ev[e.key]?e.key+'='+S.ev[e.key].n:null)).filter(Boolean).join(' '));
 console.log('never seen:',ctx.STAT_EVENTS.filter(e=>!S.ev[e.key]).map(e=>e.key).join(' '));

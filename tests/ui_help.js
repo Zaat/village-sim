@@ -6,7 +6,7 @@ const { chromium } = require('playwright');
   await p.goto('file:///' + __dirname.replace(/\\/g, '/') + '/../index.html'); await p.evaluate(() => { localStorage.clear() }); await p.reload(); await p.waitForTimeout(700);
   const shown = id => p.evaluate(id => getComputedStyle(document.getElementById(id)).display !== 'none', id);
   ok(!(await shown('modal')), 'no dialog over an automated start'); ok(!(await shown('menu')), 'the menu starts closed');
-  await p.click('#menuBtn'); ok(await shown('menu'), 'the menu button opens the menu'); ok(await p.evaluate(() => ['Resume', 'New world', 'Save now', 'Load saved', 'Settings', 'How to play', 'About'].every(t => document.getElementById('menu').innerText.includes(t))), 'it has the expected entries');
+  await p.click('#menuBtn'); ok(await shown('menu'), 'the menu button opens the menu'); ok(await p.evaluate(() => ['New world', 'Scenarios', 'Full screen', 'Save now', 'Load saved', 'Settings', 'How to play', 'About'].every(t => document.getElementById('menu').innerText.includes(t))), 'it has the expected entries');
   await p.click('[data-mn=help]'); ok(await shown('modal') && !(await shown('menu')), 'How to play opens the manual and closes the menu'); ok(await p.evaluate(() => /Giving orders/.test(document.getElementById('modal_b').innerText) && /touch/i.test(document.getElementById('modal_b').innerText)), 'the manual covers orders and touch');
   await p.screenshot({ path: 'tests/ui_help.png' }); await p.keyboard.press('Escape'); ok(!(await shown('modal')), 'Esc closes it');
   await p.click('#menuBtn'); await p.click('[data-mn=about]'); const txt = await p.evaluate(() => document.getElementById('modal_b').innerText);

@@ -4,7 +4,18 @@
    ui.js — input, panels, settings, the optional Claude counsel, main loop.
    ========================================================================== */
 const $ = id => document.getElementById(id);
-let world = null, selected = null, speed = 10, follow = false;
+let world = null, selected = null, speed = 10, follow = false, selSeen = null;
+/* v0.39.1 layout modes: Docked (map and side panel), Overlay (the map fills the screen, the panels float), Clean (only the essentials). Wide screens only; remembered per device; Docked is the default. */
+const LAYOUTS = ['docked', 'clean'], LAYOUT_NAME = { docked: 'Docked', clean: 'Clean' };
+let layout = 'docked'; try { const v = localStorage.getItem('villagesim.layout'); if (LAYOUTS.includes(v)) layout = v } catch (e) { }
+function setLayout(m, quiet) {
+  if (!LAYOUTS.includes(m)) m = 'docked'; layout = m; document.body.dataset.layout = m;
+  try { localStorage.setItem('villagesim.layout', m) } catch (e) { }
+  const sel = $('set_layout'); if (sel) sel.value = m;
+  if (typeof resizeRender === 'function') { resizeRender(); if (typeof clampCam === 'function') clampCam() }
+  if (!quiet && typeof puNote === 'function') puNote('Layout: ' + LAYOUT_NAME[m] + (m === 'clean' ? ' (press L or use the corner button to leave)' : ''));
+}
+function cycleLayout() { setLayout(LAYOUTS[(LAYOUTS.indexOf(layout) + 1) % LAYOUTS.length]) }
 const keys = {};
 const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', builder: '#e8a03a', hunter: '#3f7d4a', fisher: '#4aa3d8' };
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
@@ -245,6 +256,7 @@ function updateUI() {
   overCheck(); renderConcerns();
   const w = world, hrs = (6 + w.tod * 24) % 24, hh = Math.floor(hrs), mm = Math.floor((hrs - hh) * 60), s = w.season;
   $('hudDate').textContent = `Year ${w.year} · ${SEASONS[s]} · Day ${w.seasonDay}`;
+  { const pp = Math.max(1, w.pop), fd = Math.floor(w.stock.food), wd = Math.floor(w.stock.wood); $('hudRes').innerHTML = `<span>People <b>${w.pop}</b></span> <span class="${fd < pp * 0.5 ? 'low' : ''}">Food <b>${fd}</b></span> <span class="${wd < pp * 0.3 ? 'low' : ''}">Wood <b>${wd}</b></span>` }
   $('hudTime').textContent = `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}${w.isNight() ? ' ☾' : ''} · ${AGES[techEra(w)]}${w.cold ? ' · freezing' : w.festival ? ' · ' + w.holiday : w.harsh && s === 3 ? ' · harsh winter' : w.drought && s === 1 ? ' · drought' : ''}`;
   const cap = w.cap(), an = {}; for (const a of w.animals) if (a.alive) an[a.kind] = (an[a.kind] || 0) + 1;
   const stg = {}; for (const v of w.vills) stg[v.stage()] = (stg[v.stage()] || 0) + 1; if (w.crowd) { stg.child = (stg.child || 0) + w.crowd.kids; stg.adult = (stg.adult || 0) + w.crowd.adults; stg.elder = (stg.elder || 0) + w.crowd.elders }
@@ -297,7 +309,7 @@ function renderDisc() {
   const run = D.exped.filter(e => e.state === 'running' || e.state === 'pending');
   if (run.length) h += `<div class="hint" style="margin:6px 0 2px">On the road</div>` + run.map(e => { const s = D.sites.find(x => x.id === e.site), K = s && SITE_KINDS[s.kind], l = e.leader ? w.vills.find(v => v.id === e.leader) : null; return `<div class="techrow"><b>${K ? K.name : 'An expedition'}</b> <span class="hint">${e.state === 'pending' ? 'waiting for someone to lead it' : (l ? escapeHtml(l.name) + ' leads, ' : '') + (e.mode === 'sea' ? 'by boat' : 'on foot')}</span></div>` }).join('');
   const sites = D.sites.filter(s => s.known && !s.done); if (sites.length) h += `<div class="hint" style="margin:6px 0 2px">Heard of, not yet visited (${sites.length})</div>` + sites.slice(0, 5).map(s => `<div class="techrow"><b>${SITE_KINDS[s.kind].name}</b> <span class="hint">${Math.round(Math.hypot(s.x - w.cx, s.y - w.cy))} tiles ${compass(w, s.x, s.y)}${s.mat && w.has(SURVEY[s.mat]) ? ', may hold ' + MATS[s.mat].name : ''}</span></div>`).join('');
-  if (D.log.length) h += `<div class="hint" style="margin:6px 0 2px">Returned</div>` + D.log.slice(0, 3).map(l => `<div class="techrow"><span class="hint">day ${l.day}</span> ${escapeHtml(l.text)}</div>`).join('');
+  if (D.log.length) h += `<div class="hint" style="margin:6px 0 2px">Returned</div>` + compactList('disclog', D.log.map(l => `<div class="techrow"><span class="hint">${ydTag(l.day)}</span> ${escapeHtml(l.text)}</div>`), 4, 8);
   h += `<div class="hint" style="margin-top:6px">${D.done} expeditions returned · ${D.lost} lost · ${D.lore} old writings found${D.deals ? ' · ' + D.deals + ' lessons bought' : ''}</div>`; el.innerHTML = h;
 }
 function renderHarbour() {
@@ -314,7 +326,7 @@ function renderHarbour() {
   else h += `<div class="hint" style="margin:6px 0 2px">${app > 1.4 ? 'The village is eager to trade abroad.' : app < 0.6 ? 'The village is wary of foreign trade.' : 'The village trades abroad when it pays.'}${t.lastPlan ? ` Best prospect: ${escapeHtml(t.lastPlan.n)}.` : ''}</div>`;
   const rs = Object.entries(t.routes).filter(([, r]) => r.standing).map(([id, r]) => { const n = w.neigh.find(x => x.id === +id); return n ? `<div class="hint">Standing route to <b style="color:var(--ink)">${escapeHtml(n.name)}</b>: ${r.trips} trip${r.trips === 1 ? '' : 's'}${coin ? ', ' + (r.profit >= 0 ? '+' : '') + r.profit + ' coins' : ''}</div>` : '' }).join(''); h += rs;
   if (L.trips || L.lost) h += `<div class="stats" style="margin-top:6px"><div><span class="hint">Trips made</span><b>${L.trips}</b></div><div><span class="hint">${coin ? 'Profit' : 'Goods gained'}</span><b>${coin ? (L.profit >= 0 ? '+' : '') + L.profit + ' coins' : L.imports + ' loads'}</b></div>${coin ? `<div><span class="hint">Sold abroad</span><b>${L.exports}</b></div><div><span class="hint">Bought abroad</span><b>${L.imports}</b></div>` : ''}${L.lost ? `<div><span class="hint">Lost at sea or road</span><b>${L.lost}</b></div>` : ''}</div>`;
-  if (t.trips.length) h += `<div class="story" style="margin-top:6px"><div class="hint">Recent trips</div>${t.trips.slice(0, 3).map(x => `<div><b>D${x.day}</b>${escapeHtml(x.text)}</div>`).join('')}</div>`;
+  if (t.trips.length) h += `<div class="story" style="margin-top:6px"><div class="hint">Recent trips</div>${compactList('trips', t.trips.map(x => `<div>${ydTag(x.day)} ${escapeHtml(x.text)}</div>`), 3, 12)}</div>`;
   el.innerHTML = h || '<div class="hint">No trade abroad yet.</div>';
 }
 /* settlements founded by the village */
@@ -380,7 +392,7 @@ function renderNeigh() {
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
 /* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
 const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a', '#3f6f9a', '#4a9a6a'];
-function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
+function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · loop: ${(DBG.tpf || 0).toFixed(1)} ticks/frame, ${(DBG.stepMs || 0).toFixed(1)} ms ticking, ${DBG.frameMs.toFixed(1)} ms/frame, ${DBG.fps.toFixed(0)} fps, longest gap ${Math.round(DBG.lastDtMax || 0)} ms · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
 function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } renderDiagText() } catch (e) { } }
 /* the Diagnostics text in the World card: filled the moment the section opens and every second while it is open; a failure is shown there instead of leaving it blank (v0.38.1) */
 function renderDiagText() { const d = $('diagText'); if (!d || !d.parentElement.open) return; let t = ''; try { t = diagText(world) } catch (e) { t = 'world line: ' + worldLineShort(world) + '\n(the full snapshot could not be built: ' + (e && e.message || e) + ')' } try { t += '\n' + diagExtras() } catch (e) { t += '\n(browser details unavailable: ' + (e && e.message || e) + ')' }
@@ -433,7 +445,7 @@ function renderWar() {
   if (W && W.campaign) { const n = w.neigh.find(x => x.id === W.campaign.n); html += `<div class="hint" style="margin-top:4px">⚔️ The army is marching on ${escapeHtml(n ? n.name : 'a neighbour')}; it is due back around day ${W.campaign.back}.</div>` }
   if (W) {
     html += `<div class="hint" style="margin-top:6px">Raids beaten off ${W.repelled} · campaigns won ${W.won}, lost ${W.lost}, drawn ${W.drawn} · fallen ${W.fallen} · enemies slain ${W.slain}${W.plunder ? ' · plunder ' + W.plunder : ''}${W.sacked ? ' · outposts overrun ' + W.sacked : ''}</div>`;
-    if (W.battles.length) html += `<div style="margin-top:6px">${W.battles.slice(0, 5).map(b => `<div class="hint">Day ${b.d}: ${b.kind === 'campaign' ? 'campaign against' : b.kind === 'outpost' ? (b.at ? escapeHtml(b.at) + ' against' : 'outpost against') : 'raid by'} ${escapeHtml(b.foe)} · <b>${b.outcome}</b> · lost ${b.lostOurs || 0}, enemy ${b.lostTheirs || 0}</div>`).join('')}</div>`;
+    if (W.battles.length) html += `<div style="margin-top:6px">${compactList('battles', W.battles.map(b => `<div class="hint">${ydTag(b.d)}: ${b.kind === 'campaign' ? 'campaign against' : b.kind === 'outpost' ? (b.at ? escapeHtml(b.at) + ' against' : 'outpost against') : 'raid by'} ${escapeHtml(b.foe)} · <b>${b.outcome}</b> · lost ${b.lostOurs || 0}, enemy ${b.lostTheirs || 0}</div>`), 5, 24)}</div>`;
   }
   el.innerHTML = html;
 }
@@ -459,7 +471,7 @@ function renderDeaths() {
 function renderCulture() {
   const w = world, el = $('cultCard'), C = w.cul; if (!C) { el.innerHTML = '<div class="hint">Weddings, funerals and shared stories will build a culture here.</div>'; return }
   const sick = plagueSick(w), sc = Math.round(C.score), col = sc >= 55 ? '#7ad07a' : sc >= 25 ? '#d9c26a' : '#e07a5a';
-  let html = `<div class="polh"><span class="hint">Culture</span><span class="hint">${sc}/100</span></div><div class="bar"><i style="background:${col};width:${sc}%"></i></div>
+  let html = `<div class="polh" title="${escapeHtml(i18n('Culture grows with weddings (+0.8 each), funerals (+0.4 per person honoured) and story nights (+0.6), and fades a little every day. It slightly speeds up research and nudges how the village is governed. A village of 160 or more people holds gatherings nearly every day, so it usually reaches 100; a better, more detailed culture measure is planned.'))}"><span class="hint">Culture <span style="opacity:.6">ⓘ</span></span><span class="hint">${sc}/100</span></div><div class="bar"><i style="background:${col};width:${sc}%"></i></div>
     <div class="hint" style="margin-top:4px">${C.weddings} weddings · ${C.funerals} funerals · ${C.tales} story nights${C.floods ? ' · ' + C.floods + ' floods' : ''}${C.plagues ? ' · ' + C.plagues + ' plagues (' + C.plagueDead + ' dead)' : ''}</div>`;
   if (sick) html += `<div class="hint" style="margin-top:4px">🤒 ${sick} ill${C.plague.quarantine ? ', quarantined' : ''}.</div>`;
   if (C.guilds.length) html += C.guilds.map(g => `<div class="grp"><b>${escapeHtml(g.name)}</b> <span class="hint">${g.members} members · dues paid ${Math.round(g.dues)}</span></div>`).join(''); else html += '<div class="hint" style="margin-top:4px">No guilds yet (they need coinage and five in one trade).</div>';
@@ -471,7 +483,7 @@ function renderChron() {
   const w = world, C = w.chron, el = $('chronCard'); if (!C) return;
   const ls = Object.keys(LESSONS).filter(k => C.lessons[k] > 0.04).sort((a, b) => C.lessons[b] - C.lessons[a]);
   let html = ls.length ? ls.map(k => `<div class="pol"><div class="polh"><span>${LESSONS[k].name}</span><span class="hint">${C.lessons[k] >= 0.8 ? 'learned hard' : C.lessons[k] >= 0.55 ? 'learned' : C.lessons[k] >= 0.3 ? 'learning' : 'a first scare'}</span></div><div class="bar"><i style="background:var(--acc);width:${Math.round(C.lessons[k] * 100)}%"></i></div></div>`).join('') + '<div class="hint" style="margin-bottom:6px">Hard times teach the village what to prepare for; the lessons fade slowly, and a library helps them last.</div>' : '<div class="hint" style="margin-bottom:6px">Nothing hard has taught the village anything yet.</div>';
-  html += '<h3 style="margin-top:8px">Chronicle</h3>' + (C.events.length ? C.events.slice(0, 9).map(e => `<div class="hint" style="margin:3px 0"><b>Y${e.year} D${e.day}</b> ${escapeHtml(e.text.length > 150 ? e.text.slice(0, 147) + '…' : e.text)}</div>`).join('') : '<div class="hint">The first pages are still blank.</div>');
+  html += '<h3 style="margin-top:8px">Chronicle</h3>' + (C.events.length ? compactList('chron', C.events.map(e => `<div class="hint" style="margin:3px 0">${ydTag(e.day)} ${escapeHtml(e.text.length > 150 ? e.text.slice(0, 147) + '…' : e.text)}</div>`), 6, 30) : '<div class="hint">The first pages are still blank.</div>');
   el.innerHTML = html;
 }
 function renderProjects() {
@@ -494,10 +506,11 @@ function renderEcon() {
   const w = world, E = w.econ, card = $('econCard'), box = card.parentElement; box.style.display = w.has('trade') ? '' : 'none'; if (!w.has('trade')) return;
   const coin = w.has('coinage'), arrow = d => d > 0.15 ? '▲' : d < -0.15 ? '▼' : '•', ad = w.vills.filter(v => v.isAdult()), rich = ad.slice().sort((a, b) => (b.coins || 0) - (a.coins || 0)).slice(0, 3), cs = ad.map(v => v.coins || 0).sort((a, b) => a - b);
   const c = E.caravan;
-  card.innerHTML = `${coin ? `<div class="era"><b>${Math.round(E.treasury)} coins</b><span class="hint">treasury · tax ${Math.round(taxRate(w) * 100)}%</span></div>` : '<div class="era"><b>Bartering</b><span class="hint">no coins yet</span></div>'}
+  const tr = coin && w.stats && w.stats.s && w.stats.s.treasury ? w.stats.s.treasury.slice(-48) : [], line = (() => { if (tr.length < 4) return ''; const lo = Math.min(...tr), hi = Math.max(...tr), sp = Math.max(1, hi - lo), W = 200, H = 26; return `<svg class="tline" width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline fill="none" stroke="#8fd18b" stroke-width="1.5" points="${tr.map((v, i) => (i / (tr.length - 1) * W).toFixed(1) + ',' + (H - 2 - (v - lo) / sp * (H - 4)).toFixed(1)).join(' ')}"/></svg><div class="hint" style="margin-top:-2px">Treasury over the last ${tr.length} readings: ${Math.round(lo)} to ${Math.round(hi)} coins</div>` })();
+  card.innerHTML = `${coin ? `<div class="era"><b>${Math.round(E.treasury)} coins</b><span class="hint">treasury · tax ${Math.round(taxRate(w) * 100)}%</span></div>${line}` : '<div class="era"><b>Bartering</b><span class="hint">no coins yet</span></div>'}
     <table class="prices">${['wood', 'stone', 'food'].map(k => `<tr><td>${k}</td><td>${coin ? E.prices[k].toFixed(1) + ' coins' : w.stock[k] + ' in store'}</td><td class="tr ${E.trend[k] > 0.15 ? 'up' : E.trend[k] < -0.15 ? 'down' : ''}">${arrow(E.trend[k])}</td></tr>`).join('')}</table>
     <div class="hint">${w.of('market').length ? (c ? `${escapeHtml(c.name)} ${c.sea ? '(by ship) ' : ''}stay until day ${c.leaves}.` : `Next merchants expected around day ${E.nextCaravan}.`) : 'Build a market and merchants will come.'}</div>
-    ${E.trades.slice(0, 3).map(t => `<div class="techrow">${escapeHtml(t.text)}<span class="hint">day ${t.day}</span></div>`).join('')}
+    <div class="ledger">${compactList('trades', E.trades.map(t => `<div class="techrow">${escapeHtml(t.text)}<span class="hint">${ydTag(t.day)}</span></div>`), 4, 12)}</div>
     ${coin ? `<div class="hint" style="margin-top:6px">Wealth: median ${cs.length ? cs[cs.length >> 1] : 0} coins · richest ${rich.map(v => escapeHtml(v.name) + ' ' + (v.coins || 0)).join(', ') || '–'}</div>` : ''}`;
 }
 function renderLiv() {
@@ -575,6 +588,14 @@ const sec = (title, body) => body ? `<div class="sec"><div class="sech">${title}
 const kvs = rows => `<div class="stats">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><b>${v}</b></div>`).join('')}</div>`;
 const vlink = (v, extra) => `<a class="lnk" data-vid="${v.id}">${escapeHtml(v.name)}</a>${extra ? ' <span class="hint">' + extra + '</span>' : ''}`;
 const dateText = d => `Day ${d} (year ${Math.floor(d / (CFG.DPS * 4)) + 1})`;
+/* v0.39.1: short dates and shared compact lists. "Y53 D7" is the day of the 32-day year; the full form is in the hover text. */
+const ydTag = d => { const L = CFG.DPS * 4, y = Math.floor((d - 1) / L) + 1, dd = ((d - 1) % L) + 1; return `<b title="Year ${y}, day ${dd} of ${L} (day ${d} overall)">Y${y} D${dd}</b>` };
+const _clOpen = {};
+function compactList(id, rows, recent = 5, max = 30) {       // rows: html strings, newest first; the first few always show, the rest sit in one collapsible block (no inner scrolling)
+  if (!rows.length) return '';
+  const head = rows.slice(0, recent).join(''), more = rows.slice(recent, max);
+  return head + (more.length ? `<details class="earlier"${_clOpen[id] ? ' open' : ''} ontoggle="_clOpen['${id}']=this.open"><summary class="hint">Earlier (${more.length})</summary>${more.join('')}</details>` : '');
+}
 const humanAge = days => `${ageYears(days)} (about ${humanYears(days)} in human years)`;
 const ageYears = days => { const y = days * CFG.LIFE_BASE / (CFG.DPS * 4); return y < 1 ? `${Math.round(days * CFG.LIFE_BASE)} days` : `${y.toFixed(1)} years` };
 const spark = h => { const mx = Math.max(1, ...h); return `<span class="spark">${h.map((n, i) => `<i style="height:${Math.max(2, Math.round(16 * n / mx))}px;opacity:${i === h.length - 1 ? 0.55 : 1}" title="${n} visit${n === 1 ? '' : 's'}"></i>`).join('')}</span>` };
@@ -675,10 +696,11 @@ function updateInspector() {
   } else if (s && s.tile && puOn()) { el.innerHTML = puTilePanel(w, s)
   } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
   puInspect(el, selected);
+  if (selected !== selSeen) { selSeen = selected; if (selected && el.offsetParent) { const r = el.getBoundingClientRect(), sd = $('side').getBoundingClientRect(); if (r.top < sd.top || r.bottom > sd.bottom) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) } }   // v0.39.1: bring the inspector into view once per new selection, only when it is off screen
 }
 /* ---- side panel tabs ---- */
 let curTab = 'village'; try { curTab = localStorage.getItem('villagesim.tab') || 'village' } catch (e) { }
-function showTab(t) {
+function showTab(t, quiet) {
   if (!$('tab_' + t)) t = 'village'; curTab = t; try { localStorage.setItem('villagesim.tab', t) } catch (e) { }
   document.querySelectorAll('#tabbar button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab_' + t));
   if (world) updateUI();
@@ -689,7 +711,7 @@ $('sel').addEventListener('click', e => {
   if (a.dataset.vid) o = world.vills.find(v => v.id === +a.dataset.vid); else if (a.dataset.bid) o = world.buildings.get(+a.dataset.bid); else if (a.dataset.oid) o = world.out.list.find(x => x.id === +a.dataset.oid);
   if (o) { selected = o; const T = CFG.T; R.cam.x = (o.x + (o.w || 0) / 2) * T; R.cam.y = (o.y + (o.h || 0) / 2) * T; follow = o instanceof Villager; showTab('village'); updateUI() }
 });
-$('tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (b) showTab(b.dataset.tab) }); showTab(curTab);
+$('tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; showTab(b.dataset.tab) }); showTab(curTab, true);
 const chart = $('chart'), cc = chart.getContext('2d');
 function drawChart() {
   const h = world.hist, cw = chart.width, ch = chart.height; cc.clearRect(0, 0, cw, ch); if (h.length < 2) return;
@@ -725,7 +747,7 @@ function pick(sx, sy) {
   if (!best && world.neigh) for (const n of world.neigh) if (n.found) { const d = Math.hypot(n.x * T + 8 - p.x, n.y * T + 8 - p.y); if (d < Math.max(5 * T, 30 / R.cam.z)) { best = n; break } }
   if (!best && R.distShow) { const dd = districtAt(world, Math.floor(p.x / T), Math.floor(p.y / T)); if (dd) { R.distSel = dd.key; showTab('world'); renderCity(); return } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
-  if (best !== selected) voiceUnpin(); selected = best; if (!best) follow = false; else showTab('village'); updateUI();
+  if (best !== selected) voiceUnpin(); selected = best; if (!best) { follow = false } else showTab('village'); updateUI();
 }
 const mini = $('mini');
 function miniGo(e) { const r = mini.getBoundingClientRect(); R.cam.x = (e.clientX - r.left) / r.width * CFG.W * CFG.T; R.cam.y = (e.clientY - r.top) / r.height * CFG.H * CFG.T; follow = false; clampCam() }
@@ -749,8 +771,8 @@ addEventListener('keydown', e => {
   if (e.key === '[') stepSpeed(-1); if (e.key === ']') stepSpeed(1); if (e.key === '.') advance(e.shiftKey); if (e.key === '>') advance(true);
   const m = { '1': 1, '2': 3, '3': 10, '4': 30, '5': 100, '6': 999 }[e.key]; if (m) setSpeed(m);       // 6 is Max: as fast as the machine can go
   if (e.key === '+' || e.key === '=') zoomAt(1.2, R.vw / 2, R.vh / 2); if (e.key === '-') zoomAt(1 / 1.2, R.vw / 2, R.vh / 2);
-  if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer(); if (e.key.toLowerCase() === 'x' && !e.ctrlKey && !e.metaKey) toggleFullscreen();
-  if (e.key === 'Escape') { if ($('nw').style.display !== 'none') nwClose(); else if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
+  if (e.key.toLowerCase() === 'f') $('fol').click(); if (e.key.toLowerCase() === 'g') toggleDrawer(); if (e.key.toLowerCase() === 'l' && !e.ctrlKey && !e.metaKey && !e.altKey) cycleLayout(); if (e.key.toLowerCase() === 'x' && !e.ctrlKey && !e.metaKey) toggleFullscreen();
+  if (e.key === 'Escape') { if ($('menu').style.display === 'block') { $('menu').style.display = 'none'; $('menuBtn').classList.remove('on') } else if ($('nw').style.display !== 'none') nwClose(); else if (drawerOpen()) toggleDrawer(false); else { selected = null; follow = false; updateUI() } }
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
 addEventListener('resize', () => { resizeRender(); clampCam() });
@@ -760,6 +782,7 @@ const AUTORESUME_KEY = 'villagesim.autoresume';
 let diagTimer = 0, lastDiag = { frames: 0, t: performance.now(), tick: 0 };
 function fmt(x, d = 2) { return Number.isFinite(x) ? x.toFixed(d) : '–' }
 function updateDiag() {
+  $('diagVer').textContent = 'v' + APP_VERSION;
   const w = world, d = w.dbg, secs = dbgSections(w), errs = dbgAllErrors(w), total = errs.reduce((s, r) => s + r.count, 0), want = CFG.TPS * speed, eff = DBG.tps / CFG.TPS;
   const limited = speed > 0 && speed < 100 && DBG.tps < want * 0.7 && want > 0;
   $('diagBadge').textContent = total ? total + ' error' + (total === 1 ? '' : 's') : limited ? 'slow' : 'ok'; $('diagBadge').classList.toggle('bad', total > 0);
@@ -784,7 +807,9 @@ $('diagCopy').onclick = () => reportAction('copy'); $('diagSave').onclick = () =
 $('diagProf').onclick = () => { world.profReset(); world.dbg.errors.clear(); DBG.session.clear(); DBG.previous = []; try { localStorage.removeItem(ERR_KEY) } catch (e) { } updateDiag() };
 $('diagCheck').onclick = () => { const before = world.dbg.total; world.sanity(); for (const v of world.vills) { try { v.abort(0) } catch (e) { } } saveInfo(world.dbg.total > before ? 'Self-check repaired corrupted values and reset every villager’s current job.' : 'Self-check found nothing to repair; every villager’s current job was reset.'); updateDiag() };
 const drawer = $('drawer'), drawerOpen = () => drawer.classList.contains('open');
-function toggleDrawer(open) { drawer.classList.toggle('open', open === undefined ? !drawerOpen() : open); $('gear').classList.toggle('on', drawerOpen()); if (drawerOpen()) updateDiag() }
+function toggleDrawer(open) { drawer.classList.toggle('open', open === undefined ? !drawerOpen() : open); $('gear').classList.toggle('on', drawerOpen()); if (drawerOpen()) { $('menu').style.display = 'none'; $('menuBtn').classList.remove('on') } if (drawerOpen()) updateDiag() }
+setLayout(layout, true); $('set_layout').onchange = e => setLayout(e.target.value); $('layBack').onclick = () => setLayout('docked'); $('layBack').textContent = 'Leave Clean view (L)';
+$('set_tips').onclick = () => { tipsReset(); if (typeof puNote === 'function') puNote('Tips are back on.') };
 $('gear').onclick = () => toggleDrawer(); $('drawerClose').onclick = () => toggleDrawer(false);
 $('hudWarn').onclick = () => { toggleDrawer(true); $('diagCard').open = true; $('diagCard').scrollIntoView({ block: 'center' }) };
 $('autoresume').checked = (() => { try { return localStorage.getItem(AUTORESUME_KEY) !== '0' } catch (e) { return true } })();
@@ -826,12 +851,13 @@ $('ttGo').onclick = () => startTimeTravel(+$('ttSel').value); $('ttCancel').oncl
 function frame(now) {
   const ts = performance.now(); lastFrameAt = ts; frames++;
   try {
-    const dt = Math.min(100, now - last); last = now;
+    const dtRaw = now - last, dt = Math.min(250, dtRaw); last = now; DBG.dtMax = Math.max(DBG.dtMax || 0, dtRaw);
     if (tt) stepTimeTravel();
     if (pendingTicks > 0 && !tt) { const t0 = performance.now(); try { while (pendingTicks > 0 && performance.now() - t0 < 30) { world.step(); pendingTicks-- } } catch (e) { dbgNote('step', e); dbgPersist(world); pendingTicks = 0 } }
     if (speed > 0) {
-      acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now();
-      const budget = speed >= 100 ? 45 : 14; try { while (n-- > 0) { world.step(); if (performance.now() - t0 > budget) { acc = 0; break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
+      acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now(); let ran = 0;
+      const budget = speed >= 100 ? 45 : 14; try { while (n-- > 0) { world.step(); ran++; if (performance.now() - t0 > budget) { acc = Math.min(acc + Math.max(0, n), 4); break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
+      DBG.stepMs = (DBG.stepMs || 0) * 0.9 + (performance.now() - t0) * 0.1; DBG.tpf = (DBG.tpf || 0) * 0.9 + ran * 0.1
     }
     const pan = 520 * dt / 1000 / R.cam.z, c = R.cam;
     if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }
@@ -848,9 +874,10 @@ function frame(now) {
 let wd = { tick: 0, changedAt: performance.now(), stage: 0 };
 setInterval(() => {
   const nowT = performance.now(), dt = (nowT - lastDiag.t) / 1000; if (dt <= 0) return;
-  DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick };
+  DBG.fps = (frames - lastDiag.frames) / dt; DBG.tps = (world.tick - lastDiag.tick) / dt; lastDiag = { frames, t: nowT, tick: world.tick }; DBG.lastDtMax = DBG.dtMax || 0; DBG.dtMax = 0;
   if (++diagTimer % 10 === 0) { world.profReset(); renderWorldLine() } else renderDiagText()
   try { updateDiag() } catch (e) { }
+  try { if (typeof tagSparks === 'function') tagSparks() } catch (e) { }
   const drawn = frames - (wd.fr || 0); wd.fr = frames;
   { const eff = DBG.tps / CFG.TPS; const dps = DBG.tps / CFG.TPD; $('rate').textContent = speed >= 100 ? (dps >= 10 ? Math.round(dps) : dps.toFixed(1)) + ' days a second' : speed > 0 && eff < speed * 0.8 ? 'running at ' + (eff < 1 ? eff.toFixed(1) : Math.round(eff)) + '×' : pendingTicks > 0 ? 'stepping…' : '' }
   if (document.hidden) { wd.changedAt = nowT; wd.tick = world.tick; lastFrameAt = nowT; return }      // browsers pause hidden pages; that is not a freeze

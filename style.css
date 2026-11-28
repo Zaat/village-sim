@@ -69,7 +69,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 .tr.up{color:#e07a6a}.tr.down{color:#8fd18b}
 
 /* fixed-size live panels so nothing shifts while the simulation redraws them */
-#statCard{height:280px;overflow:hidden}#sel{height:560px;overflow-y:auto}#techCard{height:460px;overflow-y:auto}#econCard{height:236px;overflow-y:auto}#councilCard{height:430px;overflow-y:auto}#groupCard{height:150px;overflow-y:auto}
+#statCard{height:280px;overflow:hidden}#sel{max-height:560px;overflow-y:auto}#techCard{max-height:460px;overflow-y:auto}#econCard{max-height:236px;overflow-y:auto}#councilCard{max-height:430px;overflow-y:auto}#groupCard{max-height:150px;overflow-y:auto}
 #log{height:230px;max-height:none}#chart{height:84px}
 /* settings drawer: lives over the map, outside the scrolling side panel, so it never moves */
 #drawer{position:absolute;right:12px;top:62px;width:350px;max-height:calc(100% - 262px);overflow-y:auto;background:rgba(16,21,26,.97);border:1px solid var(--line);border-radius:10px;padding:10px;display:none;flex-direction:column;gap:10px;z-index:6;box-shadow:0 10px 34px rgba(0,0,0,.55)}
@@ -86,7 +86,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 @container (max-width:560px){#ctl{top:54px;right:auto;left:12px}#drawer{top:98px;max-height:calc(100% - 290px)}}
 @container (max-width:420px){#drawer{width:calc(100% - 24px)}}
 #chronCard{height:470px;overflow-y:auto}
-#ttResult{min-height:96px}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
+#ttGo{white-space:nowrap}#ttSel{min-width:0;flex:1}#ttSel{background:var(--panel2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font:inherit}
 #harbourCard{min-height:60px;max-height:420px;overflow-y:auto}#neighCard{max-height:560px;overflow-y:auto}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;margin-top:8px}.stats div{display:flex;flex-direction:column}.stats b{font-weight:600;font-size:12.5px}
 
@@ -95,7 +95,7 @@ table.prices{width:100%;border-collapse:collapse;margin:4px 0;font-size:12.5px}t
 #side>.tabbar button{flex:1;padding:5px 2px;font-size:12px;border-radius:7px}#side>.tabbar button.on{background:var(--acc);color:#0d1a0d;border-color:var(--acc)}
 .tab{display:none;flex-direction:column;gap:10px}.tab.on{display:flex}.tab>.card{flex:none}
 #log{height:calc(100vh - 150px);min-height:300px}
-#regimeCard{min-height:420px}
+#regimeCard{min-height:0}
 
 .sec{margin-top:10px;padding-top:6px;border-top:1px solid var(--line)}.sech{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:3px}.lnk{color:#9ec5ff;cursor:pointer;text-decoration:none;font-weight:600}.lnk:hover{text-decoration:underline}.spark{display:inline-flex;align-items:flex-end;gap:3px;height:18px}.spark i{display:block;width:6px;background:var(--acc);border-radius:1px}.kvl>div{display:flex;justify-content:space-between;gap:10px;padding:2px 0}.kvl>div>span:last-child{text-align:right}
 
@@ -211,3 +211,16 @@ body.playing #mini{bottom:62px}
 /* v0.39 risky switches: a small coloured tag says how much harder a switch makes the game; the note appears while the hard ones are on */
 .risk{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;font-size:10.5px;font-weight:600;line-height:1.5;vertical-align:1px}.risk.hard{background:#5c2a2a;color:#ffb9ae}.risk.mid{background:#5a4620;color:#f1d38f}.risk.low{background:#33402b;color:#c5dba8}
 .riskNote{margin:8px 0 2px;padding:6px 8px;border-radius:7px;font-size:11.5px;line-height:1.35;background:#3a2626;color:#ffcfc6;border:1px solid #6a3a36}.riskNote.mid{background:#3a3220;color:#f1d9a0;border-color:#6a5a2c}
+#menu hr{border:0;border-top:1px solid var(--line);margin:3px 0}#menu .mver{font-size:11px;opacity:.55;padding:5px 12px 3px}
+/* v0.39.1 layout modes (wide screens; the narrow layout keeps its own stacking) */
+#hudRes{display:none;gap:10px;font-size:13px;font-variant-numeric:tabular-nums}#hudRes b{font-weight:600}#hudRes .low{color:#ffcf6a}
+#layBack{display:none;position:absolute;left:12px;bottom:12px;z-index:6;background:rgba(16,21,26,.85);backdrop-filter:blur(4px)}
+@media (min-width:821px){
+  body[data-layout=clean] #hudRes{display:inline-flex}
+  body[data-layout=clean] #side,body[data-layout=clean] #zoomCtl,body[data-layout=clean] #mini,body[data-layout=clean] #hint,body[data-layout=clean] #hudTime{display:none}
+  body[data-layout=clean]:not(.playing) #ptool{display:none}
+  body[data-layout=clean] #ctl .presets,body[data-layout=clean] #stepBtn,body[data-layout=clean] #rate,body[data-layout=clean] #ctl .sep,body[data-layout=clean] #sndBtn,body[data-layout=clean] #menuBtn,body[data-layout=clean] #fol,body[data-layout=clean] #gear{display:none}
+  body[data-layout=clean] #layBack{display:block}
+}
+details.earlier{margin-top:2px}details.earlier summary{cursor:pointer;margin:3px 0}
+.sparkable{cursor:help;text-decoration:underline dotted rgba(160,175,190,.4);text-underline-offset:3px}

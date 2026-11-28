@@ -81,9 +81,9 @@ function plagueDay(w, C, P, R) {
   const ids = Object.keys(P.sick).map(Number), med = w.has('medicine') ? 0.5 : 1, byId = id => w.vills.find(v => v.id === id);
   for (const id of ids) {
     const v = byId(id); if (!v) { delete P.sick[id]; continue }
-    const days = w.day - P.sick[id]; v.health -= (v.isElder() ? 7 : v.isChild() ? 5 : 4) * med; v.cause = 'fever'; v.mood = Math.max(0, v.mood - 4);
+    const days = w.day - P.sick[id]; v.health -= (v.isElder() ? 7 : v.isChild() ? 5 : 4) * med; v.cause = 'fever'; v.plague = true; v.mood = Math.max(0, v.mood - 4);
     if (v.health <= 0) { delete P.sick[id]; P.dead++; C.plagueDead++; continue }
-    if (days >= 7 + ((R() * 4) | 0)) { delete P.sick[id]; P.cured++; continue }
+    if (days >= 7 + ((R() * 4) | 0)) { delete P.sick[id]; v.plague = false; P.cured++; continue }
     if (R() < 0.3 * (P.quarantine ? 0.35 : 1) * (1 - 0.3 * lesson(w, 'fever'))) { const o = w.vills[(R() * w.vills.length) | 0]; if (o && !P.sick[o.id] && !P.immune) P.sick[o.id] = w.day }
   }
   if (!Object.keys(P.sick).length || w.day - P.start > 40) {

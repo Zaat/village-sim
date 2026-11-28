@@ -79,7 +79,9 @@ const DEATH_KINDS = {
   starved: { label: 'Hunger', col: '#e0a458', tip: 'Build more farms and storehouses, keep a larger food reserve, send hands to the fields.' },
   cold: { label: 'Cold', col: '#6a8fd0', tip: 'Stock firewood before winter and build enough warm homes; warmer clothes and fuel tech help.' },
   wolf: { label: 'Wolves', col: '#b8896a', tip: 'Raise the watch, hunt the packs and keep children close to the village.' },
-  fever: { label: 'Illness', col: '#c678dd', tip: 'Medicine, clean water and quarantine slow plague and fever.' },
+  fever: { label: 'Fever season', col: '#c678dd', tip: 'Medicine and clean water cut the seasonal fevers; keep stores of food so weak people can recover.' },
+  plague: { label: 'Plague', col: '#a64fb0', tip: 'Quarantine and medicine slow a plague; a council that acts early loses far fewer people.' },
+  sickness: { label: 'Everyday illness', col: '#d89ae0', tip: 'Ordinary sickness and accidents among the crowd; health technology, medicine and good food bring it down.' },
   sea: { label: 'The sea', col: '#4fa3c7', tip: 'Fewer voyages in storm seasons and better ships and navigation.' },
   fight: { label: 'Fighting', col: '#e07a6a', tip: 'Raids, war and unrest: soldiers, watchtowers, treaties and a calmer council.' }
 };
@@ -87,7 +89,7 @@ function deathKey(why) {
   return /old age/.test(why) ? 'age' : /starv/.test(why) ? 'starved' : /froze/.test(why) ? 'cold' : /wolf/.test(why) ? 'wolf' : /fever|plague|sick/.test(why) ? 'fever' : /sea/.test(why) ? 'sea' : /raid|battle|unrest/.test(why) ? 'fight' : 'age';
 }
 function noteDeath(w, v, why) {
-  const k = deathKey(why), y = w.year, g = v.isChild() ? 'child' : v.isElder() ? 'elder' : 'adult';
+  let k = deathKey(why); if (k === 'fever' && v && v.plague) k = 'plague'; const y = w.year, g = v.isChild() ? 'child' : v.isElder() ? 'elder' : 'adult';
   const Y = (w.dyr[y] = w.dyr[y] || {}); Y[k] = (Y[k] || 0) + 1; Y[g] = (Y[g] || 0) + 1;
   w.dlog.unshift({ day: w.day, name: v.name, age: Math.floor(v.age * CFG.LIFE_BASE / (CFG.DPS * 4)), k, g }); if (w.dlog.length > 40) w.dlog.length = 40;
 }

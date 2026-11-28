@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon-512.png" width="112" alt="Village Sim icon"></p>
 <h1 align="center">Village Sim</h1>
-<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.39 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
+<p align="center"><b>A watch-mostly village that grows into a civilization.</b><br>Pixel art drawn in code · a deterministic seeded simulation · plain script tags: no build step, no dependencies<br><sub>v0.39.1 · MIT license · <a href="CHANGELOG.md">Changelog</a> · <a href="docs/FEATURES.md">All features</a> · <a href="docs/ARCHITECTURE.md">How it works</a></sub></p>
 
 <h2 align="center"><a href="https://zaat.github.io/village-sim/">▶&nbsp; Play it now in your browser</a></h2>
 <p align="center"><b>One click. No install, no account.</b> Works on a computer, a tablet or a phone.<br><sub>Start a world, then watch it live, or switch to Play and take the lead. <a href="https://zaat.github.io/village-sim/">zaat.github.io/village-sim</a></sub></p>
@@ -44,13 +44,14 @@
 Every release has its own page with a screenshot of that version: see the table below.
 
 ## What's new
-**[v0.35 Play](docs/releases/v0.35.md) and [v0.35.1](docs/releases/v0.35.1.md):** the first version you can play, not only watch. A Watch / Play switch lets you take the lead: select villagers and give orders, place buildings, lay roads, paint zones, choose the research and decide what the village still plans for itself. Villagers live longer lives, a village that dies ends with a story, and there is a manual, a menu and an About card. v0.35.1 makes switching modes seamless, fixes the endless homes concern, and adds pinch to zoom.
-**[v0.34 Crowds](docs/releases/v0.34.md):** a growing town no longer slows down. The 160 people with the most story stay simulated one by one; everyone else lives on as numbers by age and is drawn as small figures at the houses. **v0.34.1:** faster tests, this redesigned page, an MIT license.
+**[v0.39.1 Tidier panels and clearer deaths](docs/releases/v0.39.1.md):** a Deaths chart with illness split into fever season, plague and everyday illness; long lists (Chronicle, expeditions, trade, defence) show the recent few and an "Earlier" block, with dates like Y53 D7; hover a stat name for its history; a Clean layout (key L); one Diagnostics card with live timing numbers.
+**[v0.39 Late ages and language](docs/releases/v0.39.md):** the Atomic and Information ages (148 technologies in eleven ages), a Spanish version that follows your browser, full screen, and a fairer early game.
+**[v0.38 Pace](docs/releases/v0.38.md), [v0.37 Metropolis](docs/releases/v0.37.md) and [v0.35 Play](docs/releases/v0.35.md):** a realistic growth pace, big towns kept as a crowd of numbers around the 160 villagers simulated one by one, and a Watch / Play switch that lets you take the lead.
 
-<p align="center"><img src="docs/screenshots/v0.34-feature.png" width="860" alt="A crowded town in v0.34"></p>
+What is planned next is in the [roadmap](docs/ROADMAP.md).
 
 ## Controls
-Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows pan · Space pause · 1–4 speed · F follow selected · G settings drawer · minimap click to jump.
+Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arrows pan · Space pause · 1–6 speed (6 is Max) · F follow selected · G settings drawer · L layout (Docked or Clean) · X full screen · M music · minimap click to jump.
 
 ## Saving
 - **Autosave** every minute to this browser, plus when you leave the page. Next visit, a prompt offers to **Resume**. **Start fresh** keeps the old save as a backup.
@@ -60,17 +61,40 @@ Drag to pan · wheel to zoom · click a villager, animal or building · WASD/arr
 ## Claude counsel (optional)
 Off by default, and only available on the published page. When on, the council and courts hand Claude a short list of concrete options and it picks one based on each member's personality and what worked before; the choice is validated and the village's own rules decide when it is off, slow or invalid. Limited to 40 deliberations per session.
 
+## Documentation
+| To find out | Read |
+|---|---|
+| What the game does, release by release | [FEATURES](docs/FEATURES.md) and the [changelog](CHANGELOG.md) |
+| Why it works the way it does | [DESIGN notes](docs/DESIGN.md) |
+| What is planned next | [ROADMAP](docs/ROADMAP.md), with each item linked to an [issue](https://github.com/Zaat/village-sim/issues) and a [milestone](https://github.com/Zaat/village-sim/milestones) |
+| What is known to be wrong or missing | [Known issues and limits](docs/KNOWN-ISSUES.md) |
+| How the code is organised | [ARCHITECTURE](docs/ARCHITECTURE.md) |
+| How it is tested | [TESTING](docs/TESTING.md) and the [coverage report](docs/coverage.md) |
+| What a word in the game means | [Glossary](docs/GLOSSARY.md) |
+| How the project is built, and how to rebuild it | [DEVELOPMENT](docs/DEVELOPMENT.md) |
+| One page per release, with a screenshot | [docs/releases](docs/releases/) |
+
 ## If something goes wrong
-Open the **Diagnostics** panel and use **Copy report**. It holds timings, state counts and errors with stack traces. Send that report with the world line shown in Settings (it sets the seed, map and options in one paste).
+Open the **Diagnostics** panel and use **Copy report**. It holds timings, state counts and errors with stack traces. Send that report with the world line shown in Settings (it sets the seed, map and options in one paste). Check the [known issues](docs/KNOWN-ISSUES.md) first, then [open an issue](https://github.com/Zaat/village-sim/issues/new/choose).
 
 ## Tests
-`tools/check.sh full` runs every suite (29 suites, about 13 minutes on two cores); `tools/check.sh` alone runs only what your edit can affect; `tools/check.sh pages` runs the browser page tests. Slow suites load saved worlds from `tests/checkpoints/` (made by `tools/checkpoint.js`) instead of simulating the early game. `tools/release.sh` refuses to release code that has no green full run. More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+`tools/check.sh full` runs every suite (40 suites, about 11 minutes on two cores); `tools/check.sh` alone runs only what your edit can affect; `tools/check.sh pages` runs the browser page tests. Slow suites load saved worlds from `tests/checkpoints/` (made by `tools/checkpoint.js`) instead of simulating the early game. `tools/release.sh` refuses to release code that has no green full run. More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 <details>
 <summary><b>Release history</b> (every version, one page each)</summary>
 
 | Version | Title |
 |---|---|
+| [v0.39.1](docs/releases/v0.39.1.md) | Tidier panels and clearer deaths |
+| [v0.39](docs/releases/v0.39.md) | Late ages and language |
+| [v0.38.2](docs/releases/v0.38.2.md) | Diagnostics you can copy, and the pace lab |
+| [v0.38.1](docs/releases/v0.38.1.md) | Fixes and polish |
+| [v0.38](docs/releases/v0.38.md) | Pace |
+| [v0.37](docs/releases/v0.37.md) | Metropolis |
+| [v0.36](docs/releases/v0.36.md) | Insight, look and sound |
+| [v0.35.1](docs/releases/v0.35.1.md) | Play fixes |
+| [v0.35](docs/releases/v0.35.md) | Play |
+| [v0.34.1](docs/releases/v0.34.1.md) | Faster and launch-ready |
 | [v0.34](docs/releases/v0.34.md) | Crowds |
 | [v0.33](docs/releases/v0.33.md) | City structure |
 | [v0.32](docs/releases/v0.32.md) | Settlements, causes of death and housing |
@@ -114,7 +138,7 @@ Open the **Diagnostics** panel and use **Copy report**. It holds timings, state 
 </details>
 
 ## Roadmap
-v0.39 **Late ages and language**: an Atomic and an Information Age, Spanish with automatic browser-language detection, full screen, and fairer disasters. Next: energy and finite resources, food variety, the city design commission, a map-first layout. See the [changelog](CHANGELOG.md).
+See the full [roadmap](docs/ROADMAP.md): saves and slots, performance, farming and energy with the city design commission (v0.40), a polish release, then space (v0.41) and generative minds (v0.42). Every item is linked to a GitHub issue and milestone.
 
 ## License
 [MIT](LICENSE). © 2026 Zaat. No third-party code, fonts, images or audio are included: the art is drawn in code and the music is generated live.

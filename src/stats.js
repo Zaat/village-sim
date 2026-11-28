@@ -16,7 +16,7 @@ const STAT_EVERY = 4, STAT_CAP = 2400;
 const STAT_GROUPS = ['People', 'Hardship', 'Society', 'Economy & expansion', 'Knowledge', 'Conflict', 'Growth limits'];
 const STAT_EVENTS = [
   ['born', 'Births', 'People'], ['cabin', 'Cabins built', 'People'], ['arrivals', 'Newcomers arrive', 'People'], ['couples', 'Couples formed', 'People'], ['died', 'Deaths (all)', 'People'],
-  ['died_age', 'Died of old age', 'People'], ['died_hunger', 'Starved', 'People'], ['died_cold', 'Froze', 'People'], ['died_fever', 'Died of fever', 'People'], ['died_wolf', 'Killed by wolves', 'People'], ['died_sea', 'Lost at sea', 'People'], ['died_violence', 'Killed in raids or strife', 'People'],
+  ['died_age', 'Died of old age', 'People'], ['died_hunger', 'Starved', 'People'], ['died_cold', 'Froze', 'People'], ['died_fever', 'Died of fever', 'People'], ['died_plague', 'Died in a plague', 'People'], ['died_sickness', 'Died of everyday illness', 'People'], ['died_wolf', 'Killed by wolves', 'People'], ['died_sea', 'Lost at sea', 'People'], ['died_violence', 'Killed in raids or strife', 'People'],
   ['fire', 'Fires', 'Hardship'], ['storm', 'Storms', 'Hardship'], ['drought', 'Droughts', 'Hardship'], ['harsh_winter', 'Harsh winters', 'Hardship'], ['fever', 'Fever outbreaks', 'Hardship'], ['wolves', 'Wolf attacks', 'Hardship'], ['famine', 'Famines', 'Hardship'], ['collapse', 'Buildings collapsed', 'Hardship'], ['cargo_lost', 'Cargoes lost', 'Hardship'],
   ['election', 'Elections', 'Society'], ['decision', 'Council decisions', 'Society'], ['coup', 'Coups', 'Society'], ['uprising', 'Uprisings', 'Society'], ['purge', 'Purges', 'Society'], ['reform', 'Reforms', 'Society'], ['rival_council', 'Rival councils', 'Society'], ['strike', 'Strikes', 'Society'], ['civil_strife', 'Civil strife', 'Society'], ['secession', 'Secessions', 'Society'], ['sect', 'Sects founded', 'Society'],
   ['theft', 'Thefts', 'Society'], ['assault', 'Assaults', 'Society'], ['trial', 'Trials', 'Society'], ['banished', 'Banishments', 'Society'], ['feud', 'Feuds begun', 'Society'], ['feud_mended', 'Feuds mended', 'Society'], ['estate', 'Estates passed on', 'Society'], ['holiday', 'Holidays', 'Society'],
@@ -46,6 +46,11 @@ const STAT_SERIES = [
   { id: 'age', label: 'Average age (years)', group: 'People', get: w => w.vills.length ? w.vills.reduce((s, v) => s + v.age, 0) / w.vills.length * CFG.LIFE_BASE / CFG.DPS / 4 : 0 },
   { id: 'births', label: 'Births per 4 days', group: 'People', delta: 'born' },
   { id: 'deaths', label: 'Deaths per 4 days', group: 'People', delta: 'died' },
+  { id: 'd_age', label: 'Deaths: old age', group: 'People', delta: 'died_age' },
+  { id: 'd_hunger', label: 'Deaths: hunger', group: 'People', delta: 'died_hunger' },
+  { id: 'd_cold', label: 'Deaths: cold', group: 'People', delta: 'died_cold' },
+  { id: 'd_illness', label: 'Deaths: illness', group: 'People', delta: ['died_fever', 'died_plague', 'died_sickness'] },
+  { id: 'd_other', label: 'Deaths: wolves, sea, fighting', group: 'People', delta: ['died_wolf', 'died_sea', 'died_violence', 'died_other'] },
   { id: 'food', label: 'Food stock', group: 'Resources', get: w => w.stock.food },
   { id: 'wood', label: 'Wood stock', group: 'Resources', get: w => w.stock.wood },
   { id: 'stone', label: 'Stone stock', group: 'Resources', get: w => w.stock.stone },
@@ -128,7 +133,7 @@ function statFromEmit(w, type, text, data) {
   const c = (k, t) => statCount(w, k, 1, t || text), d = data || {}, tx = text || '';
   switch (type) {
     case 'birth': c('born'); break;
-    case 'death': { c('died'); const why = String(d.why || ''); c(/hunger|starv/.test(why) ? 'died_hunger' : /old age|peacefully/.test(why) ? 'died_age' : /froze/.test(why) ? 'died_cold' : /fever/.test(why) ? 'died_fever' : /wolf/.test(why) ? 'died_wolf' : /sea/.test(why) ? 'died_sea' : /raid|strife|struck|fight|battle/.test(why) ? 'died_violence' : 'died_other'); break }
+    case 'death': { c('died'); const why = String(d.why || ''); c(/hunger|starv/.test(why) ? 'died_hunger' : /old age|peacefully/.test(why) ? 'died_age' : /froze/.test(why) ? 'died_cold' : /fever/.test(why) ? (d.v && d.v.plague ? 'died_plague' : 'died_fever') : /wolf/.test(why) ? 'died_wolf' : /sea/.test(why) ? 'died_sea' : /raid|strife|struck|fight|battle/.test(why) ? 'died_violence' : 'died_other'); break }
     case 'event': {
       const k = d.kind; if (k === 'flood') c('flood'); else if (k === 'plague') c('plague'); else if (k === 'fire' || /^Fire/.test(tx)) c('fire'); else if (k === 'storm' || /violent storm/.test(tx)) c('storm'); else if (k === 'drought') c('drought'); else if (k === 'harsh') c('harsh_winter'); else if (k === 'fever' || /fever sweeps/.test(tx)) c('fever'); else if (k === 'wolves') c('wolves'); else if (k === 'newcomers') c('arrivals');
       else if (/^Famine/.test(tx)) c('famine'); else if (/collapses/.test(tx)) c('collapse'); else if (/cargo was lost/.test(tx)) c('cargo_lost'); break
@@ -168,7 +173,7 @@ function statsDay(w) {
   for (const s of STAT_SERIES) {
     let v;
     if (s.delta) { const keys = Array.isArray(s.delta) ? s.delta : [s.delta], tot = keys.reduce((a, k) => a + evTotal(w, k), 0); v = tot - (S.prev[s.id] || 0); S.prev[s.id] = tot } else { try { v = s.get(w) } catch (e) { v = 0 } }
-    S.s[s.id].push(Number.isFinite(v) ? Math.round(v * 1000) / 1000 : 0);
+    (S.s[s.id] || (S.s[s.id] = new Array(Math.max(0, S.days.length - 1)).fill(0))).push(Number.isFinite(v) ? Math.round(v * 1000) / 1000 : 0);   // v0.39.1: a save from before this series existed has no array for it
   }
   if (S.days.length > STAT_CAP) {                // very long runs: halve the oldest half by averaging pairs
     const half = S.days.length >> 1, thin = a => { const o = []; for (let i = 0; i < half; i += 2) o.push(a[i + 1] === undefined ? a[i] : Math.round((a[i] + a[i + 1]) / 2 * 1000) / 1000); return o.concat(a.slice(half)) };

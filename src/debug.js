@@ -4,7 +4,7 @@
    debug.js — diagnostics shared by the UI: error history (kept across page
    loads), a full report you can copy or download, and live performance numbers.
    ========================================================================== */
-const APP_VERSION = '0.39';
+const APP_VERSION = '0.39.1';
 const ERR_KEY = 'villagesim.errors';
 const DBG = { fps: 0, tps: 0, frameMs: 0, renderMs: 0, restarts: 0, lastRestart: null, session: new Map(), previous: [], watchdog: [], persistAt: 0 };
 
@@ -18,7 +18,7 @@ function dbgNote(where, e) {
 function dbgAllErrors(w) { return [...(w ? w.dbg.errors.values() : []), ...DBG.session.values()] }
 function dbgPersist(w) {
   const now = Date.now(); if (now - DBG.persistAt < 2000) return; DBG.persistAt = now;
-  try { const arr = dbgAllErrors(w).slice(-25).map(r => ({ t: now, where: r.where, msg: r.msg, stack: r.stack, count: r.count, day: r.first && r.first.day, ent: r.ent })); if (arr.length) localStorage.setItem(ERR_KEY, JSON.stringify(arr)) } catch (e) { }
+  try { const arr = dbgAllErrors(w).slice(-25).map(r => ({ v: APP_VERSION, t: now, where: r.where, msg: r.msg, stack: r.stack, count: r.count, day: r.first && r.first.day, ent: r.ent })); if (arr.length) localStorage.setItem(ERR_KEY, JSON.stringify(arr)) } catch (e) { }
 }
 function dbgSections(w) {
   const d = w.dbg, rows = Object.entries(d.prof).map(([k, p]) => ({ name: k, avgMs: p.t / Math.max(1, p.n), totalMs: p.t, maxMs: p.max, calls: p.n })), tot = rows.reduce((s, r) => s + r.totalMs, 0) || 1;
@@ -31,7 +31,13 @@ function dbgReport(w, speed) {
     app: 'Village Sim', version: APP_VERSION, when: new Date().toISOString(), userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'node',
     world: { seed: w.seed, settings: w.settings, tick: w.tick, year: w.year, season: SEASONS[w.season], dayOfSeason: w.seasonDay, day: w.day, requestedSpeed: speed },
     counts: { villagers: w.vills.length, animals: w.animals.length, blueprints: w.bps.length, buildings: w.buildings.size, relations: w.rel.size, groups: w.groups.length, councillors: w.gov.council.length, logLines: w.log.length, history: w.hist.length },
-    performance: { fps: +DBG.fps.toFixed(1), ticksPerSecond: +DBG.tps.toFixed(1), targetTicksPerSecond: CFG.TPS * speed, avgTickMs: d.ticks ? +(d.tickMs / d.ticks).toFixed(3) : null, maxTickMs: +d.tickMax.toFixed(2), frameMs: +DBG.frameMs.toFixed(2), renderMs: +DBG.renderMs.toFixed(2), memory: mem },
+    performance: { fps: +DBG.fps.toFixed(1), ticksPerSecond: +DBG.tps.toFixed(1), targetTicksPerSecond: CFG.TPS * speed, avgTickMs: d.ticks ? +(d.tickMs / d.ticks).toFixed(3) : null, maxTickMs: +d.tickMax.toFixed(2), frameMs: +DBG.frameMs.toFixed(2), renderMs: +DBG.renderMs.toFixed(2), stepMs: +(DBG.stepMs || 0).toFixed(2), ticksPerFrame: +(DBG.tpf || 0).toFixed(2), longestFrameMs: Math.round(DBG.dtMax || 0), speedSetting: speed, memory: mem },
+    village: (() => { try { return diagText(w).split('\n') } catch (e) { return ['(snapshot unavailable: ' + (e && e.message || e) + ')'] } })(),
+    crowd: w.crowd ? { people: w.crowd.n, kids: w.crowd.kids, adults: w.crowd.adults, elders: w.crowd.elders, workers: w.crowd.workers, hungry: w.crowd.hungry, simulatedVillagers: w.vills.length } : null,
+    activity: (() => { const L = {}; for (const v of w.vills) { const k = v.sleeping ? 'Sleeping' : (v.label || 'none'); L[k] = (L[k] || 0) + 1 } return Object.entries(L).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([k, n]) => k + ': ' + n) })(),
+    world2: { age: typeof techEra === 'function' ? AGES[techEra(w)] : null, techs: Object.keys(w.tech.known).length, culture: w.cul ? Math.round(w.cul.score) : null, coins: Math.round((w.gov && w.gov.coins) || 0), outposts: (w.out && w.out.list ? w.out.list.length : 0), peoplesMet: (w.neigh || []).filter(n => n.found).length, playing: !!(w.play && w.play.on), loadedFrom: w.loadedFrom || 'new world' },
+    device: typeof innerWidth !== 'undefined' ? { viewport: innerWidth + 'x' + innerHeight, dpr: devicePixelRatio, layout: (document.body.dataset.layout || 'docked'), language: (typeof I18N !== 'undefined' ? I18N.lang : '?'), fullscreen: !!document.fullscreenElement, touch: navigator.maxTouchPoints || 0 } : null,
+    stats: (() => { try { const S = w.stats; if (!S || !S.days.length) return null; const n = S.days.length, take = id => (S.s[id] || []).slice(Math.max(0, n - 6)); return { lastDays: S.days.slice(Math.max(0, n - 6)), pop: take('pop'), food: take('food'), mood: take('mood') } } catch (e) { return null } })(),
     sections: secs, unstuckVillagers: d.unstuck, watchdogEvents: DBG.watchdog.slice(-10), restarts: DBG.restarts,
     errors: dbgAllErrors(w).map(r => ({ where: r.where, message: r.msg, count: r.count, firstDay: r.first && r.first.day, entity: r.ent, stack: r.stack })),
     previousSessionErrors: DBG.previous, recentEvents: w.log.slice(0, 30).map(l => `D${l.day} ${l.text}`),

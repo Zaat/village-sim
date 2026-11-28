@@ -12,7 +12,8 @@
 <div id="app">
   <div id="stage">
     <canvas id="cv"></canvas>
-    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span><button id="hudConcern" style="display:none" title="Concerns">⚑ 0</button></div>
+    <div id="hud"><span id="hudDate"></span><span id="hudTime"></span><span id="hudWarn" style="display:none"></span><button id="hudConcern" style="display:none" title="Concerns">⚑ 0</button><span id="hudRes"></span></div>
+    <button id="layBack"></button>
     <div id="toasts"></div>
     <div id="concernPanel" style="display:none"><div class="cnhead"><b>Concerns</b><button id="cnClose" title="Close">✕</button></div><div id="cnBody"></div></div>
     <div id="ctl">
@@ -38,6 +39,9 @@
     <div class="card"><h3>Settings</h3>
       <div class="hint" style="margin-bottom:4px">Language <span class="hint">the game text; your browser language is used the first time</span></div>
       <select id="set_lang" style="width:100%;margin-bottom:8px"></select>
+      <div class="hint" style="margin-bottom:4px">Layout <span class="hint">Docked: map and side panel. Overlay: the map fills the screen and the panels float. Clean: just the essentials. Key L cycles.</span></div>
+      <select id="set_layout" style="width:100%;margin-bottom:8px"><option value="docked">Docked</option><option value="clean">Clean</option></select>
+      <div class="btnrow" style="margin-bottom:8px"><button id="set_tips">Show tips again</button></div>
       <div class="hint" style="margin-bottom:4px">Hardship <span class="hint">how forgiving the world is: births, newcomers, wolves, fevers, winters</span></div>
       <select id="set_hardship" style="width:100%;margin-bottom:8px"><option value="0">Gentle</option><option value="1">Normal</option><option value="2">Harsh</option></select>
       <div class="hint" style="margin-bottom:4px">Philosophy <span class="hint">what the village tends to study first</span></div>
@@ -75,9 +79,10 @@
       <div class="hint" id="vaiStatus"></div>
       <div id="mindLog"></div>
     </div>
-    <details class="card" id="diagCard"><summary>Diagnostics <span class="beta" id="diagBadge">ok</span></summary>
-      <div id="diagBody" class="hint">Collecting…</div>
-      <div class="btnrow"><button id="diagCopy">Copy report</button><button id="diagSave">Download report</button></div>
+    <details class="card" id="diagCard"><summary>Diagnostics <span class="hint" id="diagVer"></span> <span class="beta" id="diagBadge">ok</span></summary>
+      <div class="hint" style="margin:4px 0 2px">The village now</div><pre class="wline" id="diagText" style="user-select:text;-webkit-user-select:text"></pre>
+      <div class="hint" style="margin:6px 0 2px">The engine</div><div id="diagBody" class="hint">Collecting…</div>
+      <div class="btnrow"><button id="diagCopy">Copy report</button><button id="diagSave">Download report</button><button id="diagTextCopy">Copy the village text only</button></div>
       <div class="btnrow"><button id="diagCheck">Self-check &amp; repair</button><button id="diagProf">Clear timings</button></div>
       <textarea id="diagBox" readonly style="display:none"></textarea>
     </details>
@@ -88,11 +93,10 @@
     <div class="card"><h3>World</h3>
       <div class="hint" id="mapnow"></div>
       <div class="hint wline" id="worldLine"></div>
-      <details class="hint" style="margin-top:4px"><summary>Diagnostics</summary><pre class="wline" id="diagText" style="user-select:text;-webkit-user-select:text"></pre><div class="btnrow"><button id="diagTextCopy">Copy diagnostics</button></div></details>
       <div class="btnrow"><button id="restart">New world…</button></div></div>
     </div>
     <div id="tree" style="display:none"><div class="treebox"><div class="drawerhead"><b>Tree of knowledge</b><button id="treeClose" title="Close">✕</button></div><div id="treeSvg" class="treescroll"></div><div id="treeInfo" class="treeinfo"></div></div></div>
-    <div id="menu" style="display:none"><button data-mn="resume">Resume</button><button data-mn="new">New world…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><button data-mn="scen">Scenarios…</button><button data-mn="settings">Settings</button><button data-mn="fullscreen" id="mn_fs">Full screen (X)</button><button data-mn="tips">Show tips again</button><button data-mn="help">How to play</button><button data-mn="about">About</button></div>
+    <div id="menu" style="display:none"><button data-mn="new">New world…</button><button data-mn="scen">Scenarios…</button><button data-mn="save">Save now</button><button data-mn="load" id="mn_load">Load saved</button><hr><button data-mn="settings">Settings</button><button data-mn="fullscreen" id="mn_fs">Full screen (X)</button><hr><button data-mn="help">How to play</button><button data-mn="about">About</button><div class="mver" id="menuVer"></div></div>
     <div id="modal" style="display:none"><div class="nwbox"><div class="drawerhead"><h3 id="modal_t"></h3><button id="modal_x" title="Close (Esc)">✕</button></div><div id="modal_b" class="mbody"></div></div></div>
     <div id="over" style="display:none"><div class="nwbox">
       <h3 id="over_title"></h3><div id="over_text" style="margin-bottom:10px"></div>

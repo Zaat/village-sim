@@ -61,9 +61,9 @@ function crowdPeople(w, C) {
   // deaths: old age, ordinary sickness and accidents, and hunger when the stores are bare
   const hungry = w.stock.food <= 0 ? 1 : 0, dE = Math.min(C.elders, flow(C, 'de', C.elders / (45 * ls))), dA = Math.min(C.adults, flow(C, 'da', C.adults * 0.0012 + hungry * C.adults * 0.03)), dK = Math.min(C.kids, flow(C, 'dk', C.kids * (0.0015 + CFG.CHILD_MORT * Math.max(0.15, 1 - Math.min(0.7, techFx(w, 'health')) - (w.has('medicine') ? 0.2 : 0))) + hungry * C.kids * 0.04));
   C.elders -= dE; C.adults -= dA; C.kids -= dK;
-  const dead = dE + dA + dK; C.died += dead; w.deaths += dead; if (dead) { noteFlow(w, 'died', dead); statCount(w, 'died', dead); if (dE) statCount(w, 'died_age', dE); if (dA + dK) statCount(w, hungry ? 'died_hunger' : 'died_fever', dA + dK) }
+  const dead = dE + dA + dK; C.died += dead; w.deaths += dead; if (dead) { noteFlow(w, 'died', dead); statCount(w, 'died', dead); if (dE) statCount(w, 'died_age', dE); if (dA + dK) statCount(w, hungry ? 'died_hunger' : 'died_sickness', dA + dK) }
   const Y = (w.dyr[w.year] = w.dyr[w.year] || {});
-  const mark = (k, g, n) => { if (!n) return; w.causes[k] = (w.causes[k] || 0) + n; const dk = deathKey(k); Y[dk] = (Y[dk] || 0) + n; Y[g] = (Y[g] || 0) + n };
+  const mark = (k, g, n) => { if (!n) return; w.causes[k] = (w.causes[k] || 0) + n; const dk = k === 'succumbed to the fever' ? 'sickness' : deathKey(k); Y[dk] = (Y[dk] || 0) + n; Y[g] = (Y[g] || 0) + n };
   mark('passed away peacefully of old age', 'elder', dE); mark(hungry ? 'starved' : 'succumbed to the fever', 'adult', dA); mark(hungry ? 'starved' : 'succumbed to the fever', 'child', dK);
   // births: the same gates as the village (bread on the table, a bed to put the cradle in), at the rate the village itself shows
   let born = 0;

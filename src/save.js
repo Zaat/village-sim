@@ -32,7 +32,7 @@ const pickKeys = (o, keys) => { const r = {}; for (const k of keys) if (o[k] !==
 
 function serializeWorld(w) {
   return {
-    v: SAVE_VERSION, lifeV: 2, savedAt: Date.now(), dims: [CFG.W, CFG.H], seed: w.seed, settings: { ...w.settings }, rngState: w.rng.s, tick: w.tick,
+    v: SAVE_VERSION, appV: typeof APP_VERSION !== 'undefined' ? APP_VERSION : null, lifeV: 2, savedAt: Date.now(), dims: [CFG.W, CFG.H], seed: w.seed, settings: { ...w.settings }, rngState: w.rng.s, tick: w.tick,
     arrays: { feat: packArr(w.feat), res: packArr(w.res), road: packArr(w.road), fish: packArr(w.fish) },
     stock: { ...w.stock }, counters: { nextId: w.nextId, nameUse: w.nameUse, bnext: w.bnext, bpnext: w.bpnext, groupNext: w.groupNext, births: w.births, abirths: w.abirths || 0, deaths: w.deaths, trees: w.trees, trees0: w.trees0 },
     flags: { harsh: w.harsh, drought: w.drought, cold: w.cold, festival: w.festival, holiday: w.holiday, holidayDone: w.holidayDone, meetingDay: w.meetingDay, meetingDone: w.meetingDone, forceFeast: w.forceFeast },
@@ -54,7 +54,7 @@ function deserializeWorld(d) {
   if (!d || typeof d !== 'object' || d.v !== SAVE_VERSION || !d.seed === undefined) throw new Error('This is not a compatible Village Sim save.');
   const dims = d.dims || [160, 112]; CFG.W = dims[0]; CFG.H = dims[1];             // older saves are the original 160x112 world
   const N = CFG.W * CFG.H, w = new World(d.seed, d.settings, dims);          // regenerates the same terrain, then we replace the dynamic state
-  w.vills = []; w.animals = []; w.buildings.clear(); w.bmap.fill(0); w.blk.fill(0); w.storeAdj.fill(0); w.bldAdj.fill(0); for (const k in w.campAdj) w.campAdj[k].fill(0); w.bps = []; w.bpAt.clear(); w.claim.fill(-1);
+  w.loadedFrom = 'save written by ' + (d.appV ? 'v' + d.appV : 'an older version'); w.vills = []; w.animals = []; w.buildings.clear(); w.bmap.fill(0); w.blk.fill(0); w.storeAdj.fill(0); w.bldAdj.fill(0); for (const k in w.campAdj) w.campAdj[k].fill(0); w.bps = []; w.bpAt.clear(); w.claim.fill(-1);
   w.feat.set(unpackArr(d.arrays.feat, N)); w.res.set(unpackArr(d.arrays.res, N)); w.road.set(unpackArr(d.arrays.road, N)); w.fish.set(unpackArr(d.arrays.fish, N));
   w.tick = d.tick; w.stock = { ...d.stock }; w.inbound = { wood: 0, stone: 0, food: 0 };
   Object.assign(w, d.counters, d.flags); w.causes = d.causes || {}; w.dlog = d.dlog || []; w.dyr = d.dyr || {}; w.regrow = d.regrow || []; w.scars = d.scars || []; w.banished = d.banished || []; w.crimes = d.crimes || []; w.crimeLog = d.crimeLog || [];
