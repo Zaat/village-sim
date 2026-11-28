@@ -9,6 +9,8 @@
    ========================================================================== */
 const PU = { tool: 'select', type: 'house', zone: 'home', brush: 1, sel: [], hover: null, paint: null, box: null, panel: null, pan: false, hold: null, note: '', noteT: 0, menu: null, ok: null, fx: [] };
 const PU_NAMES = { house: 'House', farm: 'Farm', store: 'Store', workshop: 'Workshop', logcamp: 'Logging camp', minecamp: 'Mining camp', lodge: 'Hunting lodge', market: 'Market', plaza: 'Plaza', tavern: 'Tavern' };
+const PU_GROUPS = [['Homes and food', ['house', 'farm', 'store']], ['Work', ['workshop', 'logcamp', 'minecamp', 'lodge']], ['Civic', ['market', 'plaza', 'tavern']]];
+const PU_DESC = { house: 'Where a family sleeps and children are raised.', farm: 'Fields that grow food through the warm seasons.', store: 'Keeps food, wood and stone safe and dry.', workshop: 'Tools and crafts; speeds up other work.', logcamp: 'Woodcutters work from here and haul logs in.', minecamp: 'Miners work from here and haul stone in.', lodge: 'Hunters work from here and bring game home.', market: 'Where goods and visitors meet; trade grows around it.', plaza: 'The village square: a well, and where people gather.', tavern: 'Where people meet of an evening; lifts mood.' };
 const puIc = n => `<svg class="ic"><use href="#i-${n}"/></svg>`;
 const PU_ZCOL = { home: '229,192,123', farm: '152,195,121', work: '97,175,239', civic: '198,120,221' };
 const PU_ROLES = [['builder', 'Builder'], ['farmer', 'Farmer'], ['woodcutter', 'Woodcutter'], ['miner', 'Miner'], ['hunter', 'Hunter'], ['fisher', 'Fisher']];
@@ -77,16 +79,24 @@ function puCost(c) { return Object.entries(c).filter(([, n]) => n).map(([k, n]) 
 function puPanel() {
   const el = $('ppanel'), w = world, p = PU.panel; if (!p || !puOn()) { el.style.display = 'none'; return } el.style.display = 'block'; let h = '';
   if (p === 'build') {
-    h = '<div class="ph">Build <span class="hint">' + (PU.touch ? 'pick one, then tap the map. Drag the ghost, then press ✓.' : 'pick one, then click the map. Esc or right-click to stop.') + '</span></div><div class="pgrid">' + Object.keys(PLACE).map(t => {
-      const sp = PLACE[t], lock = sp.tech && !w.has(sp.tech), tip = lock ? 'Needs ' + (TECHS[sp.tech] ? TECHS[sp.tech].name.toLowerCase() : sp.tech) : puCost(CFG.COST[t]);
-      return `<button data-ptype="${t}" class="${PU.type === t ? 'on' : ''}" ${lock ? 'disabled' : ''} title="${escapeHtml(tip)}">${puIc(t)}<span>${PU_NAMES[t]}</span><small>${escapeHtml(tip)}</small></button>`
-    }).join('') + '</div>';
-    if (PU.ok && PU.hover) h += `<div class="hint" style="margin-top:6px">${PU.ok.ok ? (PU.touch ? 'Drag the ghost to move it, then press ✓.' : 'Click the green spot, or press Place.') : escapeHtml(PU.ok.why)}</div><div class="btnrow"><button id="pplace" ${PU.ok.ok ? '' : 'disabled'} class="on">Place here</button></div>`;
+    const st = w.stock, have = k => Math.floor(st[k] || 0), cost = t => CFG.COST[t] || {};
+    const costHtml = t => { const parts = Object.entries(cost(t)).filter(([, n]) => n).map(([k, n]) => `<i class="${have(k) < n ? 'lack' : ''}">${n} ${escapeHtml(i18n(k))}</i>`); return parts.length ? parts.join(' · ') : escapeHtml(i18n('free')) };
+    const btn = t => {
+      const sp = PLACE[t], lock = sp.tech && !w.has(sp.tech), need = lock ? i18n('Needs') + ' ' + i18n(TECHS[sp.tech] ? TECHS[sp.tech].name.toLowerCase() : sp.tech) : '';
+      const short = !lock && Object.entries(cost(t)).some(([k, n]) => n && have(k) < n);
+      return `<button data-ptype="${t}" class="${PU.type === t ? 'on' : ''}${lock ? ' locked' : ''}${short ? ' short' : ''}" ${lock ? 'disabled' : ''} title="${escapeHtml(lock ? need : puCost(cost(t)))}">${puIc(t)}<span>${escapeHtml(i18n(PU_NAMES[t]))}</span><small>${lock ? escapeHtml(need) : costHtml(t)}</small></button>`;
+    };
+    h = '<div class="ph">' + i18n('Build') + ' <span class="hint">' + i18n(PU.touch ? 'pick one, then tap the map. Drag the ghost, then press ✓.' : 'pick one, then click the map. Esc or right-click to stop.') + '</span></div>';
+    h += `<div class="pstock">${i18n('You have')} <b>${have('wood')}</b> ${i18n('wood')} · <b>${have('stone')}</b> ${i18n('stone')}</div>`;
+    for (const [gname, list] of PU_GROUPS) { const ts = list.filter(t => PLACE[t]); if (ts.length) h += `<div class="pgroup">${i18n(gname)}</div><div class="pgrid">${ts.map(btn).join('')}</div>` }
+    const sel = PU.type && PLACE[PU.type] ? PU.type : null;
+    if (sel) { const [bw, bh] = CFG.SIZE[sel] || [2, 2]; h += `<div class="pinfo"><b>${escapeHtml(i18n(PU_NAMES[sel]))}</b> · ${bw}×${bh} · ${escapeHtml(i18n(PU_DESC[sel] || ''))}</div>` }
+    if (PU.ok && PU.hover) h += `<div class="hint" style="margin-top:6px">${PU.ok.ok ? i18n(PU.touch ? 'Drag the ghost to move it, then press ✓.' : 'Click the green spot, or press Place.') : escapeHtml(PU.ok.why)}</div><div class="btnrow"><button id="pplace" ${PU.ok.ok ? '' : 'disabled'} class="on">${i18n('Place here')}</button></div>`;
   } else if (p === 'road') {
-    h = '<div class="ph">Roads <span class="hint">drag along the ground to lay a road. Costs 1 stone a tile. Use ✋ or hold Space to move the map.</span></div>';
+    h = '<div class="ph">' + i18n('Roads') + ' <span class="hint">' + i18n('drag along the ground to lay a road. Costs 1 stone a tile. Use ✋ or hold Space to move the map.') + '</span></div>';
   } else if (p === 'zone') {
-    h = '<div class="ph">Zones <span class="hint">paint where the village should build. Drag on the map. ✋ or Space moves the map.</span></div><div class="pgrid">' + Object.keys(PLAY_ZONES).map(z => `<button data-pzone="${z}" class="${PU.zone === z ? 'on' : ''}" style="border-left:4px solid rgb(${PU_ZCOL[z]})">${PLAY_ZONES[z]}</button>`).join('') + `<button data-pzone="erase" class="${PU.zone === 'erase' ? 'on' : ''}">Erase</button></div>
-      <div class="btnrow" style="margin-top:6px;align-items:center"><span class="hint">Brush</span>${[1, 2, 3, 5].map(n => `<button data-pbrush="${n}" class="${PU.brush === n ? 'on' : ''}">${n === 1 ? 'S' : n === 2 ? 'M' : n === 3 ? 'L' : 'XL'}</button>`).join('')}<button data-pclear style="margin-left:auto">Clear all</button></div>
+    h = '<div class="ph">' + i18n('Zones') + ' <span class="hint">' + i18n('paint where the village should build. Drag on the map. ✋ or Space moves the map.') + '</span></div><div class="pgrid">' + Object.keys(PLAY_ZONES).map(z => `<button data-pzone="${z}" class="${PU.zone === z ? 'on' : ''}" style="border-left:4px solid rgb(${PU_ZCOL[z]})">${i18n(PLAY_ZONES[z])}</button>`).join('') + `<button data-pzone="erase" class="${PU.zone === 'erase' ? 'on' : ''}">${i18n('Erase')}</button></div>
+      <div class="btnrow" style="margin-top:6px;align-items:center"><span class="hint">${i18n('Brush')}</span>${[1, 2, 3, 5].map(n => `<button data-pbrush="${n}" class="${PU.brush === n ? 'on' : ''}">${n === 1 ? 'S' : n === 2 ? 'M' : n === 3 ? 'L' : 'XL'}</button>`).join('')}<button data-pclear style="margin-left:auto">${i18n('Clear all')}</button></div>
       <div class="hint" style="margin-top:4px">${w.play.nz ? w.play.nz + ' tiles painted. ' : ''}Homes, farms, work buildings (stores, camps, workshops) and civic buildings (market, plaza, tavern) keep to their own zones when there is room.</div>`;
   } else if (p === 'research') {
     const av = techAvailable(w), cur = w.tech.focus;

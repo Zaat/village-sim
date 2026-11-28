@@ -21,7 +21,7 @@ const ROLE_COL = { farmer: '#d8b84a', woodcutter: '#b0562a', miner: '#8a929a', b
 /* panels redraw only when their content actually changed, which stops needless reflow and flicker */
 (function () {
   const desc = Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML');
-  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cityCard', 'cultCard', 'deathCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'log', 'sel', 'diagBody', 'mindLog']) {
+  for (const id of ['statCard', 'techCard', 'econCard', 'livCard', 'projCard', 'chronCard', 'neighCard', 'warCard', 'cityCard', 'cultCard', 'deathCard', 'harbourCard', 'discCard', 'regimeCard', 'councilCard', 'groupCard', 'talkCard', 'nowCard', 'feedCard', 'yearsCard', 'sel', 'diagBody', 'mindLog']) {
     const el = document.getElementById(id); if (!el) continue;
     Object.defineProperty(el, 'innerHTML', { configurable: true, get() { return desc.get.call(this) }, set(v) { if (this._h !== v) { this._h = v; desc.set.call(this, v) } } });
   }
@@ -301,7 +301,7 @@ function updateUI() {
     <div><span>Deer</span> ${an.deer || 0}</div><div><span>Wolves</span> ${an.wolf || 0}</div>${w.of('dock').length ? `<div><span>Docks / boats</span> ${w.of('dock').length} / ${w.boats.length}</div>` : ''}${w.of('logcamp').length + w.of('minecamp').length + w.of('lodge').length ? `<div><span>Camps</span> ${w.of('logcamp').length} log · ${w.of('minecamp').length} mine · ${w.of('lodge').length} lodge</div>` : ''}</div>
     <div class="chips">${Object.entries(roles).map(([r, n]) => `<span class="chip"><i style="background:${ROLE_COL[r] || '#888'}"></i>${r} ${n}</span>`).join('')}</div>`;
   if (curTab === 'progress') { renderTech(); renderEcon(); renderLiv(); renderHarbour(); renderDisc(); renderProjects() } else if (curTab === 'world') { renderChron(); renderOutposts(); renderNeigh(); renderWar(); renderCity() } else if (curTab === 'society') { renderRegime(); renderCouncil(); renderLives(); renderGroups(); renderCulture(); renderDeaths() }       // only the visible tab is redrawn
-  if (curTab === 'stats') renderStats(); if (curTab === 'events') renderTalk(); if (curTab === 'events') $('log').innerHTML = w.log.slice(0, 60).map(l => `<div><b>D${l.day}</b>${escapeHtml(l.text)}</div>`).join('');
+  if (curTab === 'stats') renderStats(); if (curTab === 'events') renderEvents();
   updateInspector(); drawChart();
 }
 function techRowHtml(w, id, avail) {
@@ -423,7 +423,8 @@ function renderNeigh() {
 const UNIT_ICON = { militia: '🪓', spearman: '🔱', archer: '🏹', swordsman: '⚔️', legionary: '🛡', musketeer: '🔫' };
 /* ---- the city card: layout character, density, rings, hamlets, redevelopment ---- */
 const STYLE_COL = ['#9a7b52', '#b98f55', '#9aa0a6', '#b5574a', '#7f8fb0', '#6c7a89', '#4f6d8a', '#3f6f9a', '#4a9a6a'];
-function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · loop: ${(DBG.tpf || 0).toFixed(1)} ticks/frame, ${(DBG.stepMs || 0).toFixed(1)} ms ticking, ${DBG.frameMs.toFixed(1)} ms/frame, ${DBG.fps.toFixed(0)} drawn fps (display calls ${(DBG.rafFps || 0).toFixed(0)}/s), longest gap ${Math.round(DBG.lastDtMax || 0)} ms · ${perfVerdict(speed)} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
+function tabsLine() { try { const t = tabProbe(); if (!t) return 'tabs: n/a'; return 'tabs: ' + t.buttons + ' buttons, ' + (t.covered.length ? 'COVERED: ' + t.covered.join(', ') : 'all clear') + (t.cursor ? ', cursor ' + t.cursor : '') } catch (e) { return 'tabs: probe failed' } }
+function diagExtras() { const errs = typeof dbgAllErrors === 'function' ? dbgAllErrors(world).slice(-3).map(r => r.where + ': ' + r.msg + ' x' + r.count) : []; return `browser: touch pointers held ${ptrs.size}${pinch ? ' (pinch on)' : ''} · speed ${speed} · loop: ${(DBG.tpf || 0).toFixed(1)} ticks/frame, ${(DBG.stepMs || 0).toFixed(1)} ms ticking, ${DBG.frameMs.toFixed(1)} ms/frame, ${DBG.fps.toFixed(0)} drawn fps (display calls ${(DBG.rafFps || 0).toFixed(0)}/s), longest gap ${Math.round(DBG.lastDtMax || 0)} ms · ${perfVerdict(speed)} · zoom ${R.cam.z.toFixed(2)} · window ${innerWidth}x${innerHeight} · ratio ${devicePixelRatio} · ${tabsLine()} · storage ${DBG.persist || 'not asked yet'}` + (errs.length ? '\nrecent errors: ' + errs.join(' | ') : '\nrecent errors: none') }
 function renderWorldLine() { const w = world; try { const a = $('worldLine'); if (a && !a._copied) { a.textContent = worldLineShort(w); a.title = 'Click to copy the full world line (paste it into the Seed box to rebuild this world)'; a.style.cursor = 'copy'; a.onclick = () => { try { navigator.clipboard.writeText(worldLine(world)); a._copied = true; a.textContent = 'Copied to the clipboard'; setTimeout(() => { a._copied = false; renderWorldLine() }, 1200) } catch (e) { } } } renderDiagText() } catch (e) { } }
 /* the Diagnostics text in the World card: filled the moment the section opens and every second while it is open; a failure is shown there instead of leaving it blank (v0.38.1) */
 function renderDiagText() { const d = $('diagText'); if (!d || !d.parentElement.open) return; let t = ''; try { t = diagText(world) } catch (e) { t = 'world line: ' + worldLineShort(world) + '\n(the full snapshot could not be built: ' + (e && e.message || e) + ')' } try { t += '\n' + diagExtras() } catch (e) { t += '\n(browser details unavailable: ' + (e && e.message || e) + ')' }
@@ -687,6 +688,24 @@ function familyBlock(w, s, home) {
     s.output ? ['Work output', `${Math.round(s.output)} units gathered`] : null, ['Born', dateText(Math.max(0, Math.round(w.day - s.age * CFG.LIFE_BASE)))]];
   return sec('Family &amp; life', `<div class="kvl">${rows.filter(Boolean).map(([k, v]) => `<div><span class="hint">${k}</span><span>${v}</span></div>`).join('')}</div>`);
 }
+/* ---- v0.39.3 (#170): ships, visitors and the things on the ground can be selected too ---- */
+function visitorAt(w, p) {
+  const T = CFG.T, E = w.econ, c = E && E.caravan, v = w.visit; if (!c && !v) return null; const id = v ? v.n : c && c.from !== undefined ? c.from : null, n = id != null && w.neigh ? w.neigh.find(x => x.id === id) : null;
+  if ((c && c.sea) || v) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = (bt.mx + d.dir[0] * 2.2) * T, sy = (bt.my + d.dir[1] * 2.2) * T; if (Math.hypot(sx - p.x, sy - 4 - p.y) < Math.max(16, 24 / R.cam.z)) return { visitor: 'ship', n, raid: !!(v && v.type === 'raid') } }
+  if (c && !c.sea) for (const m of w.of('market')) { const wx = m.x * T + 41, wy = m.y * T + 25; if (Math.hypot(wx - p.x, wy - p.y) < Math.max(18, 26 / R.cam.z)) return { visitor: 'wagon', n, raid: false } }
+  return null;
+}
+function boatPanel(w, b) {
+  const sh = shipOf(b), dk = w.buildings.get(b.dock), crew = b.crew != null ? w.vills.find(v => v.id === b.crew) : null, hold = b.hold ? Object.entries(b.hold).filter(([, n]) => n > 0).map(([k, n]) => n + ' ' + k).join(', ') : '';
+  const job = crew ? crew.jobKind : null, doing = b.state === 'out' ? (job === 'timber' ? 'Fetching timber across the water' : job === 'voyage' ? 'On a trading voyage' : job === 'fish' ? 'Out fishing' : 'At sea') : b.crew != null ? 'Being made ready' : b.noSea ? 'Laid up: no open water within reach' : 'Moored at its dock';
+  return `<h3>${b.kind === 'fishing' ? 'Boat' : 'Ship'}</h3><div class="big">${escapeHtml(sh.name)}</div><div class="hint">${doing}</div>` + sec('Details', kvs([
+    ['Crew', crew ? vlink(crew) : 'none aboard'], ['Home dock', dk ? `<a class="lnk" data-bid="${dk.id}">dock at ${dk.x},${dk.y}</a>` : 'gone'], ['Carries up to', sh.cap + ' units'], hold ? ['Aboard', escapeHtml(hold)] : null, ['Upkeep', sh.upkeep + ' per day'], ['Open water from the dock', b.range() + ' tiles']]));
+}
+function visitorPanel(w, s) {
+  const E = w.econ, c = E && E.caravan, v = w.visit, n = s.n ? w.neigh.find(x => x.id === s.n.id) : null, what = s.visitor === 'ship' ? (s.raid ? 'Raiders' : 'A visiting ship') : 'A merchant’s wagon';
+  let h = `<h3>Visitors</h3><div class="big">${what}</div><div class="hint">${n ? 'From ' + escapeHtml(n.name) + '.' : 'A travelling merchant, not tied to any neighbour.'}${c && !s.raid ? ' Here since day ' + c.arrived + ', leaving about day ' + c.leaves + '.' : ''}${v ? ' ' + ({ raid: 'They came to fight.', trade: 'They came to trade.', aid: 'They bring help.', teach: 'They came to teach.', migrants: 'Settlers looking for a home.', tribute: 'They came for tribute.', contact: 'A first meeting.', leader: 'Their leader has come to speak.' }[v.type] || '') : ''}</div>`;
+  if (n && n.found) h += neighPanel(w, n); return h;
+}
 function updateInspector() {
   const w = world, s = selected, el = $('sel');
   if (s instanceof Villager && s.alive) {
@@ -724,8 +743,10 @@ function updateInspector() {
     if (s.type === 'minecamp') extra = 'A depot at the rockface. Miners within about 14 tiles work faster, carry bigger loads and get more stone.';
     if (s.type === 'lodge') extra = 'A depot near the game trails. Hunters within about 22 tiles strike surer, and hunting parties and foragers can unload here.'; if (s.type === 'farm') extra = ['Bare soil, waiting to be sown.', 'Crops growing: ' + Math.round(s.g * 100) + '%.', 'Ripe and ready to harvest.'][s.state]; if (s.type === 'store') extra = 'Raises the village storage limit.' + (s.style === 2 ? ' Built of stone: the best protection from damp and spoilage.' : ''); if (s.type === 'campfire') extra = 'Where the village gathers, and where the council meets.';
     ensureStats(w, s); el.innerHTML = buildingPanel(w, s, extra);
-  } else if (s && s.tile && puOn()) { el.innerHTML = puTilePanel(w, s)
-  } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal or building on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
+  } else if (s && s.constructor === Boat && w.boats.includes(s)) { el.innerHTML = boatPanel(w, s)
+  } else if (s && s.visitor) { if ((w.econ && w.econ.caravan) || w.visit) el.innerHTML = visitorPanel(w, s); else { selected = null; el.innerHTML = '<h3>Inspector</h3><div class="hint">The visitors have gone.</div>' }
+  } else if (s && s.tile) { el.innerHTML = puTilePanel(w, s)
+  } else { el.innerHTML = '<h3>Inspector</h3><div class="hint">Click a villager, animal, boat, building, tree or rock on the map.</div>'; if (s && ((s instanceof Villager) || (s instanceof Animal))) selected = null }
   puInspect(el, selected);
   if (selected !== selSeen) { selSeen = selected; if (selected && el.offsetParent) { const r = el.getBoundingClientRect(), sd = $('side').getBoundingClientRect(); if (r.top < sd.top || r.bottom > sd.bottom) el.scrollIntoView({ block: 'nearest', behavior: 'smooth' }) } }   // v0.39.1: bring the inspector into view once per new selection, only when it is off screen
 }
@@ -742,6 +763,11 @@ $('sel').addEventListener('click', e => {
   if (a.dataset.vid) o = world.vills.find(v => v.id === +a.dataset.vid); else if (a.dataset.bid) o = world.buildings.get(+a.dataset.bid); else if (a.dataset.oid) o = world.out.list.find(x => x.id === +a.dataset.oid);
   if (o) { selected = o; const T = CFG.T; R.cam.x = (o.x + (o.w || 0) / 2) * T; R.cam.y = (o.y + (o.h || 0) / 2) * T; follow = o instanceof Villager; showTab('village'); updateUI() }
 });
+/* v0.39.3: the pin button on an event line: move the map to the place and ring it (a village-wide event goes to the middle of the village) */
+function evShowAt(x, y) {
+  if (!world) return; const T = CFG.T, wide = x == null, tx = wide ? world.cx + 1 : x, ty = wide ? world.cy + 1 : y;
+  follow = false; R.cam.x = (tx + 0.5) * T; R.cam.y = (ty + 0.5) * T; if (R.cam.z < 1.2) R.cam.z = 1.2; clampCam(); if (!wide) pinAdd(tx, ty, 2, true); updateUI();
+}
 $('tabbar').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; showTab(b.dataset.tab) }); showTab(curTab, true);
 const chart = $('chart'), cc = chart.getContext('2d');
 function drawChart() {
@@ -774,10 +800,13 @@ function pick(sx, sy) {
   const p = screenToWorld(sx, sy), T = CFG.T, rad = Math.max(11, 16 / R.cam.z); let best = null, bd = rad;
   for (const v of world.vills) { const d = Math.hypot(v.x * T - p.x, v.y * T - 6 - p.y); if (d < bd) { bd = d; best = v } }
   for (const a of world.animals) if (a.alive) { const d = Math.hypot(a.x * T - p.x, a.y * T - 5 - p.y); if (d < bd) { bd = d; best = a } }
+  if (!best) for (const bt of world.boats) { if (typeof bt.x !== 'number' || typeof bt.y !== 'number') continue; const d = Math.hypot(bt.x * T - p.x, bt.y * T - 4 - p.y); if (d < Math.max(14, 22 / R.cam.z)) { best = bt; break } }       // v0.39.3 (#170): boats, ships and what visits
+  if (!best) best = visitorAt(world, p);
   if (!best && world.out) for (const o of world.out.list) if (o.state === 'active') { const d = Math.hypot(o.x * T + 8 - p.x, o.y * T + 4 - p.y); if (d < Math.max(34, 30 / R.cam.z)) { best = o; break } }
   if (!best && world.neigh) for (const n of world.neigh) if (n.found) { const d = Math.hypot(n.x * T + 8 - p.x, n.y * T + 8 - p.y); if (d < Math.max(5 * T, 30 / R.cam.z)) { best = n; break } }
   if (!best && R.distShow) { const dd = districtAt(world, Math.floor(p.x / T), Math.floor(p.y / T)); if (dd) { R.distSel = dd.key; showTab('world'); renderCity(); return } }
   if (!best) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const id = world.bmap[ty * CFG.W + tx], b = id ? world.buildings.get(id) : null; if (b) best = b; else { const t2 = Math.floor((p.y + 14) / T), id2 = world.bmap[t2 * CFG.W + tx]; if (id2) best = world.buildings.get(id2) } } }
+  if (!best && !(typeof puOn === 'function' && puOn())) { const tx = Math.floor(p.x / T), ty = Math.floor(p.y / T); if (tx >= 0 && ty >= 0 && tx < CFG.W && ty < CFG.H) { const i = ty * CFG.W + tx; if ((world.feat[i] && world.res[i] > 0) || world.bpAt.get(i)) best = { tile: true, x: tx, y: ty } } }       // a tree, rock, berry bush or building site, to read what is there
   if (best !== selected) voiceUnpin(); selected = best; if (!best) { follow = false } else showTab('village'); updateUI();
 }
 const mini = $('mini');
@@ -892,7 +921,7 @@ function frame(now) {
     if (speed > 0) {
       acc += dt / 1000 * CFG.TPS * speed; let n = Math.floor(acc); acc -= n; const t0 = performance.now(); let ran = 0;
       const budget = speed >= 100 ? 45 : 14; try { while (n-- > 0) { world.step(); ran++; if (performance.now() - t0 > budget) { acc = Math.min(acc + Math.max(0, n), 4); break } } } catch (e) { dbgNote('step', e); dbgPersist(world) }
-      DBG.stepMs = (DBG.stepMs || 0) * 0.9 + (performance.now() - t0) * 0.1; DBG.tpf = (DBG.tpf || 0) * 0.9 + ran * 0.1
+      DBG.tpf = (DBG.tpf || 0) * 0.9 + ran * 0.1; if (ran > 0) DBG.stepMs = DBG.stepMs ? DBG.stepMs * 0.9 + (performance.now() - t0) * 0.1 : performance.now() - t0       // the time of the frames that ticked: empty frames at 1x no longer pull it to zero
     }
     const pan = 520 * dt / 1000 / R.cam.z, c = R.cam;
     if (keys['w'] || keys['arrowup']) { c.y -= pan; follow = false } if (keys['s'] || keys['arrowdown']) { c.y += pan; follow = false } if (keys['a'] || keys['arrowleft']) { c.x -= pan; follow = false } if (keys['d'] || keys['arrowright']) { c.x += pan; follow = false }

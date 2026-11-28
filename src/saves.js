@@ -37,7 +37,21 @@ function idbDo(mode, f) {
 async function savesPut(id, name, meta, json) {
   const data = (await savesGz(json)) || json;
   await idbDo('readwrite', s => s.put({ id, name, meta, data, at: Date.now() }));
+  savesPersist();
   return data.length;
+}
+/* after the first save: ask the browser to keep our storage (not to clear it when the disk runs low); asked once per browser, the answer goes in the diagnostics */
+let savesPersistAsked = false;
+async function savesPersist() {
+  if (savesPersistAsked) return; savesPersistAsked = true;
+  try {
+    if (!(navigator.storage && navigator.storage.persist)) { DBG.persist = 'not supported'; return }
+    if (await navigator.storage.persisted()) { DBG.persist = 'kept'; return }
+    let asked = null; try { asked = localStorage.getItem('villagesim_persist_asked') } catch (e) { }
+    if (asked) { DBG.persist = 'not granted (asked before)'; return }
+    try { localStorage.setItem('villagesim_persist_asked', String(Date.now())) } catch (e) { }
+    DBG.persist = (await navigator.storage.persist()) ? 'kept' : 'not granted';
+  } catch (e) { DBG.persist = 'error' }
 }
 /* { id, name, meta, at, text } or null */
 async function savesGet(id) {

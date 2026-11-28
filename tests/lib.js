@@ -3,7 +3,7 @@
    Browser-only files are left out. Adding a module to index.html is all a new file needs. */
 const fs = require('fs'), path = require('path');
 const ROOT = path.resolve(__dirname, '..');
-const BROWSER_ONLY = new Set(['render', 'debug', 'statsui', 'concernsui', 'voicesui', 'ui', 'treeui']);
+const BROWSER_ONLY = new Set(['render', 'debug', 'statsui', 'concernsui', 'voicesui', 'eventsui', 'crowdui', 'ui', 'treeui']);
 const SRC = [...fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').matchAll(/src="src\/([a-z0-9_]+)\.js"/g)].map(m => m[1]).filter(n => !BROWSER_ONLY.has(n));
 const code = extra => SRC.map(f => fs.readFileSync(path.join(ROOT, 'src', f + '.js'), 'utf8')).join('\n') + (extra ? '\n;' + extra : '');
 const vm = require('vm');

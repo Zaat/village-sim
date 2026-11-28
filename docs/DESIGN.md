@@ -42,6 +42,8 @@ Everything in the simulation runs from a seeded generator and a tick counter. Re
 
 *Known limit.* A reloaded save continues identically from then on, but not exactly like an uninterrupted run, because villagers come back idle.
 
+*Across engines (v0.39.3).* "The same seed" has to hold in every browser, not only on one machine. It did not: six places sorted a list with a random comparator, and engines call a comparator in different orders and a different number of times, so Node and Chromium built different villages from about day 12 (the first sign was a Midsummer Games winner's mood differing by exactly 15). The rule is now: never sort with a random comparator; use `shuffled(list, rnd)`, which draws a fixed number of numbers; and the simulation reads no clock. `tests/determinism.js` guards both, and `tools/mathcheck.js` builds the same worlds in Node, Chromium, Firefox and WebKit and compares them bit for bit (CI runs it). Separately, `Math.sin` and `Math.cos` differ by one unit in the last place between some engine builds (about 3% of values between Node 22 and Chromium 153); no result depends on that so far (48 maps and 10 days agree exactly), and the check will say when one does. The fix changed what the seeded worlds do, so the golden file was regenerated in v0.39.3.
+
 ## 5. Display-only changes keep the simulation identical
 **Standing rule** · applied in v0.39.1
 
@@ -141,9 +143,11 @@ Full screen is Menu > Full screen, or the X key, where the browser allows it. iP
 The repository is public under the MIT licence, with GitHub Pages hosting the game, issue templates and a README. A safety scan before the switch found no secrets.
 
 ## 21. Performance work must not change results
-**Decided** 2026-11-27 · **Planned** a release that already runs the full tests
+**Decided** 2026-11-27 · **Crowd part built** v0.39.3 · **Simulation part planned** v0.40
 
 Profile first. Then exact path caching with invalidation when the map changes (the golden file confirms nothing changed), a per-tick search budget and a spatial grid for neighbour scans (results sorted by id so they stay identical). Flow fields are used only if tiny changes to trajectories are acceptable. A change to how often villagers decide is undecided and will be judged from the profile. Walking crowd figures reuse the cached routes and are drawn only; they do not touch the simulation or saves.
+
+*Built in v0.39.3 (the crowd).* The living crowd runs its own flood over walkable tiles (it never calls the simulation's search, so it cannot spend the simulation's search budget), at most 3 searches a frame, keeps every route for about 24 days, and finds the nearest workplaces through a coarse grid. In the largest saved village (2,770 townsfolk, 711 houses) it costs 0 to 4 ms a frame. The simulation side (staggered decisions, path and neighbour caches) changes the order of events, so it moved to v0.40 with its own golden review rather than joining the shuffle fix, which already changed the golden file.
 
 ## 22. Late-game interest: goals and scale problems, not busywork
 **Direction decided** 2026-11-27 · **Planned** from v0.40
@@ -159,3 +163,16 @@ Browser localStorage holds about 5 MB per site and blocks the page while it writ
 **Decided** 2026-11-28 · **Built** v0.39.2
 
 Reports from the Claude app's built-in browser showed the frame loop called about 255 times a second, with one draw of a 1,900-person town taking about 3.8 ms: drawing used about 98% of the time, so the simulation ran at 0.64× at 1× speed. Safari and Chrome stop at 60 frames a second, which hid it. Drawing is now at most 60 a second, and at most about a third of the time when a draw is expensive (down to about 10 a second); the simulation takes the rest. The simulation itself is unchanged, so results and saves are identical. The report says what limits the speed (a verdict line plus busy and draw percentages and the last 30 seconds), so a future slow-run report can be read at once.
+
+## 25. Events: what is happening now, what mattered, what each year was
+**Decided** 2026-11-28 · **Built** v0.39.3
+
+The old Events tab was one growing list of lines, hard to read at high speed and silent about where things happened. It is now three cards. **Now** is the live picture: season and day, what the villagers in play are doing (a bar of working, sleeping, socialising, free time), the top concern and the last eight days in numbers. **Events** is the feed, ranked: every event has a group (People, Hardships, Society, Progress, World) and a size (small, medium, big), and chips filter by group or show only the important ones. At fast speeds the feed shows only medium and big lines and says how many small ones are folded away. **Years** has a row per year (people at the start and end, births, deaths, arrivals, a sparkline, the big events and a tale), the older years folded into decades.
+
+*The event record.* The simulation now keeps its own list next to the log: `w.ev = { v: 1, next, list: [{ i, d, g, t, s, x?, y?, v? }] }`, with an id, the day, group, size, text and, where there is one, a map position (or `v` for the whole village: storms, fever). It is trimmed by size (1,200 big, 700 medium, 150 small) when it passes 2,600 and when it is saved; saves from before are rebuilt from the log. Recording is wrapped so it can never stop a tick, and it uses no random numbers.
+
+*Pins.* An event with a place has a 📍 that moves the camera there, and a new event shows a short ring on the map (about 5 seconds, at most 8 at once, bigger for the big ones). A village-wide event has a 🏘️ instead. Pins are drawn only.
+
+*Selecting things.* Boats, visiting ships and wagons, and trees, rocks, bushes and building sites can now be selected and show a panel (what a boat is doing, its crew and dock; where visitors are from and when they leave). Single fish tiles are not selectable, because every click on water would select something.
+
+*Why this shape.* One list cannot be both a live view and a history; three cards with a shared record can. The record carries a position because "where" was the question asked most, and ranking by size is what makes fast speeds readable. Alternatives considered: toasts for every event (too noisy at any speed above 1x; pins on the map are enough) and a separate chronicle screen (the Years card is the chronicle).

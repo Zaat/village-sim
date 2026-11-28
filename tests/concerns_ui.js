@@ -3,7 +3,7 @@ const { chromium } = require('playwright');
   const b = await chromium.launch(); let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('FAIL', m) } };
   const p = await b.newPage({ viewport: { width: 1500, height: 950 } });
   const errs = []; const setMode = m => p.evaluate(m => { const el = document.getElementById('alertMode'); el.value = m; el.dispatchEvent(new Event('change')) }, m); p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
-  await p.goto('file:///home/claude/village-sim/index.html'); await p.evaluate(() => { localStorage.clear() }); await p.reload(); await p.waitForTimeout(800);
+  await p.goto('file:///' + __dirname.replace(/\\/g, '/') + '/../index.html'); await p.evaluate(() => { localStorage.clear() }); await p.reload(); await p.waitForTimeout(800);
   await p.evaluate(() => { newWorld(777); __sim.setSpeed(0) });
   // run the village a couple of months so there is something to watch
   await p.evaluate(() => { for (let i = 0; i < 1200 * 40; i++) world.step() });

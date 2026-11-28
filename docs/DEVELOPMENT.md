@@ -42,6 +42,8 @@ Known gaps in the record: the early releases (v0.2 to v0.28) have one-line chang
 ## Rules this project follows
 - Issues, milestones and these documents are updated with every release, not afterwards. The release script checks for the pieces it can.
 - A decision that is reversed stays in DESIGN.md with the reversal noted.
+- Simulation code must give the same result in every browser: no random sort comparators (use `shuffled`), no clock reads, no reliance on the last bit of `Math.sin` and `Math.cos`. `tests/determinism.js` and `tools/mathcheck.js` check it, and a GitHub Actions workflow runs the tests on every push.
+- Things decided against go in the roadmap's Won't do list, with the reason.
 - Releases are never partial or private unless the owner says so clearly.
 
 ## How a release is published (fixed procedure)

@@ -2,6 +2,17 @@
 
 The newest sections are first. For one page per release with screenshots see [docs/releases](releases/) and the [changelog](../CHANGELOG.md).
 
+## Events, performance and polish (new in 0.39.3)
+- **Events tab:** three cards. *Now* shows the season and day, a bar of what the villagers in play are doing (working, sleeping, socialising, free time), the top concern and the last eight days in numbers. *Events* is a ranked feed with chips (All, Important, People, Hardships, Society, Progress, World); at fast speeds it shows only the lines that mattered and says how many small ones are folded away. *Years* has a row per year (people at the start and end, births, deaths, arrivals, a sparkline, big events, a tale) and folds older years into decades. Talk of the village is a fold-out that opens at slow speeds and stays as you left it.
+- **Event pins:** an event with a place has a 📍 that moves the camera there (🏘️ for village-wide events such as storms), and a new event shows a short ring on the map.
+- **Select more things:** click a boat, a visiting ship or wagon, a tree, a rock, a bush or a building site to see what it is and what it is doing.
+- **A living crowd:** the townsfolk beyond the villagers in play leave their doors at sunrise, walk to fields, camps, quarries, docks and the market, work with their tools, meet at the plaza in the evening, go home and sleep inside at night. Above 30× speed they stand at their doors as before. Drawing only: no change to the simulation or saves.
+- **Build panel (Play):** buildings are grouped (Homes and food, Work, Civic), costs show red when the village cannot afford them, locked buildings say what they need, the stock is shown, and the chosen building has a line about what it does.
+- **Spanish:** the Events tab, the build, road and zone panels and the building names.
+- **Same seed, same village in every browser:** six random sorts were replaced by a fair shuffle. A seed started again can give a different village than before; saves are not affected.
+- **Diagnostics:** the report names anything sitting on top of the tab buttons and the cursor there, no longer reads 0 for step time and ticks per frame, and says whether the browser agreed to keep our storage (asked once, after the first save).
+- **For contributors:** a GitHub Actions workflow runs the tests on every push, `tools/mathcheck.js` compares engines, and the roadmap has a Won't do list.
+
 ## Saves and steadier speed (new in 0.39.2)
 - **Saves:** Menu > Saves lists the autosave, the backup (the village you left when starting a new one) and up to ten named saves. Each has Load; named saves also have Overwrite, Rename and Delete (overwrite and delete ask a second time). Loading keeps the village you were playing in the autosave. Saves are compressed and kept in the browser's IndexedDB; the screen says that clearing site data removes them.
 - **Export and Import:** Export writes a compressed `.json.gz` file; Import accepts it and older plain `.json` saves. Older plain browser saves are moved into the new store once.

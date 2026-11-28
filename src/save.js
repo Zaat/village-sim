@@ -37,7 +37,7 @@ function serializeWorld(w) {
     stock: { ...w.stock }, counters: { nextId: w.nextId, nameUse: w.nameUse, bnext: w.bnext, bpnext: w.bpnext, groupNext: w.groupNext, births: w.births, abirths: w.abirths || 0, deaths: w.deaths, trees: w.trees, trees0: w.trees0 },
     flags: { harsh: w.harsh, drought: w.drought, cold: w.cold, festival: w.festival, holiday: w.holiday, holidayDone: w.holidayDone, meetingDay: w.meetingDay, meetingDone: w.meetingDone, forceFeast: w.forceFeast },
     causes: w.causes, dlog: w.dlog, dyr: w.dyr, regrow: w.regrow, scars: w.scars, banished: w.banished, crimes: w.crimes, crimeLog: w.crimeLog, connected: [...w.connected],
-    log: w.log.slice(0, 120), hist: w.hist.slice(-600), rel: [...w.rel].map(([k, r]) => [k, Math.round(r * 10) / 10]),
+    log: w.log.slice(0, 120), ev: (w.ev && (evTrim(w.ev), w.ev)) || null, hist: w.hist.slice(-600), rel: [...w.rel].map(([k, r]) => [k, Math.round(r * 10) / 10]),
     gov: w.gov, groups: w.groups,
     buildings: [...w.buildings.values()].map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, w: b.w, h: b.h, occ: b.occ, state: b.state, g: b.g, style: b.style || 0, dir: b.dir, proj: b.proj, hp: b.hp, maxHp: b.maxHp, tier: b.tier, upg: b.upg, built: b.built, era: b.era, builtEra: b.builtEra, upgraded: b.upgraded, vh: b.vh, vser: b.vser, vtot: b.vtot, reg: b.reg, catch: b.catch, oh: b.oh, oser: b.oser, otot: b.otot, fert: b.fert, repairs: b.repairs, last: b.last, owner: b.owner, cabin: b.cabin })),
     bps: w.bps.map(b => ({ id: b.id, type: b.type, x: b.x, y: b.y, have: b.have, prog: b.prog, target: b.target, toStyle: b.toStyle, dir: b.dir, bridge: b.bridge, player: b.player, cost: b.type === 'bridge' ? b.cost : undefined })),
@@ -58,7 +58,7 @@ function deserializeWorld(d) {
   w.feat.set(unpackArr(d.arrays.feat, N)); w.res.set(unpackArr(d.arrays.res, N)); w.road.set(unpackArr(d.arrays.road, N)); w.fish.set(unpackArr(d.arrays.fish, N));
   w.tick = d.tick; w.stock = { ...d.stock }; w.inbound = { wood: 0, stone: 0, food: 0 };
   Object.assign(w, d.counters, d.flags); w.causes = d.causes || {}; w.dlog = d.dlog || []; w.dyr = d.dyr || {}; w.regrow = d.regrow || []; w.scars = d.scars || []; w.banished = d.banished || []; w.crimes = d.crimes || []; w.crimeLog = d.crimeLog || [];
-  w.connected = new Set(d.connected || []); w.log = d.log || []; w.hist = d.hist || []; w.rel = new Map(d.rel || []); w.gov = d.gov; w.groups = d.groups || [];
+  w.connected = new Set(d.connected || []); w.log = d.log || []; if (d.ev && Array.isArray(d.ev.list)) w.ev = d.ev; else evBackfill(w); w.hist = d.hist || []; w.rel = new Map(d.rel || []); w.gov = d.gov; w.groups = d.groups || [];
   for (const s of d.buildings) {
     const b = { ...s, claim: 0 }; w.buildings.set(b.id, b); w._bv = (w._bv | 0) + 1;
     for (let dy = 0; dy < b.h; dy++) for (let dx = 0; dx < b.w; dx++) { const i = (b.y + dy) * CFG.W + b.x + dx; w.bmap[i] = b.id; if (CFG.SOLID[b.type]) w.blk[i] = 1 }

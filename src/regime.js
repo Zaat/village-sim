@@ -199,7 +199,7 @@ function tryCoup(w, ad, chief, crisis) {
 function uprising(w, ad, chief) {
   const R = w.regime, g = w.gov, leader = ad.filter(v => !g.council.some(c => c.id === v.id) && v.trait.brave > 0.5 && v.charisma() > 0.5).sort((a, b) => b.charisma() - a.charisma())[0] || null;
   R.ax.auth = Math.max(0.1, R.ax.auth - 0.35); R.unrest = 0; R.revolts++; R.noManage = w.day + 60; g.termEnd = w.day;
-  const fighters = ad.filter(v => v.trait.brave > 0.55).sort(() => w.r() - 0.5).slice(0, 3), dead = []; for (const f of fighters) if (w.r() < 0.35) { f.health = -1; f.cause = 'strife'; dead.push(f) }
+  const fighters = shuffled(ad.filter(v => v.trait.brave > 0.55), () => w.r()).slice(0, 3), dead = []; for (const f of fighters) if (w.r() < 0.35) { f.health = -1; f.cause = 'strife'; dead.push(f) }
   for (const v of ad) { v.mood = Math.min(100, v.mood + (v.char.ruth < 0.55 ? 6 : -6)) }
   if (chief) { chief.stocksUntil = w.tick + CFG.TPD * 3; chief.mood = Math.max(0, chief.mood - 15); chief.story('Was overthrown by the people.') }
   if (leader) { experience(leader, 'power', 2); leader.reputation = Math.min(100, leader.reputation + 12); leader.story('Led the uprising against the hard rule.') }

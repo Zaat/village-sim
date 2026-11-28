@@ -38,6 +38,8 @@ function humanYears(days) {
 }
 
 function mulberry32(a) { const f = function () { f.s = (f.s + 0x6D2B79F5) | 0; let t = f.s; t = Math.imul(t ^ t >>> 15, 1 | t); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296 }; f.s = a | 0; return f }   // f.s is the state, so saves can resume the exact stream
+/* a fair shuffle that draws exactly list.length - 1 numbers from r. Never sort with a random comparator: engines call the comparator in different orders (and how often differs), so the same seed gave different villages in different browsers. */
+function shuffled(list, r) { const a = list.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (r() * (i + 1)) | 0; const t = a[i]; a[i] = a[j]; a[j] = t } return a }
 function hash2(x, y) { let h = Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263); h = Math.imul(h ^ h >>> 13, 1274126177); return (h ^ h >>> 16) >>> 0 }
 
 class Heap {

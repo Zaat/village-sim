@@ -172,7 +172,7 @@ function civilDay(w, ad) {
   const fr = rebels.filter(fit), fl = loyal.filter(fit);
   for (const v of ad) v.mood = Math.max(0, v.mood - 1.2);
   c.rounds++;
-  const clash = (list, foes) => { const picks = list.slice().sort(() => w.r() - 0.5).slice(0, 1 + ((w.r() * 2) | 0)); for (const v of picks) { const roll = w.r(); if (roll < 0.1 && foes.length) { v.health = -1; v.cause = 'strife'; c.dead.push(v.name); S.casualties++ } else if (roll < 0.4) { v.health = Math.max(5, v.health - 35); c.hurt++; v.mood = Math.max(0, v.mood - 10) } } };
+  const clash = (list, foes) => { const picks = shuffled(list, () => w.r()).slice(0, 1 + ((w.r() * 2) | 0)); for (const v of picks) { const roll = w.r(); if (roll < 0.1 && foes.length) { v.health = -1; v.cause = 'strife'; c.dead.push(v.name); S.casualties++ } else if (roll < 0.4) { v.health = Math.max(5, v.health - 35); c.hurt++; v.mood = Math.max(0, v.mood - 10) } } };
   clash(fr, fl); clash(fl, fr); S.clashes++;
   const sR = fr.length + (leader ? leader.charisma() * 2 : 0) + 0.5 * rebels.length, sL = fl.length + 2 + defenseScore(w) + 0.5 * loyal.length + (projBuilt(w, 'citadel') ? 2 : 0) + 3 * R.ax.auth;
   if (c.rounds < 3 + ((c.since + 1) % 3) && !(c.rounds >= 2 && (fr.length < 2 || fl.length < 2))) return;
@@ -275,7 +275,7 @@ function sectDay(w, ad) {
   const devout = ad.filter(v => v.char.piety > 0.65 && v.charisma() > 0.45 && v.age < 75); if (!devout.length) return;
   const psplit = R.psplit || 0, p = 0.0008 + 0.012 * psplit + (R.prophet && w.day - R.prophet.since > 20 ? 0.004 : 0); if (w.r() >= p) return;
   const f = (R.prophet && memberOf(w, R.prophet.id)) || bestOf(devout, v => v.char.piety * v.charisma()); if (!f || f.char.piety < 0.6) return;
-  const dw = { zealots: 0.6 * f.char.ruth + 0.4 * (1 - f.trait.cur), ascetics: 0.5 * (1 - f.char.amb) + 0.5 * f.trait.kind, reformers: 0.6 * f.trait.cur + 0.4 * (1 - f.char.ruth) }, d = Object.keys(dw).sort((a, b) => (dw[b] + 0.12 * w.r()) - (dw[a] + 0.12 * w.r()))[0], nm = DOCTRINES[d].names[(w.r() * DOCTRINES[d].names.length) | 0];
+  const dw = { zealots: 0.6 * f.char.ruth + 0.4 * (1 - f.trait.cur), ascetics: 0.5 * (1 - f.char.amb) + 0.5 * f.trait.kind, reformers: 0.6 * f.trait.cur + 0.4 * (1 - f.char.ruth) }, d = Object.keys(dw).map(k => [k, dw[k] + 0.12 * w.r()]).sort((a, b) => b[1] - a[1])[0][0], nm = DOCTRINES[d].names[(w.r() * DOCTRINES[d].names.length) | 0];
   const ms = ad.filter(v => v.char.piety > 0.5 && (v === f || (v.group && v.group === f.group) || relOf(w, f, v) > 12 || w.r() < 0.2)); if (ms.length < 4) return;
   S.sect = { name: nm, doctrine: d, founder: f.id, founderName: f.name, members: ms.map(v => v.id), since: w.day, stance: 'tolerated' }; S.schisms++; S.lastSchism = w.day;
   for (const v of ms) experience(v, 'prophecy', 0.4); experience(f, 'power', 1); f.story(`Founded ${nm}.`);

@@ -41,7 +41,7 @@ function archipelagoShape(rng) {
 /* ----- the whole-map shapes: a per-tile change to elevation ----- */
 function fullShape(w, rng) {
   const { W, H } = CFG, A = w.arch, coast = [0, 0, 0, 0], bw = [0, 0, 0, 0];                   // sides: west, east, north, south
-  if (A === 'continent') { const k = 1 + ((rng() * 2) | 0), order = [0, 1, 2, 3].sort(() => rng() - 0.5); for (let i = 0; i < k; i++) coast[order[i]] = 1 }
+  if (A === 'continent') { const k = 1 + ((rng() * 2) | 0), order = shuffled([0, 1, 2, 3], rng); for (let i = 0; i < k; i++) coast[order[i]] = 1 }
   else if (A === 'river') { if (rng() < 0.6) coast[(rng() * 4) | 0] = 1 }
   else if (A === 'peninsula') { coast[1] = coast[2] = coast[3] = 1 }
   for (let s = 0; s < 4; s++) bw[s] = 24 + rng() * 14;

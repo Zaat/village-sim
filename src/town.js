@@ -235,7 +235,7 @@ function assignRoles(w) {
     while (cnt[r] < q[r]) {
       const pool = adults.filter(v => !v.role && !(HEAVY.has(r) && v.isElder()) && !(r === 'hunter' && !v.isAdult())); if (!pool.length) break;
       pool.sort((a, b) => aff(r, b) - aff(r, a)); const v = pool[0]; v.role = r; cnt[r]++;
-      if (w.tick > 0) { w.say(`${v.name} takes up work as a ${r}.`); v.story(`Took up work as a ${r}.`) }
+      if (w.tick > 0) { w.sayAt(v, `${v.name} takes up work as a ${r}.`); v.story(`Took up work as a ${r}.`) }
     }
   }
 }
@@ -252,7 +252,7 @@ function fire(w) {
   const b = w.r() < 0.2 && st.length > 1 ? st[(w.r() * st.length) | 0] : hs[(w.r() * hs.length) | 0], who = b.occ.map(id => (w.vills.find(v => v.id === id) || {}).name).filter(Boolean);
   if (b.type === 'store') for (const k of ['wood', 'stone', 'food']) w.stock[k] = Math.floor(w.stock[k] * 0.7);
   const gone = damageBuilding(w, b, baseHp(b) * (0.8 + 0.7 * w.r()), 'fire'), what = b.type === 'house' ? 'cabin' : 'storehouse';       // stone and timber stand up to flames better than log and thatch
-  w.emit('event', gone ? `Fire! A ${what} burned to the ground${who.length ? ', leaving ' + who.slice(0, 3).join(', ') + ' homeless' : ''}.` : `Fire! A ${what} is badly scorched but still stands${who.length ? '; ' + who.slice(0, 3).join(', ') + ' put it out' : ''}.`, { kind: 'fire' });
+  w.emit('event', gone ? `Fire! A ${what} burned to the ground${who.length ? ', leaving ' + who.slice(0, 3).join(', ') + ' homeless' : ''}.` : `Fire! A ${what} is badly scorched but still stands${who.length ? '; ' + who.slice(0, 3).join(', ') + ' put it out' : ''}.`, { kind: 'fire', at: b });
 }
 function storm(w) {
   let n = 0; for (const b of w.of('farm')) if (b.state === 1 && w.r() < 0.6 * (1 - 0.5 * lesson(w, 'storm'))) { b.state = 0; b.g = 0; n++ }
@@ -285,7 +285,7 @@ function townNewDay(w) {
   const preyN = w.animals.filter(a => a.alive && a.kind === 'deer').length, wolfChance = (s >= 2 ? 0.14 : s === 0 ? 0.03 : 0.05) * sv * hd.wolf * (projBuilt(w, 'bastion') ? 0.5 : 1) * clamp(preyN / 25, 0.3, 1.4) * (1 - (w.liv ? w.liv.fx.guard : 0));       // packs return to where there is game
   if (pop >= 6 && w.r() < wolfChance && !w.animals.some(a => a.kind === 'wolf' && a.alive)) {
     const sp = ringSpot(w, 24, 32), n = 2 + ((w.r() * 3) | 0);
-    if (sp) { for (let k = 0; k < n; k++) w.animals.push(new Animal(w, 'wolf', sp.x, sp.y)); w.emit('event', `A pack of ${n} wolves has been spotted near the village!`, { kind: 'wolves' }) }
+    if (sp) { for (let k = 0; k < n; k++) w.animals.push(new Animal(w, 'wolf', sp.x, sp.y)); w.emit('event', `A pack of ${n} wolves has been spotted near the village!`, { kind: 'wolves', at: sp }) }
   }
 }
 function chatTopic(w, a, b) {

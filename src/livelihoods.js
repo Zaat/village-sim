@@ -173,7 +173,7 @@ function assignTrades(w, plan, cen) {
   for (const p of plan) { const have = (p.workers || []).length, want = Math.ceil(p.D / JOBS_PER_WORKER - 0.15); if (want > have) need.push({ ...p, gap: want - have }) }
   if (!need.length) return;
   const free = w.vills.filter(v => v.isAdult() && !v.role && !v.trade && (v.tradeSince || 0) < w.day - 6 && v.health > 35);
-  for (const v of free.sort(() => w.r() - 0.5)) {
+  for (const v of shuffled(free, () => w.r())) {
     let best = null, bs = -1;
     for (const p of need) {
       if (p.gap <= 0 || (v.isElder() && !LIGHT_TRADES.has(p.t.kind))) continue;
@@ -188,7 +188,7 @@ function assignTrades(w, plan, cen) {
   const total = need.reduce((s, p) => s + Math.max(0, p.gap), 0), adults = w.vills.filter(v => v.isAdult() && !v.isElder()), tradesmen = adults.filter(v => v.trade).length;
   if (total > 0 && w.stock.food >= w.pop * 3 && tradesmen < adults.length * 0.35) {
     const cnt = {}; for (const v of adults) if (v.role) cnt[v.role] = (cnt[v.role] || 0) + 1;
-    const donors = adults.filter(v => v.role && ['woodcutter', 'miner', 'builder'].includes(v.role) && cnt[v.role] > 1 && !v.trade).sort(() => w.r() - 0.5);
+    const donors = shuffled(adults.filter(v => v.role && ['woodcutter', 'miner', 'builder'].includes(v.role) && cnt[v.role] > 1 && !v.trade), () => w.r());
     let moved = 0;
     for (const v of donors) {
       if (moved >= Math.min(2, total)) break;

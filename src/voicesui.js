@@ -29,7 +29,8 @@ function renderTalk() {
     live = `<div class="hint">Too quick to print every line. ${d ? 'Lately: ' + d.top.join(', ') + (d.talks ? '; ' + d.talks + ' conversations' : '') + '.' : ''}</div>`;
   } else live = '<div class="hint">Too fast to follow line by line; see the daily summaries below.</div>';
   const sums = V && V.sum.length ? (sp > 10 ? digestRows(w) : V.sum.slice(0, 8).map(s => `<div><b>D${s.day}</b>${escapeHtml(s.text)}</div>`).join('')) : '<div class="hint">The first summary comes at the end of the day.</div>';
-  el.innerHTML = `<h3>Talk of the village</h3>${live}<div class="hint" style="margin-top:6px">${sp > 10 ? 'Weekly summaries' : 'Daily summaries'}</div>${sums}`;
+  const open = EVUI.talkOpen === null ? sp <= 10 : EVUI.talkOpen;        // v0.39.3: open at slow speeds, folded when fast, and it stays as the player left it
+  el.innerHTML = `<details id="talkDet"${open ? ' open' : ''}><summary><b>Talk of the village</b></summary>${live}<div class="hint" style="margin-top:6px">${sp > 10 ? 'Weekly summaries' : 'Daily summaries'}</div>${sums}</details>`;
 }
 function digestRows(w) {
   const S = w.voices.sum, out = [];

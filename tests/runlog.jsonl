@@ -41,3 +41,11 @@
 {"t":"2026-11-28T09:05:54.370Z","mode":"pages","kind":"pages","n":21,"failed":0,"wall":252,"work":252,"jobs":1,"bad":[]}
 {"t":"2026-11-28T09:26:57.570Z","mode":"quick","kind":"node","n":40,"failed":0,"wall":742,"work":1484,"jobs":2,"bad":[]}
 {"t":"2026-11-28T09:48:48.240Z","mode":"pages","kind":"pages","n":21,"failed":0,"wall":258,"work":258,"jobs":1,"bad":[]}
+{"t":"2026-11-28T10:40:24.184Z","mode":"list","kind":"node","n":2,"failed":0,"wall":37,"work":73,"jobs":2,"bad":[]}
+{"t":"2026-11-28T11:04:33.294Z","mode":"list","kind":"node","n":1,"failed":0,"wall":57,"work":57,"jobs":2,"bad":[]}
+{"t":"2026-11-28T11:17:57.315Z","mode":"list","kind":"node","n":4,"failed":0,"wall":37,"work":72,"jobs":2,"bad":[]}
+{"t":"2026-11-28T11:31:46.561Z","mode":"full","kind":"node","n":43,"failed":3,"wall":827,"work":1653,"jobs":2,"bad":["pace_events","perf_metropolis","play_events"]}
+{"t":"2026-11-28T11:33:53.895Z","mode":"list","kind":"node","n":3,"failed":1,"wall":105,"work":204,"jobs":2,"bad":["play_events"]}
+{"t":"2026-11-28T11:36:16.663Z","mode":"list","kind":"node","n":2,"failed":1,"wall":99,"work":144,"jobs":2,"bad":["play_events"]}
+{"t":"2026-11-28T11:39:28.782Z","mode":"list","kind":"node","n":1,"failed":0,"wall":39,"work":39,"jobs":2,"bad":[]}
+{"t":"2026-11-28T11:44:28.255Z","mode":"pages","kind":"pages","n":25,"failed":0,"wall":295,"work":295,"jobs":1,"bad":[]}

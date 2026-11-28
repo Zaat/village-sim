@@ -2,6 +2,31 @@
 
 Each release is one step of a village simulation growing into a civilization simulation. Newest first. Screenshots are taken from each version itself (same seed, early game for the first image of a version; later-game for the feature view).
 
+### v0.39.3 — Events, performance and polish
+A redesigned Events tab with pins on the map, a living crowd, boats and other things you can select, a clearer build panel, more Spanish, and the same seed giving the same village in every browser.
+
+![The new Events tab with a pin on the map and the working crowd](docs/screenshots/v0.39.3.png)
+
+**Events.** Three cards. *Now*: the season and day, a bar of what the villagers in play are doing, the top concern and the last eight days in numbers. *Events*: a ranked feed with chips (All, Important, People, Hardships, Society, Progress, World); at fast speeds it shows only what mattered and says how many small lines are folded away. *Years*: a row per year with people at the start and end, births, deaths, arrivals, a sparkline, the big events and a tale, with older years folded into decades. Underneath is a new event record (`w.ev`): every event has a group, a size and, where it has one, a place; saves from before are rebuilt from the log. An event with a place has a 📍 that moves the camera there (🏘️ when it concerns the whole village), and a new event rings the spot on the map for a few seconds.
+
+**Select more.** Click a boat, a visiting ship or wagon, a tree, a rock, a bush or a building site to see what it is and what it is doing.
+
+**A living crowd.** The townsfolk beyond the villagers in play walk from their doors to fields, camps, quarries, docks and the market at sunrise, work with their tools, meet at the plaza in the evening, walk home and sleep inside at night. It is drawing only: its own route search (at most 3 a frame, routes kept for about 24 days, nearest workplaces through a grid) never touches the simulation's search, saves or random numbers. In the largest saved village (2,770 townsfolk, 711 houses) it costs 0 to 4 ms a frame. Above 30× they stand at their doors as before.
+
+**Build panel.** Buildings are grouped (Homes and food, Work, Civic), costs turn red when the village cannot afford them, locked buildings say what they need, the stock is shown, and the chosen building has a line about what it does.
+
+**Same seed, same village.** Six places sorted lists with a random comparator (the Midsummer Games, rival-council clashes, livelihood changes, the doctrine of a new sect, map coasts and regime fights). Engines call a comparator in different orders, so Node and Chromium built different villages from about day 12. They now use a fair shuffle, and the two engines agree bit for bit over 10 days on 48 maps. **The golden file was regenerated**: a seed started again can give a different village than before (saves are not affected). Sine and cosine differ by one unit in the last place between some engine builds; nothing depends on that so far.
+
+**Diagnostics.** The report names anything sitting on top of the tab buttons and the cursor there (for the built-in browser's unclickable tabs, #174), no longer reads 0 for step time and ticks per frame, and says whether the browser agreed to keep our storage (asked once, after the first save).
+
+**Spanish.** The Events tab, the build, road and zone panels and the building names.
+
+**Tests and tooling.** New suites: `events_record`, `determinism` (no random sort comparators, a fair shuffle, no clock in the simulation), `strife_unity` (unity rises and stays up after a faction secedes: it does), and the page suites `ui_events`, `ui_select`, `ui_crowd_walk` and `ui_build`. Page tests no longer hard-code a workspace path. A GitHub Actions workflow runs the node suites, the page tests and `tools/mathcheck.js` (Node, Chromium, Firefox and WebKit, bit for bit) on every push. The roadmap has a Won't do section.
+
+**Moved.** Smoothing the heavy ticks and the simulation's own path and neighbour caches (#134, #135) moved to v0.40, because they change the order of events and need their own golden review. #137 (a slow run on one machine) was closed: it could not be reproduced at 1× or Max, and the machine had been starting paused.
+
+Issues: #2, #136, #147, #148, #170, #175, #176, #177, #178, #179
+
 ### v0.39.2 — Saves and steadier speed
 Named, compressed saves; drawing limited to what the village can afford; and Diagnostics that say what is limiting the speed.
 

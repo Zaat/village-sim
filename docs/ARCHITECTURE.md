@@ -26,6 +26,9 @@
 | `src/culture.js` | weddings, funerals, story nights, the culture score |
 | `src/city.js` | land value, density, redevelopment, hamlets, desire paths |
 | `src/crowd.js` | the crowd: everyone beyond the 160 people simulated one by one, kept as numbers by age |
+| `src/crowdui.js` | browser only: draws the crowd as figures that follow the day (door, work, plaza, home, asleep) along routes it finds itself and keeps; never touches the simulation |
+| `src/events.js` | the event record (`w.ev`): group, size and place of every event, the feed, the years table and the Now summary |
+| `src/eventsui.js` | browser only: the Events tab (Now, Events, Years) and the map pins |
 | `src/debug.js` | diagnostics: error history, performance numbers (including the main loop's ticks per frame), the full copyable report |
 | `src/saves.js` | browser only: compressed saves in IndexedDB (autosave, backup, ten named saves, the time-travel Undo copy); reads plain older saves |
 | `src/save.js` | snapshot and restore a whole village (terrain regenerates from the seed; everything else is stored) |
@@ -62,12 +65,14 @@
 | `tests/` | the release suites (listed in `tests/suites.json`), golden trajectories, the performance gate, Playwright page tests; old one-off scripts live in `tests/legacy/` |
 | `tools/checkpoint.js` | make and list the saved worlds in `tests/checkpoints/` that suites load instead of simulating the early game |
 | `tools/run.js` | the test runner behind `tools/check.sh` (affected suites, `full`, `pages`, timings, green stamp) |
+| `tools/mathcheck.js` | builds the same worlds in Node, Chromium, Firefox and WebKit and compares them bit for bit, and the sine and cosine values |
+| `.github/workflows/ci.yml` | runs the node suites, the page tests and the cross-engine check on every push |
 
 The simulation files never touch the DOM, so they run in Node for batch experiments.
 
 ## Rules the code relies on
-- **The simulation is deterministic.** One seeded generator and a tick counter; rendering, sound and panels never draw from the generator or write simulation state. Anything that is only a label is added as a separate display key, so the keys game logic reads stay unchanged. See [DESIGN.md](DESIGN.md) entries 4 and 5.
-- **The crowd is numbers.** Up to 160 villagers are simulated one by one; the rest are counts by age and work. Drawing the crowd is a render-only matter.
+- **The simulation is deterministic.** One seeded generator and a tick counter; rendering, sound and panels never draw from the generator or write simulation state. Anything that is only a label is added as a separate display key, so the keys game logic reads stay unchanged. The same seed must give the same village in every browser: never sort with a random comparator (use `shuffled(list, rnd)`), read no clock in simulation code, and expect `Math.sin` and `Math.cos` to differ in the last bit between engines. See [DESIGN.md](DESIGN.md) entries 4 and 5.
+- **The crowd is numbers.** Up to 160 villagers are simulated one by one; the rest are counts by age and work. Drawing the crowd is a render-only matter (`crowdui.js` has its own route search and cache, and never calls the simulation's `search`).
 - **One loop, one budget.** The page loop adds owed ticks each frame and stops a frame's ticking after a time budget (14 ms normally, 45 ms at Max speed); owed time carries over so a long tick does not slow the game. Live numbers for it are in Diagnostics.
 - **Saves** store everything except terrain, which is regenerated from the seed. The save records which version wrote it.
 

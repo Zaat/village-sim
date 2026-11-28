@@ -46,8 +46,8 @@ class Villager {
     const w = this.w;
     if (st === 'child') this.story('Took first steps and began exploring the village.');
     else if (st === 'youth') this.story('Began learning a trade as an apprentice.');
-    else if (st === 'adult') { formAdult(w, this); this.story('Came of age and joined the grown folk of the village.'); w.say(`${this.name} has come of age.`); this.nextDesire = w.day }
-    else if (st === 'elder') { this.story('Became an elder of the village.'); w.say(`${this.name} is now counted among the village elders.`) }
+    else if (st === 'adult') { formAdult(w, this); this.story('Came of age and joined the grown folk of the village.'); w.sayAt(this, `${this.name} has come of age.`); this.nextDesire = w.day }
+    else if (st === 'elder') { this.story('Became an elder of the village.'); w.sayAt(this, `${this.name} is now counted among the village elders.`) }
   }
   updateMood() {
     const w = this.w; let t = 50 + (this.hunger - 50) * 0.25 + (this.energy - 50) * 0.08 + (this.social - 50) * 0.12 + (this.health - 70) * 0.1;
@@ -74,7 +74,7 @@ class Villager {
     if (!d) { if (w.day >= this.nextDesire) this.chooseDesire(); return }
     let ok = false;
     switch (d.kind) { case 'family': ok = this.partner != null && this.kids.length >= 1; break; case 'master': ok = this.skill[d.key] >= 0.8; break; case 'belong': ok = this.group != null && this.friends >= 3; break; case 'know': ok = this.debates >= 6; break; case 'lead': ok = w.gov.council.some(c => c.id === this.id); break; case 'fame': ok = this.won > 0; break }
-    if (ok) { this.story(`Fulfilled a long-held dream: ${this.desireText()}.`); w.say(`${this.name} has fulfilled a dream: ${this.desireText()}.`); this.mood = Math.min(100, this.mood + 18); this.desire = null; this.nextDesire = w.day + 5 }
+    if (ok) { this.story(`Fulfilled a long-held dream: ${this.desireText()}.`); w.sayAt(this, `${this.name} has fulfilled a dream: ${this.desireText()}.`); this.mood = Math.min(100, this.mood + 18); this.desire = null; this.nextDesire = w.day + 5 }
   }
   get tx() { return Math.floor(this.x) } get ty() { return Math.floor(this.y) }
   isChild() { return this.age < CFG.CHILD_DAYS }

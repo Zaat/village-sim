@@ -39,7 +39,10 @@
     "districts_events",
     "storage_events",
     "economy_events",
-    "i18n_events"
+    "i18n_events",
+    "events_record",
+    "determinism",
+    "strife_unity"
   ],
   "first": [
     "save",
@@ -48,7 +51,8 @@
     "outposts",
     "maps",
     "animals",
-    "unreach"
+    "unreach",
+    "determinism"
   ],
   "pages": [
     "ui_disc",
@@ -71,7 +75,11 @@
     "ui_sound",
     "ui_mobile",
     "ui_districts",
-    "ui_lang"
+    "ui_lang",
+    "ui_events",
+    "ui_select",
+    "ui_crowd_walk",
+    "ui_build"
   ],
   "ui_only": [
     "render",
@@ -85,7 +93,9 @@
     "playui",
     "overui",
     "helpui",
-    "sound"
+    "sound",
+    "eventsui",
+    "crowdui"
   ],
   "touch": {
     "lives": [
@@ -214,6 +224,12 @@
       "crowd_events",
       "storage_events",
       "districts_events"
+    ],
+    "events": [
+      "events_record",
+      "save",
+      "golden",
+      "living"
     ]
   },
   "est": {
@@ -255,6 +271,13 @@
     "economy_events": 60,
     "perf_metropolis": 90,
     "i18n_events": 2,
-    "ui_lang": 10
+    "ui_lang": 10,
+    "events_record": 57,
+    "ui_events": 40,
+    "ui_select": 25,
+    "ui_crowd_walk": 60,
+    "determinism": 2,
+    "strife_unity": 37,
+    "ui_build": 25
   }
 }

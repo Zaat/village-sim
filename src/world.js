@@ -45,8 +45,14 @@ class World {
   get year() { return Math.floor((this.day - 1) / (CFG.DPS * 4)) + 1 }
   isNight() { return this.tod > 0.72 }
   r() { return this.rng() }
-  say(text) { this.log.unshift({ day: this.day, season: this.season, text }); if (this.log.length > 120) this.log.pop() }
-  emit(type, text, data) { if (text) this.say(text); try { statFromEmit(this, type, text, data) } catch (e) { console.error(e) } try { noteEvent(this, type, text, data) } catch (e) { console.error(e) } for (const f of this.listeners) { try { f(type, text, data) } catch (e) { console.error(e) } } }
+  /* v0.39.3: every line also goes to the long event record (events.js) with a group, a tier and, where the caller knew it, a place: `at` is anything with x and y (a villager, a building) */
+  sayAt(at, text) { this.say(text, at) }
+  say(text, at, type, data) {
+    let e = null; try { e = evRecord(this, text, type, data, at) } catch (err) { this.fault ? this.fault('events', err) : console.error(err) }
+    const l = { day: this.day, season: this.season, text }; if (e) { l.i = e.i; l.g = e.g; l.t = e.t; if (e.x !== undefined) { l.x = e.x; l.y = e.y } else if (e.v) l.v = 1 }
+    this.log.unshift(l); if (this.log.length > 120) this.log.pop()
+  }
+  emit(type, text, data) { if (text) this.say(text, null, type, data); try { statFromEmit(this, type, text, data) } catch (e) { console.error(e) } try { noteEvent(this, type, text, data) } catch (e) { console.error(e) } for (const f of this.listeners) { try { f(type, text, data) } catch (e) { console.error(e) } } }
 
   /* ----- generation ----- */
   gen() {
@@ -193,23 +199,23 @@ class World {
     for (let dy = 0; dy < bp.h; dy++) for (let dx = 0; dx < bp.w; dx++) this.bpAt.delete((bp.y + dy) * CFG.W + bp.x + dx);
     if (bp.type === 'road') { this.road[bp.idx] = this.has('concrete') ? 4 : this.has('roads') ? 3 : this.has('masonry') ? 2 : 1; return }
     if (bp.type === 'bridge') { bridgeTileDone(this, bp); return }
-    if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.say(`A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
+    if (bp.type === 'upgrade') { const b = this.buildings.get(bp.target); if (b) { b.style = bp.toStyle; ensureStats(this, b); restyle(this, b); this.sayAt(b, `A ${HOUSE_STYLES[bp.toStyle - 1].toLowerCase()} has been rebuilt as a ${HOUSE_STYLES[bp.toStyle].toLowerCase()}.`) } return }
     if (bp.type === 'farm' || bp.type === 'house') { let got = 0; for (let dy = 0; dy < CFG.SIZE[bp.type][1]; dy++) for (let dx = 0; dx < CFG.SIZE[bp.type][0]; dx++) { const i = (bp.y + dy) * CFG.W + bp.x + dx, f = this.feat[i]; if (f === FEAT.OAK || f === FEAT.PINE) { got += this.res[i]; this.clearTile(i) } } if (got) { this.stock.wood = Math.min(this.capOf('wood'), this.stock.wood + got); statCount(this, bp.type === 'farm' ? 'fields_cleared' : 'plots_cleared') } }
     const b = this.addBuilding(bp.type, bp.x, bp.y); b.style = bp.type === 'house' ? siteStyle(this, bp.x, bp.y) : bp.type === 'store' ? styleNow(this) : 0;
     ensureStats(this, b);
     if (PROJECTS[bp.type]) { projectDone(this, b, bp); return }
-    if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.say('A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
-    if (bp.type === 'market') this.say('A market square is opened. Merchants will know where to find us.');
-    if (bp.type === 'plaza') this.say(this.has('masonry') ? 'A cobbled village square is finished, with a well at its heart.' : 'A village square is laid out around a new well. The village has a place to meet.');
-    if (bp.type === 'workshop') this.say('A workshop is finished. The crafts will work side by side now.');
-    if (bp.type === 'tavern') this.say('A tavern opens its doors. Evenings will be livelier.');
-    if (bp.type === 'logcamp') this.say('A logging camp is raised beside the forest.');
-    if (bp.type === 'minecamp') this.say('A mining camp opens at the rockface.');
-    if (bp.type === 'lodge') this.say('A hunting lodge is built near the game trails.');
+    if (bp.type === 'dock') { b.dir = bp.dir; addBoat(this, b); this.sayAt(b, 'A new dock is finished, and a fishing boat is launched.'); if (this.has('navigation')) addBoat(this, b); return }
+    if (bp.type === 'market') this.sayAt(b, 'A market square is opened. Merchants will know where to find us.');
+    if (bp.type === 'plaza') this.sayAt(b, this.has('masonry') ? 'A cobbled village square is finished, with a well at its heart.' : 'A village square is laid out around a new well. The village has a place to meet.');
+    if (bp.type === 'workshop') this.sayAt(b, 'A workshop is finished. The crafts will work side by side now.');
+    if (bp.type === 'tavern') this.sayAt(b, 'A tavern opens its doors. Evenings will be livelier.');
+    if (bp.type === 'logcamp') this.sayAt(b, 'A logging camp is raised beside the forest.');
+    if (bp.type === 'minecamp') this.sayAt(b, 'A mining camp opens at the rockface.');
+    if (bp.type === 'lodge') this.sayAt(b, 'A hunting lodge is built near the game trails.');
     if (bp.type === 'house' && bp.cabin) { cabinDone(this, b, bp); return }
-    if (bp.type === 'house') this.say(`A new ${HOUSE_STYLES[b.style].toLowerCase()} is finished.`);
-    if (bp.type === 'farm') this.say('A new field is ready for sowing.');
-    if (bp.type === 'store') this.say(b.style >= 2 ? 'A stone granary is raised, so the village can keep more.' : 'A storehouse is raised, so the village can keep more.');
+    if (bp.type === 'house') this.sayAt(b, `A new ${HOUSE_STYLES[b.style].toLowerCase()} is finished.`);
+    if (bp.type === 'farm') this.sayAt(b, 'A new field is ready for sowing.');
+    if (bp.type === 'store') this.sayAt(b, b.style >= 2 ? 'A stone granary is raised, so the village can keep more.' : 'A storehouse is raised, so the village can keep more.');
   }
 
   /* ----- pathfinding: Dijkstra, roads cheap, sand/rock slightly dear ----- */
@@ -320,6 +326,7 @@ class World {
     this.emit('birth', `${c.name} ${c.family} was born to ${f.name}${dad ? ' and ' + dad.name : ''}.`, { c, f });
   }
   kill(v, why) {
+    const lead = !!(this.gov && this.gov.council && this.gov.council.some(c => c.id === v.id));
     try { onChiefDeath(this, v) } catch (e) { this.fault('succession', e) }
     v.alive = false; v.endJob(); this.vills.splice(this.vills.indexOf(v), 1); this.deaths++; noteFlow(this, 'died'); this.causes[why] = (this.causes[why] || 0) + 1; try { noteDeath(this, v, why) } catch (e) { this.fault('deathlog', e) }
     for (const h of this.houses()) { const k = h.occ.indexOf(v.id); if (k >= 0) h.occ.splice(k, 1) }
@@ -329,7 +336,7 @@ class World {
     for (const id of v.parentIds) if (id != null) grieve(id, 20, 5, `Lost their child ${v.name}.`);
     try { inheritFrom(this, v) } catch (e) { this.fault('inherit', e) }
     this.lastGone = { name: `${v.name} ${v.family}`, day: this.day };
-    this.emit('death', `${v.name} ${v.family} ${why}.`, { v, why });
+    this.emit('death', `${v.name} ${v.family} ${why}.`, { v, why, lead });
   }
   removeBuilding(b) {
     this.buildings.delete(b.id); this._bv = (this._bv | 0) + 1; const { W } = CFG;

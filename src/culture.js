@@ -72,7 +72,7 @@ function disasterDay(w) {
 function startPlague(w, C, R) {
   const ad = w.vills.filter(v => v.age > 5); if (!ad.length) return; const first = ad[(R() * ad.length) | 0];
   C.plague = { start: w.day, sick: { [first.id]: w.day }, quarantine: false, dead: 0, cured: 0 }; C.plagues++;
-  w.emit('event', `A sickness spreads from ${first.name}. People are falling ill, and the council must decide what to do.`, { kind: 'plague' });
+  w.emit('event', `A sickness spreads from ${first.name}. People are falling ill, and the council must decide what to do.`, { kind: 'plague', at: first });
   ask(w, { kind: 'diplomacy', topic: 'A plague has broken out in the village. How should the council respond?', default: w.has('medicine') || avgTrait(w, 'kind') < 0.5 ? 'quarantine' : 'carryon',
     options: [{ id: 'quarantine', text: 'Quarantine the sick and keep the healthy apart (slower spread, but work and feasts stop for a while)' }, { id: 'carryon', text: 'Carry on as usual and tend the sick as neighbours do' }],
     apply: (id, sp, reason, src) => { C.plague && (C.plague.quarantine = id === 'quarantine'); recordDecision(w, id === 'quarantine' ? 'to quarantine the sick during the plague.' : 'to carry on and tend the sick during the plague.', sp, src); w.gov.nextMeeting = w.day + 4 } })

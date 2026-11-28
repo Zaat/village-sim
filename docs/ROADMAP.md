@@ -2,35 +2,22 @@
 
 What is planned, in rough order, and why. Plans change as the game is played; when one does, this file is updated. The reasoning behind decisions is in [DESIGN.md](DESIGN.md), what exists today is in [FEATURES.md](FEATURES.md), and each release is in the [changelog](../CHANGELOG.md).
 
-Current version: **v0.39.2** · [all milestones](https://github.com/Zaat/village-sim/milestones) · [open issues](https://github.com/Zaat/village-sim/issues) (see the [changelog](../CHANGELOG.md)). Everything below is not built yet.
+Current version: **v0.39.3** · [all milestones](https://github.com/Zaat/village-sim/milestones) · [open issues](https://github.com/Zaat/village-sim/issues) (see the [changelog](../CHANGELOG.md)). Everything below is not built yet.
 
 Status key: **planned** (scope agreed), **proposed** (idea, scope still open).
-
-## Performance — planned
-- Profile large villages (year 50 and beyond) and smooth the heavy ticks: villagers currently re-decide together every 32 ticks and the day rollover is long.
-- Exact path caching, a per-tick search budget and a spatial grid, so large villages stay smooth on phones and 120 Hz screens.
-- **A living crowd** (render only): the crowd beyond the 160 simulated villagers walks between homes and workplaces along cached routes, rests at night and shows work animations, instead of standing at doors. It does not change the simulation or saves, and waits until drawing cost is understood.
-
-Issues: [#134](https://github.com/Zaat/village-sim/issues/134), [#135](https://github.com/Zaat/village-sim/issues/135), [#136](https://github.com/Zaat/village-sim/issues/136), [#137](https://github.com/Zaat/village-sim/issues/137) · Milestone: [Performance](https://github.com/Zaat/village-sim/milestone/52)
 
 ## v0.40: farming, energy and City design — planned (large; may be split in two)
 - **Farming and energy.** A deeper crop and field model, an energy ladder from wood to the later power sources, and finite resource deposits, so scale creates new problems that need new answers.
 - **Culture, rebuilt.** One overall figure with four plainly named parts always visible: Traditions, Learning, Heritage and Togetherness, plus a "known for" line, measured per person so a large town does not simply reach 100.
 - **Look follows the age.** Buildings and streets that look different from age to age, so a modern town does not look like a medieval one by accident.
 - **City design commission.** Beauty and street layout become the work of a council commission: a visible beauty score per district; a project ledger listing every idea, proposal and project with its state (thought of, proposed, approved, funded, in progress, done, shelved, rejected), who proposed it, cost and progress. Projects are slow and expensive and depend on regime, culture and technology. In Watch the council decides; in Play the player approves, changes or rejects, with auto-approve rules and a limit on how many proposals appear at fast speeds.
-- **Transport planning.** Roads, straightening and widening, rail, stations and later transit lines, using the same project engine. Needs a transport ladder first (carts, rail, cars, aviation); see DESIGN.md entry 17.
+- **Transport planning.** Roads, straightening and widening, rail, stations and later transit lines, using the same project engine. Needs a transport ladder first (carts, buses, rail, metro, cars, airports, aviation); see DESIGN.md entry 17.
 - **Distance and the sea.** Villagers can expand over water; resources across water are not available as if connected unless a bridge is built or a route opened, and goods can be carried.
+- **Smoother heavy ticks and cached paths in the simulation.** Villagers all re-decide on the same tick and the day rollover is long, so a large village has brief pauses; stagger the decisions, split the day's work, and cache paths and neighbour scans. This changes the order of events, so it comes with its own golden review (moved here from the v0.39.3 plan; the crowd's route cache and grid shipped there). See DESIGN.md entry 21.
+- **Explorers and distant resources.** A scout role that sends villagers out on their own, below today's expedition size gates; reach grows with the age (foot, boats, roads, later transport) and fog clears as scouts and hunters walk, so most of the map is known by the last age. Some resources sit far away and need boats, roads or later tech to reach. A map-explored percentage in Stats.
 - **Wildlife and daily life.** Wildlife depth, child mortality tied to conditions and lessons, resting at home.
 
-Issues: [#138](https://github.com/Zaat/village-sim/issues/138), [#139](https://github.com/Zaat/village-sim/issues/139), [#140](https://github.com/Zaat/village-sim/issues/140), [#141](https://github.com/Zaat/village-sim/issues/141), [#142](https://github.com/Zaat/village-sim/issues/142), [#143](https://github.com/Zaat/village-sim/issues/143), [#144](https://github.com/Zaat/village-sim/issues/144), [#145](https://github.com/Zaat/village-sim/issues/145), [#10](https://github.com/Zaat/village-sim/issues/10), [#4](https://github.com/Zaat/village-sim/issues/4) · Milestone: [v0.40](https://github.com/Zaat/village-sim/milestone/45)
-
-## Polish release (before v1.0) — planned
-- **Events redesign**, including the Chronicle and daily summaries.
-- **A clearer build screen** and a full interface sweep before 1.0.
-- **Select ships and other map objects** (boats, barges, trade ships, caravans, resource tiles) to see their information; today only people, animals, outposts, neighbours and buildings can be selected.
-- **More of the game in Spanish.**
-
-Issues: [#170](https://github.com/Zaat/village-sim/issues/170), [#2](https://github.com/Zaat/village-sim/issues/2), [#147](https://github.com/Zaat/village-sim/issues/147), [#148](https://github.com/Zaat/village-sim/issues/148), [#149](https://github.com/Zaat/village-sim/issues/149), [#150](https://github.com/Zaat/village-sim/issues/150), [#151](https://github.com/Zaat/village-sim/issues/151), [#3](https://github.com/Zaat/village-sim/issues/3) · Milestone: [Polish release](https://github.com/Zaat/village-sim/milestone/54)
+Issues: [#138](https://github.com/Zaat/village-sim/issues/138), [#139](https://github.com/Zaat/village-sim/issues/139), [#140](https://github.com/Zaat/village-sim/issues/140), [#141](https://github.com/Zaat/village-sim/issues/141), [#142](https://github.com/Zaat/village-sim/issues/142), [#143](https://github.com/Zaat/village-sim/issues/143), [#144](https://github.com/Zaat/village-sim/issues/144), [#145](https://github.com/Zaat/village-sim/issues/145), [#10](https://github.com/Zaat/village-sim/issues/10), [#4](https://github.com/Zaat/village-sim/issues/4), [#134](https://github.com/Zaat/village-sim/issues/134), [#135](https://github.com/Zaat/village-sim/issues/135) · Milestone: [v0.40](https://github.com/Zaat/village-sim/milestone/45)
 
 ## Pace — proposed
 A single, smoother birth model for villagers and crowd, and a faster march through the ages (the last current age by about year 30 instead of 60), calibrated with the pace lab tool across maps and hardship levels. Waits for a decision after more play testing; see DESIGN.md entry 3.
@@ -48,13 +35,28 @@ Focus villagers keep a small memory and compose their thoughts and talk from the
 Issue: [#154](https://github.com/Zaat/village-sim/issues/154) · Milestone: [v0.42 Generative minds](https://github.com/Zaat/village-sim/milestone/56)
 
 ## v1.0
-After the polish release and the content releases above.
+After the content releases above, and one last task before it ships: a **full interface sweep** (every screen, in both languages, on a computer and a phone; the Play layout), together with the browser and web API review and the rest of the Spanish translation (the inspector panels, event texts, thoughts and technology names).
+
+Issues: [#149](https://github.com/Zaat/village-sim/issues/149), [#151](https://github.com/Zaat/village-sim/issues/151), [#150](https://github.com/Zaat/village-sim/issues/150) · Milestone: [v1.0](https://github.com/Zaat/village-sim/milestone/57)
 
 ## Tooling and backlog (no release attached)
-- Test impact analysis, more suites converted to checkpoints, telemetry beyond the world line, an immersive 3D view as a stretch idea.
+- A date panel behind the date display (needs a discussion first), test impact analysis, more suites converted to checkpoints, telemetry beyond the world line, an immersive 3D view as a stretch idea.
 
-Issues: [#155](https://github.com/Zaat/village-sim/issues/155), [#156](https://github.com/Zaat/village-sim/issues/156), [#146](https://github.com/Zaat/village-sim/issues/146), [#6](https://github.com/Zaat/village-sim/issues/6), [#7](https://github.com/Zaat/village-sim/issues/7) · Milestone: [Backlog](https://github.com/Zaat/village-sim/milestone/58)
+Issues: [#3](https://github.com/Zaat/village-sim/issues/3), [#155](https://github.com/Zaat/village-sim/issues/155), [#156](https://github.com/Zaat/village-sim/issues/156), [#146](https://github.com/Zaat/village-sim/issues/146), [#6](https://github.com/Zaat/village-sim/issues/6), [#7](https://github.com/Zaat/village-sim/issues/7) · Milestone: [Backlog](https://github.com/Zaat/village-sim/milestone/58)
 
 ## Ideas under discussion
 - **Late-game interest.** After the population plateaus the game can feel static. Ideas: near-term goals ("ambitions") that give a village something to aim for, new problems that appear with scale and need the energy ladder, and a second village on a neighbouring map.
 - **Simple, easy tasks** that players can do mindlessly between decisions.
+- **Event pins, further.** Pins now show where a new event happened. Possible later: pin toasts for the biggest events only, a map layer that shows where the last year's events were, and a filter for the event feed by place.
+- **From the study of another open village simulation (parked, none planned yet):** a save that carries a fingerprint of the world's generation so a loaded save can say when the rules changed; a recovery screen that resets one broken part of a save instead of refusing all of it; scenes that can be reproduced from a link (seed, tick, camera); a short "rules that are easy to miss" file for contributors; a release-notes rule that lists a bug under Fixed only if it shipped in an earlier release.
+
+## Won't do
+Things decided against, with the reason, so they are not proposed again by accident. A decision here can change; say so in [DESIGN.md](DESIGN.md) when it does.
+- **Simulating every townsperson as an individual.** Past about 160 people the rest are a crowd kept as numbers and drawn as figures. Individual minds for thousands would cost more than any phone can run and would add little the player can see (entry 1).
+- **A game server, accounts or multiplayer.** The game is one page that runs from files, with saves in the browser. The only server is the optional music-ratings tally, which the game never needs. A game server would bring cost, privacy duties and something that can go down.
+- **A build step, a bundler or third-party code.** Plain script tags and code written for the project: anyone can open the folder and read it, and licences stay simple.
+- **Third-party art, fonts or audio.** Pixels are drawn in code and the music is generated live.
+- **Asking Claude, or any service, for lines during a run.** Generative minds (v0.42) use lines written ahead and cached, so a village never waits for a network and a run never depends on a service being up.
+- **Giving orders on a plain click.** A click selects and inspects; orders need a deliberate second step so nothing happens by accident (entry 14).
+- **Results that depend on the browser.** The same seed gives the same village everywhere; code that cannot promise that (a random sort comparator, a clock read, an unordered scan) is a bug (entry 4).
+- **Following every crowd figure to the pixel in fast play.** Above 30x the crowd stands at its doors; following walkers there would cost frames for something nobody can see.

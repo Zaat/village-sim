@@ -56,7 +56,33 @@ const I18N = {
     'Livelihoods': 'Medios de vida', 'Harbour & trade abroad': 'Puerto y comercio exterior', 'Expeditions & discoveries': 'Expediciones y descubrimientos', 'Great projects': 'Grandes obras', 'Settlements & outposts': 'Asentamientos y puestos',
     'Neighbours': 'Vecinos', 'City': 'Ciudad', 'Defence & war': 'Defensa y guerra', 'Chronicle & lessons': 'Crónica y lecciones', 'A civilization in numbers': 'Una civilización en cifras', 'Over time': 'A lo largo del tiempo',
     'What happens, and how often': 'Qué ocurre y con qué frecuencia', 'Records & firsts': 'Récords y primicias', 'Export CSV': 'Exportar CSV', 'Export JSON': 'Exportar JSON',
-    'Click to move the camera': 'Clic para mover la cámara'
+    'Click to move the camera': 'Clic para mover la cámara',
+    // v0.39.3: the Events tab (Now, Events feed, Years), event pins, and the Play panels
+    'Now': 'Ahora', 'Years': 'Años', 'All': 'Todo', 'Important': 'Importante', 'People': 'Gente', 'Hardships': 'Penurias',
+    'Spring': 'Primavera', 'Summer': 'Verano', 'Autumn': 'Otoño', 'Winter': 'Invierno', 'day {n}': 'día {n}', 'a wet year': 'un año lluvioso', 'a dry year': 'un año seco', 'mood': 'ánimo',
+    'joyful': 'alegre', 'content': 'tranquilo', 'uneasy': 'inquieto', 'unhappy': 'abatido', 'miserable': 'desdichado',
+    'working': 'trabajando', 'sleeping': 'durmiendo', 'socialising': 'conviviendo', 'free time': 'tiempo libre', 'What the villagers in play are doing': 'Qué hacen los aldeanos en juego',
+    'event': 'suceso', 'events': 'sucesos', 'big event': 'suceso importante', 'big events': 'sucesos importantes', '{n} big': '{n} importantes', '{n} born': '{n} nacidos', '{n} died': '{n} muertos', '{n} arrived': '{n} llegados',
+    'Top concern:': 'Mayor preocupación:', 'No pressing concerns.': 'Ninguna preocupación urgente.', 'Last eight days:': 'Últimos ocho días:',
+    'Fast speed: this card is the live picture; the feed below shows what mattered.': 'Velocidad alta: esta tarjeta es la imagen en vivo; la lista de abajo muestra lo que importó.',
+    'Show on the map': 'Mostrar en el mapa', 'The whole village: go to the village': 'Toda la aldea: ir a la aldea', 'Go to the village': 'Ir a la aldea',
+    'Fast speed: showing the important lines': 'Velocidad alta: se muestran solo las líneas importantes', '{n} minor ones in the last eight days are folded away': 'se ocultan {n} menores de los últimos ocho días',
+    'Nothing here yet.': 'Todavía no hay nada aquí.', 'Show more': 'Mostrar más', 'Show older events': 'Mostrar sucesos anteriores',
+    '{n} people': '{n} personas', '{a} → {b} people': '{a} → {b} personas', 'Tale:': 'Relato:', 'Year {n}': 'Año {n}', 'Years {a}–{b}': 'Años {a}–{b}', 'so far': 'hasta ahora', 'No big events.': 'Sin sucesos importantes.',
+    'The first year is still being written.': 'El primer año aún se está escribiendo.',
+    // v0.39.3: Play mode panels
+    'Homes and food': 'Casas y comida', 'Work': 'Trabajo', 'Civic': 'Cívico', 'You have': 'Tienes', 'wood': 'madera', 'stone': 'piedra', 'free': 'gratis', 'Needs': 'Requiere',
+    'House': 'Casa', 'Farm': 'Granja', 'Store': 'Almacén', 'Workshop': 'Taller', 'Logging camp': 'Campamento maderero', 'Mining camp': 'Campamento minero', 'Hunting lodge': 'Cabaña de caza', 'Market': 'Mercado', 'Plaza': 'Plaza', 'Tavern': 'Taberna',
+    'Where a family sleeps and children are raised.': 'Donde duerme una familia y se crían los niños.', 'Fields that grow food through the warm seasons.': 'Campos que dan comida en las estaciones cálidas.',
+    'Keeps food, wood and stone safe and dry.': 'Guarda comida, madera y piedra a salvo y secas.', 'Tools and crafts; speeds up other work.': 'Herramientas y oficios; acelera otros trabajos.',
+    'Woodcutters work from here and haul logs in.': 'Los leñadores trabajan desde aquí y traen los troncos.', 'Miners work from here and haul stone in.': 'Los mineros trabajan desde aquí y traen la piedra.',
+    'Hunters work from here and bring game home.': 'Los cazadores trabajan desde aquí y traen la caza.', 'Where goods and visitors meet; trade grows around it.': 'Donde se encuentran mercancías y visitantes; el comercio crece a su alrededor.',
+    'The village square: a well, and where people gather.': 'La plaza de la aldea: un pozo y el lugar donde la gente se reúne.', 'Where people meet of an evening; lifts mood.': 'Donde la gente se reúne por la tarde; levanta el ánimo.',
+    'pick one, then tap the map. Drag the ghost, then press ✓.': 'elige uno y toca el mapa. Arrastra el fantasma y pulsa ✓.', 'pick one, then click the map. Esc or right-click to stop.': 'elige uno y haz clic en el mapa. Esc o clic derecho para parar.',
+    'Drag the ghost to move it, then press ✓.': 'Arrastra el fantasma para moverlo y pulsa ✓.', 'Click the green spot, or press Place.': 'Haz clic en el punto verde o pulsa Colocar.', 'Place here': 'Colocar aquí',
+    'Roads': 'Caminos', 'drag along the ground to lay a road. Costs 1 stone a tile. Use ✋ or hold Space to move the map.': 'arrastra por el suelo para trazar un camino. Cuesta 1 piedra por casilla. Usa ✋ o mantén Espacio para mover el mapa.',
+    'Zones': 'Zonas', 'paint where the village should build. Drag on the map. ✋ or Space moves the map.': 'pinta dónde debe construir la aldea. Arrastra sobre el mapa. ✋ o Espacio mueve el mapa.',
+    'Homes': 'Casas', 'Farms': 'Granjas', 'Erase': 'Borrar', 'Brush': 'Pincel', 'Clear all': 'Borrar todo'
   }
 };
 /* The language to start in: a saved choice wins, then the browser's list of languages (first one we have), then English. */

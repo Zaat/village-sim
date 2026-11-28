@@ -5,11 +5,11 @@ const { CFG } = S;
 // 1. life stages: childhood is long, and the stages stay in order
 ok(CFG.ADULT_DAYS >= 25 && CFG.ADULT_DAYS < CFG.ELDER_DAYS, 'adulthood comes late: ' + CFG.ADULT_DAYS);
 ok(CFG.INFANT_DAYS < CFG.CHILD_DAYS && CFG.CHILD_DAYS < CFG.ADULT_DAYS && CFG.FERTILE_MAX < CFG.OLD_DAYS, 'stages are in order');
-// 2. children die of fevers and accidents: with the hazard on, some of forty die in a year and most do not; with it off, none do (they are fed every day)
-const kidsDie = hazard => { CFG.CHILD_MORT = hazard; const w = new S.World(12, { map: 'continent' }); const kids = []; for (let i = 0; i < 40; i++) { const v = new S.Villager(w, i % 2 ? 'f' : 'm', 6, w.cx, w.cy); w.vills.push(v); kids.push(v) }
+// 2. children die of fevers and accidents: with the hazard on, some of a hundred die in a year and most do not; with it off, none do (they are fed every day)
+const kidsDie = hazard => { CFG.CHILD_MORT = hazard; const w = new S.World(12, { map: 'continent' }); const kids = []; for (let i = 0; i < 100; i++) { const v = new S.Villager(w, i % 2 ? 'f' : 'm', 6, w.cx, w.cy); w.vills.push(v); kids.push(v) }
   for (let d = 0; d < 32; d++) { for (const v of kids) if (v.alive) { v.hunger = 100; v.health = 100 } for (let t = 0; t < 1200; t++) w.step() } return kids.filter(v => !v.alive).length };
 { const base = CFG.CHILD_MORT, on = kidsDie(base), off = kidsDie(0); CFG.CHILD_MORT = base;
-  ok(on >= 3 && on <= 20, 'some children die in a year, most live: ' + on + ' of 40'); ok(off === 0, 'with the hazard off none die: ' + off); }
+  ok(on >= 2 && on <= 35, 'some children die in a year, most live: ' + on + ' of 100'); ok(off === 0, 'with the hazard off none die: ' + off); }
 // 3. order: a small town keeps the peace, a vast one strains
 { const w = new S.World(12, { map: 'continent' }); for (let d = 0; d < 3; d++) for (let t = 0; t < 1200; t++) w.step();
   S.prosperityDay(w); ok(w.order === 1, 'a small town keeps order: ' + w.order);

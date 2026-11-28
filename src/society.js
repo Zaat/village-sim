@@ -77,8 +77,8 @@ function socialInteract(w, a, b) {
   }
   r = clamp(r, -100, 100); w.rel.set(key, r);
   a.social = Math.min(100, a.social + 45); b.social = Math.min(100, b.social + 30);
-  if (prev < 50 && r >= 50) { w.say(`${a.name} and ${b.name} became friends.`); a.story(`Became friends with ${b.name}.`); b.story(`Became friends with ${a.name}.`) }
-  if (prev > -40 && r <= -40) { w.say(`${a.name} and ${b.name} have fallen out.`); a.story(`Fell out with ${b.name}.`); b.story(`Fell out with ${a.name}.`) }
+  if (prev < 50 && r >= 50) { w.sayAt(a, `${a.name} and ${b.name} became friends.`); a.story(`Became friends with ${b.name}.`); b.story(`Became friends with ${a.name}.`) }
+  if (prev > -40 && r <= -40) { w.sayAt(a, `${a.name} and ${b.name} have fallen out.`); a.story(`Fell out with ${b.name}.`); b.story(`Fell out with ${a.name}.`) }
   if (a.sex !== b.sex && a.isAdult() && b.isAdult() && r >= 50 - 12 * clamp(fertilityMult(w) - 1, 0, 0.6) - 22 * (w.pairNeed || 0) && a.partner == null && b.partner == null && w.r() < 0.5 * hardOf(w).fert * fertilityMult(w)) pairUp(w, a, b);       // good times and gentle worlds make it easier to settle down
   if (a.partner === b.id && a.sex !== b.sex) w.tryConceive(a.sex === 'f' ? a : b, a.sex === 'f' ? b : a);
 }
@@ -88,7 +88,7 @@ function pairUp(w, a, b) {
   else if (m.home == null && f.home != null) { const h = w.buildings.get(f.home); if (h && h.occ.length < bedsOf(h)) { h.occ.push(m.id); m.home = f.home } }
   a.mood = Math.min(100, a.mood + 15); b.mood = Math.min(100, b.mood + 15);
   a.story(`Fell in love with ${b.name}.`); b.story(`Fell in love with ${a.name}.`);
-  w.say(`${a.name} and ${b.name} have become a couple.`); statCount(w, 'couples');
+  w.sayAt(a, `${a.name} and ${b.name} have become a couple.`); statCount(w, 'couples');
   try { feudMarriage(w, a, b) } catch (e) { }
 }
 
@@ -346,7 +346,7 @@ function theft(w, v) {
 }
 function assault(w, att, vic, a, b) {
   vic = vic || (att === a ? b : a); statCount(w, 'assault'); vic.health -= 15 + w.r() * 15; vic.cause = 'hunger'; w.crimeLog.push(w.day); att.story(`Struck ${vic.name} in anger.`); vic.story(`Was struck by ${att.name}.`);
-  w.say(`${att.name} struck ${vic.name} in a heated quarrel.`); const c = { type: 'assault', day: w.day, culprit: att.id, victim: vic.id, witnesses: [vic.id], solved: true }; try { feudFight(w, att, vic) } catch (e) { w.fault('feud', e) } trial(w, c);
+  w.sayAt(att, `${att.name} struck ${vic.name} in a heated quarrel.`); const c = { type: 'assault', day: w.day, culprit: att.id, victim: vic.id, witnesses: [vic.id], solved: true }; try { feudFight(w, att, vic) } catch (e) { w.fault('feud', e) } trial(w, c);
 }
 function trial(w, c) {
   const culprit = memberOf(w, c.culprit); if (!culprit) return; const g = w.gov, law = g.policy.law, rep = culprit.record;
@@ -382,7 +382,7 @@ function resolveHoliday(w) {
   const amph = projBuilt(w, 'amphitheatre'), near = w.vills.filter(v => !v.sleeping && Math.hypot(v.x - w.cx, v.y - w.cy) < (amph ? 16 : 9));
   for (const v of near) { v.mood = Math.min(100, v.mood + (amph ? 14 : 8) + (w.holiday === 'Day of Devotion' ? 6 * v.char.piety : 0)); experience(v, 'fest', 1) }
   if (w.holiday === 'Midsummer Games') {
-    const ps = near.filter(v => !v.isChild() && v.age < 65).sort(() => w.r() - 0.5).slice(0, 10); if (ps.length < 3) return;
+    const ps = shuffled(near.filter(v => !v.isChild() && v.age < 65), () => w.r()).slice(0, 10); if (ps.length < 3) return;
     const events = [['footrace', v => v.trait.ind * 0.4 + v.trait.brave * 0.2 - (v.age > 50 ? 0.3 : 0)], ['archery', v => v.skill.hunt + v.trait.cur * 0.2], ['wrestling', v => v.trait.brave * 0.6 + v.trait.ind * 0.3 + (v.sex === 'm' ? 0.1 : 0)], ['riddle contest', v => v.trait.cur * 0.7 + v.trait.soc * 0.2]];
     const winners = [];
     for (const [name, f] of events) {

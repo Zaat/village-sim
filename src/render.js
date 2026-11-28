@@ -341,23 +341,6 @@ function separateVillagers(w) {
   }
   for (const v of vs) { const tx = Math.max(-0.3, Math.min(0.3, v._tx)), ty = Math.max(-0.18, Math.min(0.18, v._ty)); v.sx = (v.sx || 0) + (tx - (v.sx || 0)) * 0.15; v.sy = (v.sy || 0) + (ty - (v.sy || 0)) * 0.15 }
 }
-/* the townsfolk beyond the villagers in play: little figures at their doors, spread over the houses; they carry no names and cannot be selected */
-function drawCrowd(g, w, inView, T, now) {
-  const C = w.crowd, hs = w.houses(); if (!hs.length) return;
-  const per = C.n / hs.length, coat = ['#5b7fb5', '#b5655b', '#6a9b5a', '#8a6ab0', '#c99a4a', '#5b9ba5'], skin = ['#e8c9a4', '#c99a74', '#8d6240'];
-  for (const h of hs) {
-    if (!inView(h.x, h.y, h.w, h.h)) continue;
-    const k = Math.min(8, Math.max(0, Math.round(per + ((h.id * 7919) % 5 - 2) * 0.3)));
-    for (let i = 0; i < k; i++) {
-      const s = (h.id * 31 + i * 17) % 97, ph = ((now / 700) + s) % 6.283, bob = Math.abs(Math.sin(ph)) < 0.35 ? 1 : 0, small = (s % 7) === 0 ? 2 : 0;
-      const ax = Math.round((h.x + h.w / 2 + ((s % 9) - 4) * 0.34 + Math.sin(ph * 0.4) * 0.15) * T), ay = Math.round((h.y + h.h + 0.5 + (((s / 9) | 0) % 4) * 0.3) * T) - bob;
-      g.fillStyle = 'rgba(0,0,0,0.25)'; g.fillRect(ax - 2, ay + 1, 5, 1);
-      g.fillStyle = '#3a3a4a'; g.fillRect(ax - 1, ay - 2, 1, 3); g.fillRect(ax + 1, ay - 2, 1, 3);
-      g.fillStyle = coat[s % 6]; g.fillRect(ax - 2, ay - 7 + small, 5, 5 - small);
-      g.fillStyle = skin[(s >> 3) % 3]; g.fillRect(ax - 1, ay - 10 + small, 3, 3);
-    }
-  }
-}
 function drawVillager(g, v, w, now, sel) {
   const x = Math.round((v.x + (v.sx || 0)) * CFG.T), y = Math.round((v.y + (v.sy || 0)) * CFG.T), st = v.stage(), k = { infant: 0.5, child: 0.7, youth: 0.88, adult: 1, elder: 0.96 }[st], s = w.season;
   if (!v.boat) rc(g, 'rgba(0,0,0,.22)', x - 4 * k, y - 1, 8 * k, 2);
@@ -421,7 +404,7 @@ function render(w, sel, now) {
   if (w.crowd && w.crowd.n > 0) drawCrowd(g, w, inView, T, now);
   const vflag = visitorFlag(w); separateVillagers(w);
   if ((w.econ.caravan && w.econ.caravan.sea) || w.visit) for (const d of w.of('dock')) { const bt = w.boats.find(x => x.dock === d.id); if (!bt || !d.dir) continue; const sx = bt.mx + d.dir[0] * 2.2, sy = bt.my + d.dir[1] * 2.2, ty = Math.floor(sy); if (rows[ty]) rows[ty].push({ y: sy * T - 1, fn: () => shipArt(g, sx * T, sy * T, d.dir[0] >= 0 ? 1 : -1, now, vflag) }) }
-  for (const bt of w.boats) { const ty = Math.floor(bt.y); if (rows[ty]) rows[ty].push({ y: bt.y * T - 2, fn: () => drawBoat(g, bt, w, now) }) }
+  for (const bt of w.boats) { const ty = Math.floor(bt.y); if (rows[ty]) rows[ty].push({ y: bt.y * T - 2, fn: () => { drawBoat(g, bt, w, now); if (sel === bt) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.beginPath(); g.ellipse(Math.round(bt.x * T), Math.round(bt.y * T) + 3, bt.kind === 'fishing' ? 14 : 20, 6, 0, 0, 7); g.stroke() } } }) }
   for (const a of w.animals) { if (!a.alive) continue; const ty = Math.floor(a.y); if (rows[ty] && a.x / 1 >= x0 - 1 && a.x <= x1 + 1) rows[ty].push({ y: a.y * T, fn: () => drawAnimal(g, a, w, now, sel) }) }
   for (const v of w.vills) { const ty = Math.floor(v.y); if (rows[ty] && v.x >= x0 - 1 && v.x <= x1 + 1) rows[ty].push({ y: v.y * T, fn: () => drawVillager(g, v, w, now, sel) }) }
   for (let y = y0; y <= y1; y++) {
@@ -429,6 +412,7 @@ function render(w, sel, now) {
     const r = rows[y]; if (r && r.length) { r.sort((a, b) => a.y - b.y); for (const it of r) it.fn() }
   }
   if (sel instanceof Villager && sel.alive && sel.path.length) { g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(sel.x * T, sel.y * T); for (const p of sel.path) g.lineTo((p % W + .5) * T, ((p / W | 0) + .5) * T); g.stroke() }
+  if (sel && sel.tile && !sel.type) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T + .5, sel.y * T + .5, T - 1, T - 1) }
   if (sel && sel.type && sel.w) { g.strokeStyle = '#fff'; g.lineWidth = 1; g.strokeRect(sel.x * T - .5, sel.y * T - .5, sel.w * T + 1, sel.h * T + 1); if (sel.maxHp) { const pr = Math.max(0, sel.hp / sel.maxHp); rc(g, 'rgba(0,0,0,.7)', sel.x * T, sel.y * T - 6, sel.w * T, 4); rc(g, conditionColor(sel), sel.x * T + 1, sel.y * T - 5, Math.round((sel.w * T - 2) * pr), 2) } }
   if (w.play && w.play.on && typeof playDraw === 'function') playDraw(g, w, now);
   if (w.festival) bunting(g, w, now);
@@ -448,6 +432,7 @@ function render(w, sel, now) {
     g.fillStyle = 'rgba(255,255,255,.85)';
     for (const p of R.snow) { p.y += p.s * 0.004 * (R.vh / 600 + 0.5); p.x += Math.sin(now / 1500 + p.d) * 0.0004 + 0.0003; if (p.y > 1) { p.y = -0.02; p.x = Math.random() } if (p.x > 1) p.x = 0; g.fillRect(p.x * R.vw, p.y * R.vh, 1.5 + p.s, 1.5 + p.s) }
   }
+  try { pinsUpdate(w, now); drawPins(g, now, tlx, tly, z) } catch (e) { R.pins = []; console.error(e) }
   try { drawBubbles(g, w, sel, now, tlx, tly, z) } catch (e) { R.vo = null; console.error(e) }
 }
 function inViewR(b, x0, x1, y0, y1) { return b.x + b.w >= x0 && b.x <= x1 && b.y + b.h >= y0 && b.y <= y1 }

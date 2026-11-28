@@ -29,7 +29,7 @@ const treeNear = w => { const { W } = S.CFG, T = []; for (let i = 0; i < w.feat.
   ok(!S.playPlace(w, 'house', 0, 0).ok, 'the map edge is refused'); const water = (() => { for (let i = 0; i < w.terr.length; i++) if (w.terr[i] <= 1) return i })(); ok(!S.playPlace(w, 'house', water % S.CFG.W, (water / S.CFG.W) | 0).ok, 'water is refused');
   ok(!S.playCanPlace(w, 'barracks', 50, 50).ok, 'a great project cannot be placed by hand');
   const r3 = S.playPlace(w, 'farm', p2[0], p2[1]); ok(r3.ok, 'a farm can be placed'); const id = r3.bp.id, wood0 = w.stock.wood; ok(S.playCancelBp(w, id) && !w.bps.some(b => b.id === id), 'a site that has not been started can be cancelled');
-  const h0 = w.houses().length; days(w, 10); ok(w.houses().length >= h0 + 1 && !w.bps.some(b => b.id === r.bp.id), 'builders raise the player\'s house: ' + h0 + ' to ' + w.houses().length); ok(w.faults.length === 0, 'no faults while building: ' + w.faults[0]); }
+  const h0 = w.houses().length, bx = r.bp.x, by = r.bp.y; let built = false; days(w, 10, () => { if (w.houses().some(h => h.x === bx && h.y === by)) built = true }); ok(built && !w.bps.some(b => b.id === r.bp.id), 'builders raise the player\'s house at its site: ' + h0 + ' to ' + w.houses().length); ok(w.faults.length === 0, 'no faults while building: ' + w.faults[0]); }
 // roads
 { const w = mk(), [p] = free(w, 1), line = []; for (let i = 0; i < 6; i++) line.push([p[0] + i, p[1] + 8]);
   const free8 = line.filter(([x, y]) => S.playCanPlace(w, 'house', x, y, true).ok || (w.terr[y * S.CFG.W + x] === S.TERR.GRASS && !w.feat[y * S.CFG.W + x] && !w.bmap[y * S.CFG.W + x] && !w.road[y * S.CFG.W + x]));

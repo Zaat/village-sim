@@ -173,7 +173,7 @@ pre.wline{background:var(--panel2);border-radius:6px;padding:6px 8px;overflow:au
 #pstack{position:absolute;left:50%;transform:translateX(-50%);bottom:62px;display:flex;flex-direction:column;align-items:center;gap:6px;width:min(480px,calc(100% - 24px));pointer-events:none;z-index:4}#pstack>*{pointer-events:auto}
 #ppanel{width:100%;max-height:46%;overflow:auto;background:rgba(16,21,26,.96);border:1px solid var(--line);border-radius:10px;padding:10px;z-index:4}
 #ppanel .ph{font-weight:600;margin-bottom:6px}#ppanel .ph .hint{font-weight:400;margin-left:6px}
-.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:4px}.pgrid button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;line-height:1.25}.pgrid small,.plist small{display:block;font-size:11px;color:var(--mut);font-weight:400}.pgrid button.on small,.plist button.on small{color:#0d1a0d}
+.pstock{font-size:12px;color:var(--mut);margin:0 0 4px}.pstock b{color:var(--fg,#e6e6e6);font-weight:600}.pgroup{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;margin:8px 0 4px}.pcost i,.pgrid small i{font-style:normal}.pgrid small i.lack{color:#f0907a}.pgrid button.on small i.lack{color:#8a1d0a;font-weight:600}.pgrid button.short:not(.on) small{opacity:.95}.pgrid button.locked{opacity:.55}.pinfo{margin-top:8px;padding:6px 8px;border-left:3px solid var(--line);font-size:12px;line-height:1.4}.pinfo b{font-weight:600}.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:4px}.pgrid button{display:flex;flex-direction:column;align-items:flex-start;text-align:left;line-height:1.25}.pgrid small,.plist small{display:block;font-size:11px;color:var(--mut);font-weight:400}.pgrid button.on small,.plist button.on small{color:#0d1a0d}
 .plist{display:flex;flex-direction:column;gap:4px}.plist button{text-align:left}
 .prow{display:flex;align-items:center;gap:8px;margin:4px 0}.prow span{width:48px}.prow input{flex:1}.prow b{width:38px;text-align:right}
 #pcmd{width:max-content;max-width:100%;gap:4px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 24px);background:rgba(34,30,14,.94);border:1px solid #6b5a2c;border-radius:8px;padding:5px 8px;z-index:3}
@@ -230,3 +230,13 @@ details.earlier{margin-top:2px}details.earlier summary{cursor:pointer;margin:3px
 .saverow .btnrow{margin:0;flex-wrap:wrap;justify-content:flex-end}
 .saverow input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:5px 8px;font:inherit}
 .saverow .btnrow button{min-width:64px}
+/* v0.39.3 Events tab: Now, Feed, Years, pins */
+#nowCard .evbar{display:flex;height:9px;border-radius:5px;overflow:hidden;background:var(--panel2);margin:7px 0 4px}#nowCard .evbar i{display:block;height:100%}
+#nowCard .evleg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11.5px;color:var(--mut)}#nowCard .evleg i{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px}
+.evchips{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:4px}.evchips button{font-size:11px;padding:2px 8px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);cursor:pointer}.evchips button.on{background:#2f4a3a;border-color:#4d7a5f}
+#feedCard .evday{margin:7px 0 1px;font-size:11.5px;color:var(--mut);border-bottom:1px solid #20282f}
+.evl{display:flex;gap:6px;align-items:flex-start;padding:2px 0;font-size:12.5px;line-height:1.35}.evl .evic{flex:0 0 18px;text-align:center}.evl .evtx{flex:1}.evl.t2 .evtx{font-weight:600}.evl.t0 .evtx{color:#9aa6b0}
+.evl .evgo{flex:0 0 auto;background:none;border:0;cursor:pointer;font-size:13px;padding:0 3px;opacity:.75}.evl .evgo:hover{opacity:1}
+.evmore{margin-top:6px;width:100%;font-size:12px;padding:4px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--ink);cursor:pointer}
+details.evyr{border-top:1px solid #20282f;padding:4px 0}details.evyr>summary{cursor:pointer;list-style:none}details.evyr>summary::-webkit-details-marker{display:none}details.evyr[open]>summary{margin-bottom:4px}.evyr .evsp{display:inline-block;vertical-align:middle;margin-left:6px}
+#talkCard details>summary{cursor:pointer;list-style:none;margin-bottom:6px}#talkCard details>summary::-webkit-details-marker{display:none}#talkCard summary b{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}

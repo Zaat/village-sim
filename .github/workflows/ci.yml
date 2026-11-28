@@ -1,0 +1,69 @@
+# Runs the project's own test runner on every push and pull request.
+#   node  : every node suite (the simulation, saves, goldens, economy, ...), tools/run.js full
+#   pages : the browser page tests (Playwright + Chromium), tools/run.js pages
+#   math  : the cross-engine check (tools/mathcheck.js): the same worlds and the same sin/cos values in Node, Chromium, Firefox and WebKit (see docs/TESTING.md)
+# The suites that time the simulation (perf, perf_metropolis) have generous limits, but a busy shared runner can still be slow:
+# if only they fail, run the job again before looking for a cause.
+name: tests
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/run.js full --jobs=3
+      - name: Test log
+        if: failure()
+        run: tail -n 60 tests/runlog.jsonl || true
+
+  pages:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright and Chromium
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright
+          NODE_PATH="$RUNNER_TEMP/pw/node_modules" "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium
+      - run: node tools/run.js pages
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+      - name: Screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: page-test-screenshots
+          path: tests/*.png
+          if-no-files-found: ignore
+
+  math:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Playwright with all three engines
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright
+          "$RUNNER_TEMP/pw/node_modules/.bin/playwright" install --with-deps chromium firefox webkit
+      - name: Same seed, same world in every engine (fails if the worlds differ)
+        run: node tools/mathcheck.js --strict
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules

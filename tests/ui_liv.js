@@ -2,7 +2,7 @@ const { chromium } = require('playwright');
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1400, height: 860 } }); const errs = []; let fail = 0; const ok = (c, m) => { if (!c) { fail++; console.log('FAIL', m) } };
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) });
-  await p.goto('file:///home/claude/village-sim/index.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(800);
+  await p.goto('file:///' + __dirname.replace(/\\/g, '/') + '/../index.html'); await p.evaluate(() => localStorage.clear()); await p.reload(); await p.waitForTimeout(800);
   await p.evaluate(() => { __sim.setSpeed(0); for (let i = 0; i < 1200 * 260; i++) world.step() });
   // find a craftsperson at work and put the camera on them
   await p.evaluate(() => { for (let i = 0; i < 6000; i++) { world.step(); if (world.vills.some(v => (v.trade || v.side) && v.jobKind === 'craft' && v.cur && v.cur.type === 'work')) break } });
