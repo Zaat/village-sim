@@ -43,3 +43,11 @@ Known gaps in the record: the early releases (v0.2 to v0.28) have one-line chang
 - Issues, milestones and these documents are updated with every release, not afterwards. The release script checks for the pieces it can.
 - A decision that is reversed stays in DESIGN.md with the reversal noted.
 - Releases are never partial or private unless the owner says so clearly.
+
+## How a release is published (fixed procedure)
+
+1. `tools/release.sh vX.Y[.Z] "message"` in the working copy: gates, zip, commit, push, close the milestone's issues. Check `git remote -v` first: origin must be Zaat/village-sim, not the old archive repo.
+2. Republish the artifact (all files).
+3. Create the GitHub release page **from the maintainer's Mac through Desktop Commander and `gh`** (the cloud session gets HTTP 403 for releases): temp clone of Zaat/village-sim, `git archive --format=zip --prefix=village-sim/ -o village-sim-vX.Y.zip <full release SHA>`, then `gh release create vX.Y --repo Zaat/village-sim --target <FULL 40-character SHA> --title "vX.Y — Title" --notes-file <notes without the leading "# " heading> village-sim-vX.Y.zip`, then delete the temp clone. A short SHA is rejected as an invalid target.
+4. macOS has BSD `sed`: use python3 for text edits on the Mac, and never hand the maintainer a script when the bridge can do it.
+5. Update the Project docs and tell the maintainer what shipped.
